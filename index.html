@@ -282,15 +282,21 @@ const START=121, CAP=91, FINAL=88;
 const MILESTONES=[115,110,105,100,95,91,88];
 const DAY_NAMES=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const SESSIONS={
-  1:{t:'Poussée',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Presse pectoraux','SETS × 10 · 90 s'],['Développé épaules','3 × 12 · 90 s'],['Écarté poulie / pec-deck','3 × 12 · 60 s'],['Élévations latérales','3 × 15 · 60 s'],['Triceps à la poulie (corde de poulie)','3 × 12 · 60 s'],['Planche sur genoux','3 × 30 s'],['Marche inclinée 6–8 %','CARDIO']]},
+  1:{t:'Poussée',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Presse pectoraux','SETS × 10 · 90 s'],['Développé épaules','3 × 12 · 90 s'],['Écarté poulie / pec-deck','3 × 12 · 60 s'],['Élévations latérales','3 × 15 · 60 s'],['Triceps à la poulie (corde de poulie)','3 × 12 · 60 s'],['ABS',''],['Marche inclinée 6–8 %','CARDIO']]},
   2:{t:'Full cardio + dos',tag:'Cardio · 1h15',ex:[['Échauffement vélo + bird-dog','8 min'],['ABIKE',''],['ROPE',''],['ROWER20',''],['Curl-up · dead bug · side plank','12 min'],['Étirements hanches','5 min']]},
   3:{t:'Cardio + dos solide',tag:'Mixte · 1h',ex:[['ROWER10',''],['Marche inclinée','10–15 min'],['Curl-up modifié','3 × 8, tenir 8 s'],['Bird-dog','3 × 8 par côté'],['Side plank sur genoux','3 × 20 s'],['Étirements fessiers, hanches, ischios','30 s × 2']]},
-  4:{t:'Tirage',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Tirage vertical','SETS × 10 · 90 s'],['Rowing poitrine appuyée','SETS × 12 · 90 s'],['Tirage horizontal poulie basse','3 × 12 · 60 s'],['Face pull','3 × 15 · 60 s'],['Curl haltères assis','3 × 12 · 60 s'],['Planche','3 × 30 s'],['Vélo ou elliptique','CARDIO']]},
+  4:{t:'Tirage',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Tirage vertical','SETS × 10 · 90 s'],['Rowing poitrine appuyée','SETS × 12 · 90 s'],['Tirage horizontal poulie basse','3 × 12 · 60 s'],['Face pull','3 × 15 · 60 s'],['Curl haltères assis','3 × 12 · 60 s'],['ABS',''],['Vélo ou elliptique','CARDIO']]},
   5:{t:'Circuit full body',tag:'Force + cardio · 1h15',ex:[['head','Le matin, à jeun'],['Pesée et tour de taille','2 min'],['Bilan de la semaine dans l\'onglet Bilan','5 min'],['head','La séance'],['Échauffement vélo + bird-dog','8 min'],['CIRCUIT',''],['Marche inclinée','CARDIO']]},
 };
 
 /* Données mises à jour par le coach à chaque bilan : si l'app ne garde rien, c'est ceci qui s'affiche. */
-const SEED={v:21,entries:[],days:[1,0,0,0,0],weekKey:'2026-09-07',programStart:'2026-09-07',milestones:[],lastSummary:null,seedDate:'2026-09-07'};
+const SEED={v:21,
+  entries:[{w:117,t:null,s:2,p:1,h:3,c2:50,c3:null,c1:30,d:'2026-09-11'}],
+  days:[0,0,0,0,0],weekKey:'2026-09-14',programStart:'2026-09-07',milestones:[],
+  lastSummary:{week:1,w:117,loss:4,total:4,waist:null,waistDelta:null,s:2,p:1,h:3,
+    perf:{c2:'50 kg',c3:'–',c1:'30 s'},
+    decision:"Semaine 1 : –4 kg, dont une grosse part d'eau, on ne conclut rien. Deux séances seulement à cause de la rage de dents, donc on ne touche ni à l'assiette ni au cardio. Objectif unique : 4 séances.",stall:false},
+  seedDate:'2026-09-13b'};
 let state=JSON.parse(JSON.stringify(SEED));
 let sel={s:null,p:null,h:null};
 let storeMode='unknown';
@@ -303,7 +309,7 @@ const f1=n=>(Math.round(n*10)/10).toLocaleString('fr-FR',{minimumFractionDigits:
 function mondayKey(d=new Date()){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x.toISOString().slice(0,10); }
 function ensureWeek(){ const k=mondayKey(); if(!state.programStart) state.programStart=k; if(state.weekKey!==k){ state.weekKey=k; state.days=[0,0,0,0,0]; } }
 function calendarWeek(){ const a=new Date(state.programStart+'T00:00:00'), b=new Date(mondayKey()+'T00:00:00'); return Math.max(1,Math.round((b-a)/604800000)+1); }
-function programWeek(){ return Math.min(state.entries.length+1, calendarWeek()); }
+function programWeek(){ return Math.max(state.entries.length+1, Math.min(state.entries.length+1, calendarWeek())); }
 function missingBilans(){ return Math.max(0, calendarWeek()-1-state.entries.length); }
 function sessionsDone(){ return state.days.reduce((a,b)=>a+b,0); }
 
@@ -558,6 +564,9 @@ function sessionLines(dow,P){
     } else if(a==='ABIKE'){
       if(P.noRower||P.rowerMax){ out.push(['Assault bike tranquille, jambes seules, buste droit','15 min']); adapt.push('Assault bike : pas d\'intervalles'); }
       else { out.push([`Assault bike : 3 min calme, 8 × (${P.abike} s fort / ${P.abikeRest} tranquille), 3 min calme`,'26 min']); if(P.tabata) out.push(['Tabata assault bike en fin de séance : 8 × (20 s à fond / 10 s)','4 min']); }
+    } else if(a==='ABS'){
+      if(P.noRope||P.ropeMax){ out.push(['Abdos : dead bug 3 × 10/côté + planche genoux 3 × 30 s','6 min']); }
+      else { out.push(['Abdos (6 min)','']); out.push(['sub','Planche sur genoux 3 × 30 s']); out.push(['sub','Pallof press à la poulie 3 × 10 par côté']); out.push(['sub','Relevés de genoux allongé, dos plaqué 3 × 12']); }
     } else if(a==='head'){ out.push(['head',b]);
     } else {
       out.push([a.replace('SETS',P.sets), b.replace('CARDIO',P.cardio+' min')]);
@@ -681,6 +690,8 @@ const FICHES=[
   ['Curl-up modifié','Allongé, une jambe pliée, mains sous le bas du dos.','Décolle juste la tête et les épaules, tiens 8 s.','Respire normalement, ne bloque pas.','Faire un crunch complet.','Remplace le crunch : la colonne bouge peu, en général mieux toléré.'],
   ['Bird-dog','À quatre pattes, dos neutre.','Tends bras et jambe opposés, tiens 8 s, dos immobile.','Respire normalement.','Cambrer, tourner le bassin.','À faire 3 fois par semaine si confortable.'],
   ['Side plank','Sur le coude et les genoux, hanches alignées.','Tiens 20 s, change de côté.',null,'Hanche qui tombe.',null],
+  ['Pallof press','Poulie à hauteur de poitrine, debout de profil, poignée tenue à deux mains contre le sternum, pieds écartés.','Tends les bras devant toi sans laisser le buste tourner, tiens 2 s, reviens. Tout le travail est de résister à la rotation.','Expire en tendant.','Laisser le buste pivoter. Charge trop lourde.','Travaille les abdos sans plier la colonne : souvent bien toléré quand les crunchs gênent.'],
+  ['Relevés de genoux allongé','Allongé, mains sous le bas du dos, genoux pliés au-dessus des hanches.','Descends lentement les pieds vers le sol sans décoller le bas du dos, reviens. Amplitude courte au début.','Expire en remontant.','Le bas du dos qui décolle. Aller trop bas trop vite.','Si tu sens les lombaires, réduis l\'amplitude ou reste sur le dead bug.'],
   ['Dead bug','Allongé, bras au plafond, genoux à 90°, bas du dos plaqué.','Tends une jambe et le bras opposé vers le sol sans décoller le dos. Lent.','Expire en tendant.','Le dos se cambre : la jambe est allée trop loin.','Généralement bien toléré si le bas du dos reste plaqué. Sinon, réduis l\'amplitude.'],
   ['Pont fessier','Genoux pliés, pieds proches des fesses.','Pousse dans les talons, aligne genoux-hanches-épaules, serre 1 s.','Expire en montant.','Monter trop haut et cambrer.','Renforce les fessiers ; souvent utile pour le confort lombaire, à condition de ne pas cambrer.'],
  ]],
