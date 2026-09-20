@@ -81,6 +81,9 @@
   .exl li span:last-child{color:var(--ink2);white-space:nowrap}
   .exl li.sub{color:var(--ink2);font-size:14px;padding:6px 0 4px;border-bottom:0}
   .exl li.head{color:var(--accent);font-weight:700;font-size:13px;padding:12px 0 2px;border-bottom:0}
+  .exl li.ss{border-bottom:0;padding-bottom:2px}
+  .exl li.ss span:last-child{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:700}
+  .exl li.sub2{color:var(--ink);font-size:15px;padding:2px 0 9px;border-bottom:1px solid var(--line)}
   .days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
   .days button{min-height:58px;padding:8px 2px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);font-size:12px;line-height:1.2;color:var(--ink2)}
   .days button b{display:block;font-size:15px;color:var(--ink)}
@@ -282,21 +285,61 @@ const START=121, CAP=91, FINAL=88;
 const MILESTONES=[115,110,105,100,95,91,88];
 const DAY_NAMES=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const SESSIONS={
-  1:{t:'Poussée',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Presse pectoraux','SETS × 10 · 90 s'],['Développé épaules','3 × 12 · 90 s'],['Écarté poulie / pec-deck','3 × 12 · 60 s'],['Élévations latérales','3 × 15 · 60 s'],['Triceps à la poulie (corde de poulie)','3 × 12 · 60 s'],['ABS',''],['Marche inclinée 6–8 %','CARDIO']]},
-  2:{t:'Full cardio + dos',tag:'Cardio · 1h15',ex:[['Échauffement vélo + bird-dog','8 min'],['ABIKE',''],['ROPE',''],['ROWER20',''],['Curl-up · dead bug · side plank','12 min'],['Étirements hanches','5 min']]},
-  3:{t:'Cardio + dos solide',tag:'Mixte · 1h',ex:[['ROWER10',''],['Marche inclinée','10–15 min'],['Curl-up modifié','3 × 8, tenir 8 s'],['Bird-dog','3 × 8 par côté'],['Side plank sur genoux','3 × 20 s'],['Étirements fessiers, hanches, ischios','30 s × 2']]},
-  4:{t:'Tirage',tag:'Force · 1h15',ex:[['Échauffement vélo + bird-dog + épaules','8 min'],['Tirage vertical','SETS × 10 · 90 s'],['Rowing poitrine appuyée','SETS × 12 · 90 s'],['Tirage horizontal poulie basse','3 × 12 · 60 s'],['Face pull','3 × 15 · 60 s'],['Curl haltères assis','3 × 12 · 60 s'],['ABS',''],['Vélo ou elliptique','CARDIO']]},
-  5:{t:'Circuit full body',tag:'Force + cardio · 1h15',ex:[['head','Le matin, à jeun'],['Pesée et tour de taille','2 min'],['Bilan de la semaine dans l\'onglet Bilan','5 min'],['head','La séance'],['Échauffement vélo + bird-dog','8 min'],['CIRCUIT',''],['Marche inclinée','CARDIO']]},
+  1:{t:'Pectoraux + triceps',tag:'Force · 1h05',ex:[
+    ['Échauffement vélo + rotations épaules','8 min'],
+    ['Presse pectoraux','SETS × 10 · 90 s'],
+    ['Développé incliné haltères ou machine','SETS × 10 · 90 s'],
+    ['ss','Écarté poulie / pec-deck 3 × 12','+ Triceps poulie corde 3 × 12'],
+    ['ss','Extension triceps au-dessus de la tête 3 × 12','+ Pallof press 3 × 10 par côté'],
+    ['ABS',''],
+    ['Marche inclinée 6–8 %','CARDIO']]},
+  2:{t:'Dos',tag:'Force · 1h05',ex:[
+    ['Échauffement vélo + rotations épaules','8 min'],
+    ['Tirage vertical','SETS × 10 · 90 s'],
+    ['Rowing poitrine appuyée','SETS × 12 · 90 s'],
+    ['ss','Tirage horizontal poulie basse 3 × 12','+ Pull-over poulie haute 3 × 12'],
+    ['ss','Face pull 3 × 15','+ Curl haltères 3 × 12'],
+    ['ss','Curl marteau 3 × 12','+ Planche sur genoux 3 × 30 s'],
+    ['Vélo ou elliptique','CARDIO']]},
+  3:{t:'Cardio pur',tag:'Cardio · 50 min',ex:[
+    ['Échauffement vélo tranquille','6 min'],
+    ['ABIKE',''],
+    ['ROPE',''],
+    ['ROWER20',''],
+    ['Étirements hanches et ischios','5 min']]},
+  4:{t:'Épaules + triceps',tag:'Force · 1h05',ex:[
+    ['Échauffement vélo + rotations épaules','8 min'],
+    ['Développé épaules machine ou haltères','SETS × 10 · 90 s'],
+    ['Dips machine ou barre assistée','3 × 10 · 90 s'],
+    ['ss','Élévations latérales 4 × 15','+ Élévations buste penché 4 × 15'],
+    ['ss','Face pull 3 × 15','+ Extension triceps au-dessus de la tête 3 × 12'],
+    ['ABS',''],
+    ['Marche inclinée','CARDIO']]},
+  5:{t:'Pectoraux + dos',tag:'Force · 1h05',ex:[
+    ['head','Le matin, à jeun'],
+    ['Pesée, tour de taille et bilan','5 min'],
+    ['head','La séance'],
+    ['Échauffement vélo + rotations épaules','8 min'],
+    ['ss','Presse pectoraux 3 × 12','+ Tirage vertical 3 × 12'],
+    ['ss','Écarté poulie 3 × 12','+ Rowing poitrine appuyée 3 × 12'],
+    ['ss','Pompes inclinées, max de reps','+ Relevés de genoux 3 × 12'],
+    ['ABS',''],
+    ['Marche inclinée','CARDIO']]},
 };
+
+
+
 
 /* Données mises à jour par le coach à chaque bilan : si l'app ne garde rien, c'est ceci qui s'affiche. */
 const SEED={v:21,
-  entries:[{w:117,t:null,s:2,p:1,h:3,c2:50,c3:null,c1:30,d:'2026-09-11'}],
-  days:[0,0,0,0,0],weekKey:'2026-09-14',programStart:'2026-09-07',milestones:[],
-  lastSummary:{week:1,w:117,loss:4,total:4,waist:null,waistDelta:null,s:2,p:1,h:3,
-    perf:{c2:'50 kg',c3:'–',c1:'30 s'},
-    decision:"Semaine 1 : –4 kg, dont une grosse part d'eau, on ne conclut rien. Deux séances seulement à cause de la rage de dents, donc on ne touche ni à l'assiette ni au cardio. Objectif unique : 4 séances.",stall:false},
-  seedDate:'2026-09-13b'};
+  entries:[
+    {w:117,t:null,s:2,p:1,h:3,c2:50,c3:null,c1:30,d:'2026-09-11'},
+    {w:116.1,t:null,s:2,p:0,h:5,c2:50,c3:null,c1:null,d:'2026-09-18'}],
+  days:[0,0,0,0,0],weekKey:'2026-09-21',programStart:'2026-09-07',milestones:[],
+  lastSummary:{week:2,w:116.1,loss:0.9,total:4.9,waist:null,waistDelta:null,s:2,p:0,h:5,
+    perf:{c2:'50 kg (0 kg)',c3:'–',c1:'–'},
+    decision:"–0,9 kg cette semaine, –4,9 kg depuis le départ : rythme parfait, et cette fois c'est de la vraie perte, pas de l'eau. Deux séances à cause de la dent, donc rien ne change à l'assiette ni au cardio. Faim à 5 : on garde le goûter. Objectif unique : 4 séances.",stall:false},
+  seedDate:'2026-09-19'};
 let state=JSON.parse(JSON.stringify(SEED));
 let sel={s:null,p:null,h:null};
 let storeMode='unknown';
@@ -491,7 +534,7 @@ function render(){
   $('planCard').innerHTML=`<h2>Ta semaine à venir</h2>`+
     `<div class="decision"><b>Décision du coach</b>${P.decision}</div>`+
     P.msgs.map(m=>`<div class="msg ${m[0]}">${m[1]}</div>`).join('')+
-    [['Séries par exercice',P.sets],['Cardio en fin de séance',P.cardio+' min'],['Type de cardio',P.cardioType],['Rameur',P.noRower?'remplacé par vélo ou marche':(P.rowerMax?`${P.rowerMax} min max si confortable`:'ok, dos droit, damper 4–6')],['Corde à sauter',P.noRope?'remplacée par vélo ou marche cette semaine':(P.ropeMax?`${P.ropeMax} min max, seulement si confortable`:`${P.corde} s de saut / ${60-P.corde} s de marche, × 12`)],['Assault bike (mardi)',(P.noRower||P.rowerMax)?'15 min tranquille, pas d\'intervalles':`8 × ${P.abike} s fort / ${P.abikeRest}`+(P.tabata?' + Tabata en fin de séance':'')],['Circuit du vendredi',P.tours+' tours'],['Charges',P.charge],['Féculents le soir',P.feculentsSoir],['Goûter',P.gouter]]
+    [['Séries par exercice',P.sets],['Cardio en fin de séance',P.cardio+' min'],['Type de cardio',P.cardioType],['Rameur',P.noRower?'remplacé par vélo ou marche':(P.rowerMax?`${P.rowerMax} min max si confortable`:'ok, dos droit, damper 4–6')],['Corde à sauter',P.noRope?'remplacée par vélo ou marche cette semaine':(P.ropeMax?`${P.ropeMax} min max, seulement si confortable`:`${P.corde} s de saut / ${60-P.corde} s de marche, × 12`)],['Assault bike (mardi)',(P.noRower||P.rowerMax)?'15 min tranquille, pas d\'intervalles':`8 × ${P.abike} s fort / ${P.abikeRest}`+(P.tabata?' + Tabata en fin de séance':'')],['Charges',P.charge],['Féculents le soir',P.feculentsSoir],['Goûter',P.gouter]]
     .map(k=>`<div class="kv"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('');
 
   /* ---- aujourd'hui ---- */
@@ -543,7 +586,7 @@ function renderDays(id){
 
 function sessionLines(dow,P){
   const s=SESSIONS[dow]; const out=[]; const adapt=[];
-  s.ex.forEach(([a,b])=>{
+  s.ex.forEach(([a,b,c])=>{
     if(a==='ROPE'){
       if(P.noRope){ out.push(['Corde à sauter remplacée par vélo ou marche','12 min']); adapt.push('Corde à sauter → vélo/marche'); }
       else if(P.ropeMax){ out.push([`Corde à sauter : 30 s de saut / 30 s de marche, seulement si confortable`,`${P.ropeMax} min max`]); adapt.push(`Corde à sauter limitée à ${P.ropeMax} min, puis vélo`); }
@@ -565,8 +608,14 @@ function sessionLines(dow,P){
       if(P.noRower||P.rowerMax){ out.push(['Assault bike tranquille, jambes seules, buste droit','15 min']); adapt.push('Assault bike : pas d\'intervalles'); }
       else { out.push([`Assault bike : 3 min calme, 8 × (${P.abike} s fort / ${P.abikeRest} tranquille), 3 min calme`,'26 min']); if(P.tabata) out.push(['Tabata assault bike en fin de séance : 8 × (20 s à fond / 10 s)','4 min']); }
     } else if(a==='ABS'){
-      if(P.noRope||P.ropeMax){ out.push(['Abdos : dead bug 3 × 10/côté + planche genoux 3 × 30 s','6 min']); }
-      else { out.push(['Abdos (6 min)','']); out.push(['sub','Planche sur genoux 3 × 30 s']); out.push(['sub','Pallof press à la poulie 3 × 10 par côté']); out.push(['sub','Relevés de genoux allongé, dos plaqué 3 × 12']); }
+      out.push(['Abdos (6 min)','']);
+      out.push(['sub','Planche sur genoux 3 × 30 s']);
+      out.push(['sub','Pallof press à la poulie 3 × 10 par côté']);
+      out.push(['sub','Relevés de genoux allongé, dos plaqué 3 × 12']);
+      out.push(['sub','Dead bug 2 × 10 par côté']);
+    } else if(a==='CIRCUITABS'){
+      out.push(['Circuit abdos, 3 tours','30 s entre exos']);
+    } else if(a==='ss'){ out.push(['ss',b]); out.push(['sub2',c||'']);
     } else if(a==='head'){ out.push(['head',b]);
     } else {
       out.push([a.replace('SETS',P.sets), b.replace('CARDIO',P.cardio+' min')]);
@@ -585,7 +634,7 @@ function renderToday(P){
   }
   const s=SESSIONS[dow]; $('tdTag').textContent=s.tag;
   const {out,adapt}=sessionLines(dow,P);
-  $('tdList').innerHTML=out.map(x=> x[0]==='sub' ? `<li class="sub">${x[1]}</li>` : (x[0]==='head' ? `<li class="head">${x[1]}</li>` : `<li><span>${x[0]}</span><span>${x[1]}</span></li>`)).join('');
+  $('tdList').innerHTML=out.map(x=> x[0]==='sub' ? `<li class="sub">${x[1]}</li>` : (x[0]==='head' ? `<li class="head">${x[1]}</li>` : (x[0]==='ss' ? `<li class="ss"><span>${x[1]}</span><span>binôme</span></li>` : (x[0]==='sub2' ? `<li class="sub2">${x[1]}</li>` : `<li><span>${x[0]}</span><span>${x[1]}</span></li>`)))).join('');
   $('tdAdapt').innerHTML=(P.alert?`<div class="msg warn">${P.alert}</div>`:'')+(adapt.length?`<div class="msg info">Adaptation du coach : ${adapt.join(' · ')}</div>`:'');
   const done=!!state.days[dow-1]; const b=$('tdBtn'); b.style.display='block';
   b.textContent=done?'Séance terminée ✓':'Séance terminée'; b.classList.toggle('done',done);
@@ -667,13 +716,19 @@ const FICHES=[
   ['Écarté poulie / pec-deck','Poulies à hauteur d\'épaule, coudes légèrement pliés et figés.','Ramène les mains devant la poitrine, serre 1 s, reviens lentement.',null,'Plier les coudes. Épaules qui montent.','Si la poulie tire sur le dos : pec-deck assis.'],
   ['Élévations latérales','Haltères légers, assis dos au dossier.','Monte jusqu\'à l\'horizontale, petit doigt un peu plus haut, descends en 2 s.',null,'Balancer le buste. Monter au-dessus de l\'épaule.','Assis, dossier haut : option généralement mieux tolérée pour les lombaires.'],
   ['Triceps poulie corde','Poulie haute, coudes collés au corps, léger penché du buste.','Tends vers le bas en écartant la corde, remonte à 90°.','Expire en tendant.','Coudes qui s\'écartent. Se pencher de plus en plus.','Alternative : extension haltère assis, dossier haut.'],
+  ['Extension triceps au-dessus de la tête','Assis dossier haut, un haltère à deux mains derrière la nuque, ou corde à la poulie.','Tends les bras vers le plafond sans bouger les coudes, descends lentement derrière la tête.','Expire en tendant.','Écarter les coudes. Charge trop lourde qui tire sur l\'épaule.','Dos plaqué au dossier : évite de cambrer quand les bras passent derrière la tête.'],
  ]],
  ['Jeudi, tirage',[
   ['Tirage vertical','Cuisses bloquées, prise un peu plus large que les épaules, paumes vers l\'avant.','Tire vers le haut de la poitrine, coudes vers les hanches, poitrine sortie. Remonte en contrôlant.','Expire en tirant.','Se pencher en arrière. Tirer derrière la nuque : jamais.','Buste stable, pas de balancement. Généralement bien toléré car la colonne n\'est pas chargée.'],
   ['Rowing poitrine appuyée','Coussin réglé pour avoir les bras tendus sans que les épaules soient tirées.','Tire en serrant les omoplates, coudes le long du corps, reviens lentement.','Expire en tirant.','Décoller la poitrine du coussin. Hausser les épaules.','Version choisie car le buste est soutenu. Pas de rowing barre penché pour l\'instant.'],
   ['Tirage horizontal poulie basse','Assis, genoux fléchis, buste droit à 90°.','Tire vers le nombril, buste immobile. Étire sans arrondir le dos.',null,'Buste qui avance et recule. Dos arrondi en étirement.','Si le dos parle : remplace par le rowing poitrine appuyée.'],
+  ['Développé incliné','Banc incliné à 30°, pieds à plat, dos et tête appuyés.','Descends les haltères à hauteur de poitrine, pousse sans verrouiller. Cible le haut des pectoraux.','Expire en poussant.','Banc trop incliné : ce sont les épaules qui prennent. Cambrer le dos.','Dos plaqué au dossier du début à la fin.'],
+  ['Pull-over poulie haute','Debout face à la poulie haute, barre ou corde, bras presque tendus, léger penché.','Ramène la barre vers les cuisses en gardant les bras tendus, contracte les dorsaux, reviens en contrôlant.','Expire en tirant.','Plier les coudes : ça devient un triceps. Balancer le buste.','Buste stable, pas de balancement : aucune charge sur la colonne.'],
+  ['Élévations buste penché','Assis buste penché en avant ou pec-deck inversé, haltères légers.','Ouvre les bras sur les côtés, omoplates serrées, coudes légèrement pliés. Léger et contrôlé.',null,'Trop lourd, le buste se relève à chaque rep.','Préfère la machine pec-deck inversé, buste appuyé : le dos ne travaille pas.'],
+  ['Dips machine ou barre assistée','Machine à assistance réglée pour faire 10 reps propres, ou dips sur barres parallèles.','Descends jusqu\'à ce que les bras soient à 90°, remonte. Buste légèrement penché pour les pectoraux, vertical pour les triceps.','Expire en remontant.','Descendre trop bas : l\'épaule souffre. Se laisser tomber.','Machine assistée au début : tu contrôles la charge.'],
   ['Face pull','Poulie à hauteur du visage, corde, charge légère.','Tire vers le visage en écartant les mains, coudes hauts, serre 1 s.',null,'Trop lourd. Coudes qui descendent.',null],
   ['Curl haltères','Assis dos droit, paumes vers l\'avant.','Coudes fixes, descends en 2 s.',null,'Balancer. Coudes qui partent en avant.','Assis dossier haut.'],
+  ['Curl marteau','Assis ou debout, haltères tenus comme un marteau, pouces vers le haut.','Monte sans tourner le poignet, coudes fixes, descends en 2 s. Cible le brachial, celui qui épaissit le bras.',null,'Balancer le buste. Coude qui avance.','Assis dossier haut si tu le fais après le tirage.'],
  ]],
  ['Vendredi, circuit',[
   ['Goblet squat sur box','Haltère contre la poitrine, banc derrière toi.','Fesses en arrière jusqu\'à toucher le banc, remonte par les talons, poitrine haute.','Inspire en descendant, expire en remontant.','Dos arrondi en bas. Genoux qui rentrent.','Le banc limite la descente. Si le dos gêne, pont fessier à la place.'],
