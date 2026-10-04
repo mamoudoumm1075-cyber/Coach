@@ -1,0 +1,95 @@
+{
+  "maj": "2026-10-04",
+  "niveaux": [
+    {
+      "id": 1, "nom": "Fondations", "min": 115, "max": 999,
+      "deblocage": "On construit la base : technique, régularité, zéro blessure.",
+      "force": [
+        { "t": "Farmer walk, haltères légers, buste droit", "d": "2 × 30 m" }
+      ],
+      "cardio": [],
+      "messages": [
+        "Le plus dur, c'est de venir. Tu viens, le reste suit.",
+        "Chaque séance de ce mois-ci, c'est une brique. On construit.",
+        "Pas besoin d'être fort, besoin d'être régulier.",
+        "Le corps s'adapte en silence. Les résultats arrivent après la régularité.",
+        "Aujourd'hui compte. Même une séance moyenne vaut mieux que zéro.",
+        "Personne ne voit encore le travail. Toi tu sais. Continue."
+      ],
+      "repas": [
+        "poulet rôti sans la peau, carottes et petits pois, un poing de riz",
+        "œufs brouillés, épinards, une tranche de pain complet"
+      ]
+    },
+    {
+      "id": 2, "nom": "Élan", "min": 105, "max": 115,
+      "deblocage": "Sous 115 kg : tu bouges plus facilement. On ajoute du travail de jambes et un peu d'intensité.",
+      "force": [
+        { "t": "Farmer walk", "d": "3 × 30 m" },
+        { "t": "Goblet squat sur box", "d": "3 × 10" }
+      ],
+      "cardio": [
+        { "t": "Stepper ou montée de marches, rythme régulier", "d": "8 min" }
+      ],
+      "messages": [
+        "Sous 115. Tu n'es plus au point de départ, tu es en route.",
+        "Tu montes les escaliers plus facilement ? C'est ça, le vrai progrès.",
+        "La balance descend parce que tu viens. Simple.",
+        "Les vêtements commencent à changer. Garde le rythme.",
+        "Tu as prouvé que tu sais tenir. Maintenant on construit.",
+        "Tes charges montent pendant que ton poids descend. Parfait."
+      ],
+      "repas": [
+        "bœuf sauté aux poivrons, un poing de riz complet",
+        "salade de pois chiches, thon, tomates, oignon rouge"
+      ]
+    },
+    {
+      "id": 3, "nom": "Puissance", "min": 95, "max": 105,
+      "deblocage": "Sous 105 kg : place à la puissance. Swing, fentes et poussée de traîneau débloqués.",
+      "force": [
+        { "t": "Kettlebell swing léger, hanches qui poussent", "d": "4 × 12", "impact": true, "alt": "Pont fessier 3 × 12" },
+        { "t": "Fentes arrière, main sur un support", "d": "3 × 8 par jambe" }
+      ],
+      "cardio": [
+        { "t": "Poussée de traîneau (sled push), ou vélo en côte", "d": "6 × 15 m" }
+      ],
+      "messages": [
+        "Sous 105 kg. Tu n'es plus le même qu'au départ, et ça se voit.",
+        "Plus léger, plus rapide, plus fort. On en profite.",
+        "Les 100 kg sont là, juste devant. Pas de précipitation, de la régularité.",
+        "Tu fais aujourd'hui des exercices que tu ne pouvais pas faire au début.",
+        "Ton cardio a changé. Remarque-le pendant la séance.",
+        "Ce rythme-là, garde-le. C'est lui qui t'amène à 91."
+      ],
+      "repas": [
+        "filet de dinde, haricots verts, patate douce",
+        "poke bowl saumon, riz, edamame, concombre"
+      ]
+    },
+    {
+      "id": 4, "nom": "Athlète", "min": 0, "max": 95,
+      "deblocage": "Sous 95 kg : niveau athlète. Course légère et exercices dynamiques débloqués, si le dos est calme.",
+      "force": [
+        { "t": "Burpees sans saut", "d": "4 × 8", "impact": true, "alt": "Mountain climbers lents 4 × 20 s" },
+        { "t": "Kettlebell swing", "d": "4 × 15", "impact": true, "alt": "Pont fessier 3 × 15" }
+      ],
+      "cardio": [
+        { "t": "Course légère : 6 × (1 min de course / 2 min de marche)", "d": "18 min", "impact": true, "alt": "Vélo 6 × (1 min fort / 2 min calme) 18 min" }
+      ],
+      "messages": [
+        "Sous 95. Tu cours maintenant. Rappelle-toi d'où tu viens.",
+        "La dernière ligne droite. On reste calme et régulier.",
+        "91, puis 88. Tu y es presque. Aucune raison de lâcher maintenant.",
+        "Tu es devenu quelqu'un qui s'entraîne. Ça, ça reste.",
+        "Le plus dur est derrière toi. Le meilleur est devant.",
+        "Termine le travail. Tu sais exactement comment faire."
+      ],
+      "repas": [
+        "steak de thon, ratatouille, quinoa",
+        "poulet tikka maison au yaourt, riz basmati, salade"
+      ]
+    }
+  ],
+  "nouveautes": []
+}

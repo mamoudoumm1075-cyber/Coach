@@ -360,6 +360,22 @@ const SESSIONS={
 
 
 
+/* Contenu évolutif (niveaux, exercices bonus, messages, repas) : contenu.json,
+   enrichi chaque semaine par une routine automatique. Gardé en local pour le hors ligne. */
+const KEY_CONTENT='coach-contenu';
+let CONTENT=null;
+try{ CONTENT=JSON.parse(localStorage.getItem(KEY_CONTENT)||'null'); }catch(e){}
+async function loadContent(){
+  try{ const r=await fetch('contenu.json',{cache:'no-cache'}); if(!r.ok) return; const c=await r.json(); if(!c||!Array.isArray(c.niveaux)) return;
+    CONTENT=c; try{ localStorage.setItem(KEY_CONTENT,JSON.stringify(c)); }catch(e){} render(); }catch(e){}
+}
+/* niveau = meilleur poids atteint (on ne perd pas un niveau pour une pesée) */
+function bestWeight(){ return Math.min(START,...state.entries.map(x=>x.w)); }
+function level(){ if(!CONTENT) return null; const w=bestWeight(); return CONTENT.niveaux.find(n=>w>=n.min&&w<n.max)||null; }
+function checkLevelUp(){ const L=level(); if(!L) return; if(state.level==null){ state.level=L.id; return; }
+  if(L.id>state.level){ state.level=L.id; state.levelUpAt=new Date().toISOString().slice(0,10); persist(); } }
+function recent(iso,days){ return iso && (new Date()-new Date(iso+'T00:00:00'))/864e5 < days; }
+
 /* Variantes : l'app change d'exercice toutes les 4 semaines (nouveau bloc) pour relancer la progression.
    Les deux exercices suivis dans le bilan (presse pecs, tirage vertical) restent fixes, sauf si tu les changes toi-même. */
 const VARIANTS={
@@ -435,7 +451,7 @@ async function load(){
   } else { try{ const o=JSON.parse(raw); if(!Array.isArray(o.entries) || o.entries.length>=SEED.entries.length) state=Object.assign(state,o); }catch(e){} }
   if(!Array.isArray(state.days)||state.days.length!==5) state.days=[0,0,0,0,0];
   if(!Array.isArray(state.milestones)) state.milestones=[];
-  ensureWeek(); checkMilestones(false); render();
+  ensureWeek(); checkMilestones(false); render(); loadContent();
 }
 async function persist(){
   const raw=JSON.stringify(state); let ok=false;
@@ -592,7 +608,7 @@ function computePlan(entries){
    RENDU
 ===================================================================== */
 function render(){
-  ensureWeek();
+  ensureWeek(); checkLevelUp();
   const e=state.entries, last=e[e.length-1], w=last?last.w:START;
   const P=computePlan(e);
   $('topWeek').textContent=P.tag;
@@ -708,6 +724,11 @@ function sessionLines(dow,P){
       const [va,ka]=variant(a); out.push([va.replace('SETS',P.sets), b.replace('SETS',P.sets).replace('CARDIO',P.cardio+' min'), ka]);
     }
   });
+  /* bonus du niveau, avant le cardio/étirements de fin */
+  const L=level(), list=L?((dow===3?L.cardio:L.force)||[]):[];
+  if(list.length){ const fragile=P.noRope||P.ropeMax||P.noRower||P.rowerMax;
+    const add=list.map(f=>{ if(f.impact&&fragile){ if(f.alt) adapt.push(`${f.t} → ${f.alt}`); return f.alt?[f.alt,'']:null; } return [f.t,f.d||'']; }).filter(Boolean);
+    if(add.length) out.splice(out.length-1,0,['head',`Bonus niveau ${L.id} · ${L.nom}`],...add); }
   return {out,adapt};
 }
 function renderToday(P){
@@ -940,7 +961,9 @@ const MSG={
 const GYM_DAYS=[1,2,3,4,5]; /* lundi→vendredi, comme SESSIONS */
 function dayNum(d){ return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5); }
 function pick(arr,n){ return arr[((n%arr.length)+arr.length)%arr.length]; }
-function fill(t,dow,n){ return t.replace('{t}',SESSIONS[dow]?SESSIONS[dow].t.toLowerCase():'séance').replace('{m}',pick(MEALS,n*5+3)).replace(/^./,c=>c.toUpperCase()); }
+function meals(){ const L=level(); return MEALS.concat(L&&L.repas||[]); }
+function cheer(n){ const L=level(); return L&&L.messages&&L.messages.length?pick(L.messages,n*3+1):null; }
+function fill(t,dow,n){ return t.replace('{t}',SESSIONS[dow]?SESSIONS[dow].t.toLowerCase():'séance').replace('{m}',pick(meals(),n*5+3)).replace(/^./,c=>c.toUpperCase()); }
 
 function renderCoachNow(){
   const box=$('coachNow'); if(!box) return;
@@ -954,6 +977,11 @@ function renderCoachNow(){
     if(!done && h<21) out.push(['info',fill(pick(MSG.gym,n),dow,n),'today','Voir la séance']);
     if(done) out.push(['ok',pick(MSG.soirOk,n)]);
   } else out.push(['plain',pick(dow===6?MSG.sam:MSG.dim,n)]);
+  const L=level();
+  if(L && recent(state.levelUpAt,7)) out.unshift(['ok',`<b>Niveau ${L.id} débloqué : ${L.nom}.</b> ${L.deblocage}`,'today','Voir les nouveaux exercices']);
+  const nw=CONTENT&&(CONTENT.nouveautes||[]).filter(x=>recent(x.date,7)).slice(-1)[0];
+  if(nw) out.push(['info','Nouveau : '+nw.texte]);
+  const c=cheer(n); if(c) out.push(['plain',`<b>Niveau ${L.id} · ${L.nom}</b> — ${c}`]);
   if(state.remindersUntil){ const left=(new Date(state.remindersUntil+'T00:00:00')-d)/864e5;
     if(left<7) out.push(['info',left<0?'Tes rappels agenda sont terminés : recharge-les.':'Tes rappels agenda se terminent bientôt : recharge-les.','prog','Recharger']); }
   box.innerHTML=`<div class="card"><h2>Le mot du coach</h2>${out.map((m,i)=>`<div class="msg ${m[0]}">${m[1]}${m[2]?`<button class="btn ghost" data-go="${m[2]}" style="margin-top:8px;min-height:40px;padding:8px">${m[3]}</button>`:''}</div>`).join('')}</div>`;
@@ -979,7 +1007,7 @@ function buildIcs(o,weeks){
     if(dow>=1&&dow<=5){
       if(o.pesee&&dow===5) ev(d,'pesee',o.peseeT,10,'⚖️ '+pick(MSG.pesee,n),0);
       if(o.midi) ev(d,'midi',o.midiT,15,'🍽️ '+fill(pick(MSG.midi,n),dow,n),0);
-      if(o.gym) ev(d,'gym',o.gymT,65,'💪 '+fill(pick(MSG.gym,n),dow,n),30);
+      if(o.gym) ev(d,'gym',o.gymT,65,'💪 '+(n%2&&cheer(n)?SESSIONS[dow].t+' ce soir. '+cheer(n):fill(pick(MSG.gym,n),dow,n)),30);
       if(o.soir) ev(d,'soir',o.soirT,10,'🌙 '+pick(MSG.soirOk,n),0);
     } else if(o.we) ev(d,'we',dow===6?'10:00':'18:00',10,(dow===6?'⚽ ':'🛒 ')+pick(dow===6?MSG.sam:MSG.dim,n),0);
   }

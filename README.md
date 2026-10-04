@@ -15,3 +15,7 @@ Après la première ouverture, l'app fonctionne **hors ligne**.
 - Enregistrées automatiquement dans le téléphone.
 - Onglet Progression → « Télécharger un fichier » pour garder une copie, « Importer un fichier » pour la restaurer.
 - Mise à jour des fichiers : changer `VERSION` dans `sw.js`.
+
+## Contenu évolutif
+
+`contenu.json` contient les niveaux (selon le meilleur poids atteint), les exercices bonus, les messages d'encouragement et les idées repas. L'appli le recharge à chaque ouverture. Une routine hebdomadaire l'enrichit automatiquement (nouveaux messages, repas, exercices, rubrique « nouveautés »).
