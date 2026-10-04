@@ -105,6 +105,11 @@
   .seg{display:flex;gap:5px;flex-wrap:wrap}
   .seg button{flex:1;min-width:40px;min-height:44px;border:1.5px solid var(--line);background:#FAFBFD;border-radius:10px;font-size:16px}
   .seg button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .rem{display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:center;font-size:15px}
+  .rem label{display:flex;gap:8px;align-items:center}
+  .rem small{color:var(--ink2);font-size:13px}
+  .rem input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+  .rem input[type=time]{font:inherit;font-size:15px;padding:6px 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
   .hint{font-size:13px;color:var(--ink2);margin:4px 0 0}
   .sum{margin-top:12px}
   .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -165,6 +170,7 @@
   <div class="view on" id="v-home">
     <div id="trophy"></div>
     <div id="banner"></div>
+    <div id="coachNow"></div>
     <div class="card">
       <div class="muted" id="wLabel">Poids actuel</div>
       <div class="big" id="wNow">121<small> kg</small></div>
@@ -245,6 +251,23 @@
     <div class="card">
       <h2>Historique</h2>
       <div class="tbl" id="hist"></div>
+    </div>
+    <div class="card" id="rappels">
+      <h2>Rappels du coach</h2>
+      <p class="muted" style="margin:0 0 10px">Des notifications sur ton téléphone, avec un message différent à chaque fois. Elles passent par l'agenda : ça marche même appli fermée et sans internet.</p>
+      <div class="rem">
+        <label><input type="checkbox" id="rGym" checked> <span>Heure de la salle <small>· rappel 30 min avant</small></span></label>
+        <input type="time" id="rGymT" value="17:05" aria-label="Heure">
+        <label><input type="checkbox" id="rMidi" checked> Idée repas du midi</label>
+        <input type="time" id="rMidiT" value="11:45" aria-label="Heure">
+        <label><input type="checkbox" id="rPesee" checked> Pesée du vendredi</label>
+        <input type="time" id="rPeseeT" value="07:00" aria-label="Heure">
+        <label><input type="checkbox" id="rSoir" checked> Message du soir</label>
+        <input type="time" id="rSoirT" value="20:30" aria-label="Heure">
+        <label style="grid-column:1/-1"><input type="checkbox" id="rWe" checked> Week-end <small>(foot, repas libre, courses)</small></label>
+      </div>
+      <button class="btn" id="rAdd" style="margin-top:12px">Ajouter les rappels à mon agenda</button>
+      <p class="hint" id="rMsg">8 semaines de rappels. iPhone : ouvre l'appli dans Safari si rien ne s'affiche, puis « Tout ajouter ».</p>
     </div>
     <div class="card">
       <h2>Sauvegarde</h2>
@@ -568,7 +591,7 @@ function render(){
   renderSummary();
 
   /* ---- progression ---- */
-  drawChart(e); renderPerf(e); renderHist(e); renderStoreInfo();
+  drawChart(e); renderPerf(e); renderHist(e); renderStoreInfo(); renderCoachNow();
   if(!$('fiches').children.length) renderFiches();
 }
 
@@ -801,6 +824,137 @@ $('copy').onclick=copySave; $('paste').onclick=pasteSave;
 $('exportFile').onclick=exportFile; $('importFile').onclick=()=>$('fileIn').click(); $('fileIn').onchange=importFile;
 $('reset').onclick=async()=>{ if(confirm('Effacer tout l\'historique, les séances et les paliers ?')){ state={v:21,entries:[],days:[0,0,0,0,0],weekKey:mondayKey(),programStart:mondayKey(),milestones:[],lastSummary:null}; await persist(); render(); toast('Tout est effacé'); } };
 
+
+/* =====================================================================
+   LE COACH QUI PARLE : messages, idées repas, rappels agenda
+===================================================================== */
+const MEALS=[
+  'poulet grillé, haricots verts, un poing de riz',
+  'saumon, brocolis, quelques pommes de terre vapeur',
+  'bowl thon, quinoa, tomates, concombre, maïs',
+  'steak haché 5 %, grosse salade, un poing de pâtes complètes',
+  'omelette 3 œufs aux légumes, salade, une tranche de pain complet',
+  'wrap complet poulet, crudités, sauce au yaourt',
+  'dinde, ratatouille, un poing de semoule',
+  'chili maison bœuf maigre et haricots rouges, salade verte',
+  'cabillaud, courgettes, un poing de riz basmati',
+  'salade lentilles, œufs durs, crudités, vinaigrette légère',
+  'crevettes sautées, légumes au wok, un poing de nouilles',
+  'steak, patate douce au four, haricots verts',
+  'à la cantine, viande ou poisson grillé, double légumes, sauce à part',
+  'dehors, sandwich poulet crudités, pas de frites, eau ou boisson zéro',
+];
+const MSG={
+  gym:[
+    'Ce soir : {t}. Sac prêt ? On y va.',
+    '{t} au programme. Règle des 10 minutes : tu viens, tu commences, tu décides après.',
+    'Pas besoin d\'être motivé, juste d\'être là. Ce soir : {t}.',
+    'Chaque séance compte pour juin 2027. Ce soir : {t}.',
+    'Tu ne regretteras jamais une séance faite. {t} t\'attend.',
+    '1h05 et c\'est réglé. {t}, à tout à l\'heure.',
+    'Ne rate pas deux jours d\'affilée. Ce soir : {t}.',
+    'Oublie pas la salle ! {t} aujourd\'hui. Technique propre, pas d\'ego.',
+    'Ton futur toi te remercie déjà. Go {t}.',
+    'La régularité bat la perfection. {t} ce soir, même une version courte.',
+  ],
+  midi:[
+    'Mange bien ce midi : {m}.',
+    'Idée pour ce midi : {m}.',
+    'Pause déj : {m}. Moitié légumes, une main de protéines.',
+    'Ce midi on assure : {m}. Et 2,5 L d\'eau sur la journée.',
+    'Faim ? Normal. Ce midi : {m}. Mange lentement.',
+    'Assiette du jour : {m}.',
+  ],
+  pesee:[
+    'Jour de pesée ! À jeun, après les toilettes, avant de boire. Puis bilan dans l\'appli.',
+    'Vendredi = bilan. Balance à jeun, tour de taille, et tu notes tout dans l\'appli.',
+    'Pesée ce matin. Un chiffre, pas un jugement : on regarde la tendance.',
+    'Bilan du vendredi : 2 minutes à jeun sur la balance, l\'appli fait le reste.',
+  ],
+  soirOk:[
+    'Séance faite ? Coche-la dans l\'appli. Dîner : un peu de féculents c\'est permis ce soir.',
+    'Bien joué si t\'es passé à la salle. Coche ta séance et dors 7 h.',
+    'Une séance de plus dans la boîte ? Coche-la. Ce soir : protéines + légumes.',
+  ],
+  soirRest:[
+    'Ce soir pas de salle : dîner léger, protéines + légumes, pas de féculents.',
+    'Soirée off : marche 20 min si tu peux, et au lit à une heure correcte.',
+  ],
+  sam:[
+    'Samedi : foot si tu joues, sinon 45 min de marche. Un seul repas libre, prévu.',
+    'Week-end ≠ pause. Bouge un peu aujourd\'hui, et profite de ton repas libre.',
+    'Repas libre ce week-end : un seul, assumé, sans culpabilité.',
+  ],
+  dim:[
+    'Dimanche = préparation. Courses : poulet, œufs, skyr, légumes. Sac de salle prêt pour demain.',
+    'Demain on reprend. Prépare ton sac ce soir, la semaine se gagne maintenant.',
+    'Petite marche aujourd\'hui, et on prévoit les repas de la semaine.',
+  ],
+};
+const GYM_DAYS=[1,2,3,4,5]; /* lundi→vendredi, comme SESSIONS */
+function dayNum(d){ return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5); }
+function pick(arr,n){ return arr[((n%arr.length)+arr.length)%arr.length]; }
+function fill(t,dow,n){ return t.replace('{t}',SESSIONS[dow]?SESSIONS[dow].t.toLowerCase():'séance').replace('{m}',pick(MEALS,n*5+3)).replace(/^./,c=>c.toUpperCase()); }
+
+function renderCoachNow(){
+  const box=$('coachNow'); if(!box) return;
+  const d=new Date(), dow=d.getDay(), h=d.getHours()+d.getMinutes()/60, n=dayNum(d);
+  const done=dow>=1&&dow<=5&&!!state.days[dow-1];
+  const lastD=state.entries.length?state.entries[state.entries.length-1].d:null;
+  const out=[];
+  if(dow===5 && h<14 && lastD!==d.toISOString().slice(0,10)) out.push(['warn',pick(MSG.pesee,n),'bilan','Faire mon bilan']);
+  if(dow>=1&&dow<=5){
+    if(h<14) out.push(['plain',fill(pick(MSG.midi,n),dow,n)]);
+    if(!done && h<21) out.push(['info',fill(pick(MSG.gym,n),dow,n),'today','Voir la séance']);
+    if(done) out.push(['ok',pick(MSG.soirOk,n)]);
+  } else out.push(['plain',pick(dow===6?MSG.sam:MSG.dim,n)]);
+  if(state.remindersUntil){ const left=(new Date(state.remindersUntil+'T00:00:00')-d)/864e5;
+    if(left<7) out.push(['info',left<0?'Tes rappels agenda sont terminés : recharge-les.':'Tes rappels agenda se terminent bientôt : recharge-les.','prog','Recharger']); }
+  box.innerHTML=`<div class="card"><h2>Le mot du coach</h2>${out.map((m,i)=>`<div class="msg ${m[0]}">${m[1]}${m[2]?`<button class="btn ghost" data-go="${m[2]}" style="margin-top:8px;min-height:40px;padding:8px">${m[3]}</button>`:''}</div>`).join('')}</div>`;
+  box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ go(b.dataset.go); if(b.dataset.go==='prog') $('rappels').scrollIntoView({behavior:'smooth'}); });
+}
+
+/* ---------- agenda (.ics) : les rappels marchent appli fermée ---------- */
+function icsEsc(t){ return t.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function icsFold(line){ const enc=new TextEncoder(); let out='', cur='', len=0;
+  for(const ch of line){ const b=enc.encode(ch).length; if(len+b>73){ out+=cur+'\r\n '; cur=''; len=1; } cur+=ch; len+=b; } return out+cur; }
+function icsDate(d,hm){ const [H,M]=hm.split(':').map(Number); const p=x=>String(x).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(H)}${p(M)}00`; }
+function addMin(hm,m){ let [H,M]=hm.split(':').map(Number); let t=H*60+M+m; t=(t+1440)%1440; return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`; }
+function buildIcs(o,weeks){
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Coach//Rappels//FR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:Coach'];
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  const ev=(d,kind,hm,dur,title,alarmBefore)=>{ const n=dayNum(d);
+    L.push('BEGIN:VEVENT',`UID:coach-${kind}-${n}@coach`,`DTSTAMP:${stamp}`,`DTSTART:${icsDate(d,hm)}`,`DTEND:${icsDate(d,addMin(hm,dur))}`,
+      icsFold('SUMMARY:'+icsEsc(title)),'TRANSP:TRANSPARENT','CATEGORIES:Coach',
+      'BEGIN:VALARM','ACTION:DISPLAY',icsFold('DESCRIPTION:'+icsEsc(title)),`TRIGGER:-PT${alarmBefore}M`,'END:VALARM','END:VEVENT'); };
+  const start=new Date(); start.setHours(0,0,0,0); start.setDate(start.getDate()+1);
+  let last=start;
+  for(let i=0;i<weeks*7;i++){ const d=new Date(start); d.setDate(start.getDate()+i); const dow=d.getDay(), n=dayNum(d); last=d;
+    if(dow>=1&&dow<=5){
+      if(o.pesee&&dow===5) ev(d,'pesee',o.peseeT,10,'⚖️ '+pick(MSG.pesee,n),0);
+      if(o.midi) ev(d,'midi',o.midiT,15,'🍽️ '+fill(pick(MSG.midi,n),dow,n),0);
+      if(o.gym) ev(d,'gym',o.gymT,65,'💪 '+fill(pick(MSG.gym,n),dow,n),30);
+      if(o.soir) ev(d,'soir',o.soirT,10,'🌙 '+pick(MSG.soirOk,n),0);
+    } else if(o.we) ev(d,'we',dow===6?'10:00':'18:00',10,(dow===6?'⚽ ':'🛒 ')+pick(dow===6?MSG.sam:MSG.dim,n),0);
+  }
+  L.push('END:VCALENDAR');
+  return {ics:L.join('\r\n')+'\r\n', until:last.toISOString().slice(0,10)};
+}
+function readRem(){ return {gym:$('rGym').checked,gymT:$('rGymT').value||'17:05',midi:$('rMidi').checked,midiT:$('rMidiT').value||'11:45',
+  pesee:$('rPesee').checked,peseeT:$('rPeseeT').value||'07:00',soir:$('rSoir').checked,soirT:$('rSoirT').value||'20:30',we:$('rWe').checked}; }
+function loadRem(){ const o=state.reminders; if(!o) return;
+  $('rGym').checked=o.gym; $('rGymT').value=o.gymT; $('rMidi').checked=o.midi; $('rMidiT').value=o.midiT;
+  $('rPesee').checked=o.pesee; $('rPeseeT').value=o.peseeT; $('rSoir').checked=o.soir; $('rSoirT').value=o.soirT; $('rWe').checked=o.we; }
+$('rAdd').onclick=async()=>{
+  const o=readRem(); if(!o.gym&&!o.midi&&!o.pesee&&!o.soir&&!o.we){ toast('Coche au moins un rappel'); return; }
+  const {ics,until}=buildIcs(o,8);
+  const file=new File([ics],'coach-rappels.ics',{type:'text/calendar'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download='coach-rappels.ics';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  state.reminders=o; state.remindersUntil=until; await persist(); renderCoachNow();
+  $('rMsg').textContent=`Rappels prêts jusqu'au ${fmtDate(until)} — ouvre le fichier et choisis « Tout ajouter » / « Importer ». L'appli te préviendra quand il faudra les recharger.`;
+};
+
 /* ---------- navigation ---------- */
 const TITLES={home:'Accueil',today:'Aujourd\'hui',bilan:'Bilan',prog:'Progression',exos:'Exercices'};
 function go(v){
@@ -811,7 +965,7 @@ function go(v){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
 if('serviceWorker' in navigator && location.protocol!=='file:'){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
-load().then(()=>{ if(state.lastTrophy && !state.trophySeen){ state.trophySeen=true; persist(); } });
+load().then(()=>{ loadRem(); if(state.lastTrophy && !state.trophySeen){ state.trophySeen=true; persist(); } });
 </script>
 </body>
 </html>
