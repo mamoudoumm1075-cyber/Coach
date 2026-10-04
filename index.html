@@ -7,8 +7,9 @@
 <meta name="theme-color" content="#10213A">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Coach">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2310213A'/%3E%3Ctext x='90' y='118' text-anchor='middle' font-family='Arial' font-weight='700' font-size='84' fill='%23F4600F'%3E88%3C/text%3E%3C/svg%3E">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Coach%20Mamoudou%22%2C%22short_name%22%3A%22Coach%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F3F5F8%22%2C%22theme_color%22%3A%22%2310213A%22%2C%22start_url%22%3A%22.%22%7D">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Coach — Mamoudou</title>
 <style>
   :root{
@@ -252,7 +253,12 @@
         <button class="btn ghost" id="copy">Copier ma sauvegarde</button>
         <button class="btn ghost" id="paste">Restaurer</button>
       </div>
-      <p class="hint">Copie cette sauvegarde dans tes notes si tu veux une sauvegarde indépendante.</p>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost" id="exportFile">Télécharger un fichier</button>
+        <button class="btn ghost" id="importFile">Importer un fichier</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json,.json" style="display:none">
+      <p class="hint">Tout reste sur ton téléphone. Télécharge un fichier de sauvegarde de temps en temps (avant de changer de téléphone ou de vider le navigateur).</p>
       <p class="hint" id="copyMsg"></p>
       <textarea id="saveBox" style="display:none" aria-label="Sauvegarde"></textarea>
       <button class="btn ghost" id="reset" style="margin-top:12px;color:var(--warn)">Tout effacer</button>
@@ -360,6 +366,7 @@ function sessionsDone(){ return state.days.reduce((a,b)=>a+b,0); }
    STOCKAGE
 ===================================================================== */
 async function load(){
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
   let raw=null;
   try{ const l=localStorage.getItem(KEY); if(l){ raw=l; storeMode='local'; } }catch(e){}
   if(!raw){ try{ if(window.storage){ const r=await window.storage.get(KEY,false); if(r&&r.value){ raw=r.value; storeMode='app'; } } }catch(e){} }
@@ -368,7 +375,7 @@ async function load(){
     try{ if(window.storage){ const r=await window.storage.get(KEY_V1,false); if(r&&r.value) v1=r.value; } }catch(e){}
     if(!v1){ try{ v1=localStorage.getItem(KEY_V1); }catch(e){} }
     if(v1){ try{ const o=JSON.parse(v1); state.entries=o.entries||[]; state.days=o.days||[0,0,0,0,0]; state.weekKey=mondayKey(); if(state.entries.length){ const d0=new Date(state.entries[0].d+'T00:00:00'); d0.setDate(d0.getDate()-4); state.programStart=mondayKey(d0); } }catch(e){} }
-  } else { try{ const o=JSON.parse(raw); if(!o.seedDate || o.seedDate>=SEED.seedDate) state=Object.assign(state,o); }catch(e){} }
+  } else { try{ const o=JSON.parse(raw); if(!Array.isArray(o.entries) || o.entries.length>=SEED.entries.length) state=Object.assign(state,o); }catch(e){} }
   if(!Array.isArray(state.days)||state.days.length!==5) state.days=[0,0,0,0,0];
   if(!Array.isArray(state.milestones)) state.milestones=[];
   ensureWeek(); checkMilestones(false); render();
@@ -381,17 +388,30 @@ async function persist(){
   renderStoreInfo();
 }
 function renderStoreInfo(){
-  const t={app:'Sauvegarde automatique active.',local:'Sauvegarde automatique active (navigateur).',none:'Pas de sauvegarde entre deux ouvertures ici : ton coach met le fichier à jour chaque semaine. Données du fichier au '+SEED.seedDate+'.',unknown:'Données du fichier au '+SEED.seedDate+'. La sauvegarde automatique sera testée à ta première action.'}[storeMode];
+  const t={app:'Sauvegarde automatique active.',local:'Sauvegarde automatique active (navigateur).',none:'Ce navigateur bloque l\'enregistrement (navigation privée ?). Ouvre l\'app dans un navigateur normal, ou télécharge un fichier de sauvegarde après chaque bilan.',unknown:'La sauvegarde automatique sera activée à ta première action.'}[storeMode];
   $('storeInfo').textContent=t;
-  $('banner').innerHTML = storeMode==='none' ? '<div class="msg info">Cette app n\'enregistre pas entre deux ouvertures. Envoie tes séances et ton bilan à ton coach : il met le fichier à jour chaque semaine.</div>' : '';
+  $('banner').innerHTML = storeMode==='none' ? '<div class="msg info">Ce navigateur n\'enregistre pas entre deux ouvertures (navigation privée ?). Ouvre l\'app normalement ou télécharge un fichier de sauvegarde (onglet Progression).</div>' : '';
 }
 async function copySave(){
   const raw=JSON.stringify(state);
-  try{ await navigator.clipboard.writeText(raw); $('copyMsg').textContent='Copiée. Colle-la dans tes notes ou envoie-la à ton coach.'; toast('Sauvegarde copiée'); }
+  try{ await navigator.clipboard.writeText(raw); $('copyMsg').textContent='Copiée. Colle-la dans tes notes.'; toast('Sauvegarde copiée'); }
   catch(e){ $('saveBox').value=raw; $('saveBox').style.display='block'; $('copyMsg').textContent='Sélectionne et copie le texte ci-dessous.'; }
 }
 async function pasteSave(){
   const v=prompt('Colle ta sauvegarde ici :'); if(!v) return;
+  await restoreFrom(v);
+}
+function exportFile(){
+  const blob=new Blob([JSON.stringify(state,null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`coach-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  state.lastExport=new Date().toISOString().slice(0,10); persist(); toast('Fichier téléchargé');
+}
+async function importFile(ev){
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  await restoreFrom(await f.text());
+}
+async function restoreFrom(v){
   try{ const o=JSON.parse(v); if(!o.entries) throw 0; state=Object.assign({v:21,entries:[],days:[0,0,0,0,0],weekKey:'',programStart:'',milestones:[],lastSummary:null},o);
     if(!o.v){ state.weekKey=mondayKey(); } ensureWeek(); checkMilestones(false); await persist(); render(); toast('Sauvegarde restaurée'); }
   catch(e){ $('copyMsg').textContent='Texte invalide : vérifie que tu as tout collé, du premier { au dernier }.'; }
@@ -778,6 +798,7 @@ $('save').onclick=async()=>{
   if(newM){ go('home'); } else { $('bilanSummary').scrollIntoView({behavior:'smooth',block:'start'}); }
 };
 $('copy').onclick=copySave; $('paste').onclick=pasteSave;
+$('exportFile').onclick=exportFile; $('importFile').onclick=()=>$('fileIn').click(); $('fileIn').onchange=importFile;
 $('reset').onclick=async()=>{ if(confirm('Effacer tout l\'historique, les séances et les paliers ?')){ state={v:21,entries:[],days:[0,0,0,0,0],weekKey:mondayKey(),programStart:mondayKey(),milestones:[],lastSummary:null}; await persist(); render(); toast('Tout est effacé'); } };
 
 /* ---------- navigation ---------- */
@@ -789,6 +810,7 @@ function go(v){
   if(v==='home' && state.lastTrophy && !state.trophySeen){ state.trophySeen=true; persist(); }
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+if('serviceWorker' in navigator && location.protocol!=='file:'){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 load().then(()=>{ if(state.lastTrophy && !state.trophySeen){ state.trophySeen=true; persist(); } });
 </script>
 </body>
