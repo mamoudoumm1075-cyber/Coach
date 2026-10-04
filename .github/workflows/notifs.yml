@@ -1,0 +1,43 @@
+# Envoie les vraies notifications Coach sur le téléphone.
+# Réglage unique : coller le code donné par l'appli dans le secret COACH_PUSH
+# (Settings → Secrets and variables → Actions → New repository secret).
+name: Notifications Coach
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Envoyer une notif d'essai tout de suite"
+        type: boolean
+        default: true
+concurrency: notifs
+permissions:
+  contents: read
+jobs:
+  envoyer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-audit --no-fund web-push@3
+      - name: Reprendre où on en était
+        uses: actions/cache/restore@v4
+        with:
+          path: .notifs-state.json
+          key: notifs-state-${{ github.run_id }}
+          restore-keys: notifs-state-
+      - name: Envoyer les notifs à l'heure
+        run: node scripts/notifs.mjs
+        env:
+          COACH_PUSH: ${{ secrets.COACH_PUSH }}
+          TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test && '1' || '' }}
+      - name: Retenir ce qui a été envoyé
+        if: always() && hashFiles('.notifs-state.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .notifs-state.json
+          key: notifs-state-${{ github.run_id }}
