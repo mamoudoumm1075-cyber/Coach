@@ -1038,7 +1038,8 @@ function buildIcs(o,weeks){
     } else if(o.we) ev(d,'we',dow===6?'10:00':'18:00',10,(dow===6?'⚽ ':'🛒 ')+pick(dow===6?MSG.sam:MSG.dim,n),0);
   }
   L.push('END:VCALENDAR');
-  return {ics:L.join('\r\n')+'\r\n', until:last.toISOString().slice(0,10)};
+  const p2=x=>String(x).padStart(2,'0');
+  return {ics:L.join('\r\n')+'\r\n', until:`${last.getFullYear()}-${p2(last.getMonth()+1)}-${p2(last.getDate())}`};
 }
 function readRem(){ return {gym:$('rGym').checked,gymT:$('rGymT').value||'17:05',midi:$('rMidi').checked,midiT:$('rMidiT').value||'11:45',
   pesee:$('rPesee').checked,peseeT:$('rPeseeT').value||'07:00',soir:$('rSoir').checked,soirT:$('rSoirT').value||'20:30',we:$('rWe').checked}; }
