@@ -230,6 +230,26 @@
   .sheet p b{display:block;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px}
   .sheet p.dos{background:var(--info-bg);color:var(--info-ink);padding:9px 11px;border-radius:10px}
   .sheet .btn{margin-top:8px}
+  /* ---------- carnet de charges ---------- */
+  .exl li .vol.logged{color:var(--ok);font-weight:700}
+  .lg{background:var(--bg);border-radius:14px;padding:12px;margin:10px 0}
+  .lg-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .lg-h b{font-size:16px}.lg-h span{font-size:13px;color:var(--ink2);white-space:nowrap}
+  .lg-last{font-size:13px;color:var(--ink2);margin-top:3px}
+  .lg-sug{font-size:14px;color:var(--ok-ink);background:var(--ok-bg);border-radius:10px;padding:7px 10px;margin-top:8px;font-weight:600}
+  .lg-row{display:grid;grid-template-columns:64px 52px 1fr 52px;gap:8px;align-items:center;margin-top:10px}
+  .lg-row span{font-size:14px;color:var(--ink2)}
+  .lg-row button{height:52px;border:1.5px solid var(--line);background:var(--card);border-radius:12px;font-size:24px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .lg-row button:active{transform:scale(.95)}
+  .lg-row input{height:52px;width:100%;text-align:center;font:inherit;font-size:22px;font-weight:800;border:1.5px solid var(--line);border-radius:12px;background:var(--field);color:var(--ink)}
+  .hl{margin-top:12px}.hl>b{font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+  .hl ul{list-style:none;padding:0;margin:4px 0 0}.hl li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .allc{margin-top:6px}.allc>b{display:block;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px}
+  .allc .kv span small{display:block;font-size:12px;color:var(--ink2)}
+  .allc em{font-style:normal;font-size:13px;margin-left:4px}.allc em.up{color:var(--ok)}.allc em.down{color:var(--warn)}
+  .perf .allc{background:none;padding:0}
+  .allc .kv b{white-space:nowrap;max-width:none}
+  .perf .allc .kv{background:none;padding:8px 0;border-radius:0}
   /* ---------- confettis ---------- */
   .confetti{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
   .confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:fall 1.6s cubic-bezier(.2,.6,.4,1) forwards}
@@ -772,6 +792,7 @@ function render(){
   seg('segS',5,'s'); slider('segP','p',v=>['😌','😌','🙂','🙂','😐','😐','😣','😣','😖','😖','😖'][v],'0 · rien','10 · très fort'); slider('segH','h',v=>['😌','😌','🙂','🙂','😐','😐','😕','😩','😩','😩','😩'][v],'0 · jamais faim','10 · tout le temps');
   $('segSHint').textContent=`Pré-rempli avec tes cases cochées : ${n}/5.`;
   if(last){ $('c2').value=last.c2??''; $('c3').value=last.c3??''; $('c1').value=last.c1??''; }
+  prefillBilan();
   renderSummary();
 
   /* ---- progression ---- */
@@ -871,13 +892,15 @@ function renderToday(P){
   out.forEach(x=>{
     if(x[0]==='head'){ html+=`<li class="head">${x[1]}</li>`; return; }
     if(x[0]==='sub'){ html+=`<li class="sub">${x[1]}</li>`; return; }
-    if(x[0]==='sub2'){ const it=items[items.length-1]; it.alt=x[1]; it.k2=x[2]; html+=`<li class="sub2">${x[1]}</li>`; return; }
-    const ss=x[0]==='ss', i=items.length; items.push(ss?{name:x[1],vol:'',k:x[2]}:{name:x[0],vol:x[1],k:x[2]});
+    if(x[0]==='sub2'){ const it=items[items.length-1]; it.alt=x[1]; it.k2=x[2]; it.labels.push(exLabel(x[1])); it.targets.push(target(x[1])); html+=`<li class="sub2">${x[1]}</li>`; return; }
+    const ss=x[0]==='ss', i=items.length;
+    items.push(ss?{name:x[1],vol:'',k:x[2],labels:[exLabel(x[1])],targets:[target(x[1])]}:{name:x[0],vol:x[1],k:x[2],labels:[exLabel(x[0])],targets:[target(x[1])]});
     html+=`<li class="it${ss?' ss':''}" data-i="${i}"><button class="ck" aria-label="Exercice fait"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><span class="nm">${ss?x[1]:x[0]}${ss?'<small>en binôme</small>':''}</span><span class="vol">${ss?'':x[1]}</span></li>`;
   });
-  TD.items=items; $('tdList').innerHTML=html; $('tdProg').style.display='';
+  TD.items=items; TD.progress=/^Si toutes/.test(P.charge); $('tdList').innerHTML=html; $('tdProg').style.display='';
   $('tdList').querySelectorAll('li.it').forEach(li=>{ const i=+li.dataset.i;
-    li.querySelector('.ck').onclick=ev=>{ ev.stopPropagation(); toggleEx(i); };
+    li.querySelector('.ck').onclick=ev=>{ ev.stopPropagation(); const it=TD.items[i];
+      if(!exDone().includes(i) && it.targets.some(Boolean)) openLog(i); else toggleEx(i); };
     li.onclick=()=>openSheet(i); });
   paintEx();
   $('tdAdapt').innerHTML=(P.alert?`<div class="msg warn">${P.alert}</div>`:'')+(adapt.length?`<div class="msg info">Adaptation du coach : ${adapt.join(' · ')}</div>`:'');
@@ -888,14 +911,54 @@ function renderToday(P){
 }
 
 const TD={items:[]};
+/* ---------- carnet de charges ---------- */
+const isoDay=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function exLabel(t){ return (t||'').replace(/^\+ /,'').replace(/\s+\d+\s*×.*$/,'').trim(); }
+function exKey(l){ return l.toLowerCase(); }
+function target(t){ const m=(t||'').match(/(\d+)\s*×\s*(\d+)/); return m?{s:+m[1],r:+m[2]}:null; }
+function hist(l){ state.log=state.log||{}; return state.log[exKey(l)]||[]; }
+function todayLog(l){ return hist(l).find(e=>e.d===isoDay())||null; }
+function lastBefore(l){ const t=isoDay(); return [...hist(l)].reverse().find(e=>e.d!==t)||null; }
+function dropTodayLog(l){ const k=exKey(l), t=isoDay(); if(state.log&&state.log[k]) state.log[k]=state.log[k].filter(e=>e.d!==t); }
+function addLog(l,kg,r){ dropTodayLog(l); state.log=state.log||{}; const k=exKey(l); (state.log[k]=state.log[k]||[]).push({d:isoDay(),kg,r,n:l}); if(state.log[k].length>80) state.log[k].shift(); }
+const num=v=>{ const x=parseFloat(String(v).replace(',','.')); return isNaN(x)?null:x; };
+function openLog(i){
+  const it=TD.items[i];
+  const blocks=it.labels.map((l,j)=>{ const t=it.targets[j]; if(!t) return '';
+    const prev=lastBefore(l); let kg=prev&&prev.kg!=null?prev.kg:'', sug='';
+    if(prev&&prev.kg!=null){
+      if(prev.r>=t.r && TD.progress){ kg=Math.round((prev.kg+2.5)*10)/10; sug=`Toutes les reps la dernière fois : on monte à ${f1(kg)} kg.`; }
+      else if(prev.r<t.r) sug=`Même charge, vise ${Math.min(prev.r+1,t.r)} reps.`;
+      else sug='Même charge cette semaine : on consolide.'; }
+    return `<div class="lg" data-j="${j}"><div class="lg-h"><b>${l}</b><span>objectif ${t.s} × ${t.r}</span></div>`+
+      `<div class="lg-last">${prev?`Dernière fois (${fmtDate(prev.d)}) : ${prev.kg!=null?f1(prev.kg)+' kg':'poids du corps'} × ${prev.r}`:'Première fois : prends une charge où il te reste 2 reps en réserve.'}</div>`+
+      (sug?`<div class="lg-sug">${sug}</div>`:'')+
+      `<div class="lg-row"><span>Charge</span><button data-f="kg" data-d="-2.5" aria-label="moins 2,5 kg">−</button><input data-f="kg" inputmode="decimal" value="${kg===''?'':String(kg).replace('.',',')}" placeholder="kg"><button data-f="kg" data-d="2.5" aria-label="plus 2,5 kg">+</button></div>`+
+      `<div class="lg-row"><span>Reps</span><button data-f="r" data-d="-1" aria-label="moins 1 rep">−</button><input data-f="r" inputmode="numeric" value="${t.r}"><button data-f="r" data-d="1" aria-label="plus 1 rep">+</button></div></div>`; }).join('');
+  $('shT').textContent='Noter la série'; $('shV').textContent='Charge utilisée et reps sur ta dernière série. Laisse la charge vide si c\'est au poids du corps.';
+  $('shB').innerHTML=blocks;
+  $('shB').querySelectorAll('.lg-row button').forEach(b=>b.onclick=()=>{ const inp=b.parentNode.querySelector('input'); const v=num(inp.value)??(b.dataset.f==='kg'?0:0);
+    const nv=Math.max(0,Math.round((v+ +b.dataset.d)*10)/10); inp.value=String(nv).replace('.',','); try{ navigator.vibrate&&navigator.vibrate(8); }catch(e){} });
+  $('shA').innerHTML=`<button class="btn" data-a="ok">Valider ✓</button><button class="btn ghost" data-a="tick">Juste cocher, sans noter</button>`;
+  $('shA').querySelector('[data-a=ok]').onclick=async()=>{
+    $('shB').querySelectorAll('.lg').forEach(div=>{ const j=+div.dataset.j, kg=num(div.querySelector('input[data-f=kg]').value), r=num(div.querySelector('input[data-f=r]').value);
+      if(r!=null) addLog(it.labels[j],kg,Math.round(r)); });
+    closeSheet(); await toggleEx(i); };
+  $('shA').querySelector('[data-a=tick]').onclick=async()=>{ closeSheet(); await toggleEx(i); };
+  $('sheet').classList.add('on'); $('sheet').setAttribute('aria-hidden','false');
+}
 function exDone(){ const k=new Date().toDateString(); if(!state.exDone||state.exDone.d!==k) state.exDone={d:k,list:[]}; return state.exDone.list; }
 function paintEx(){ const L=exDone(), n=TD.items.length, d=TD.items.filter((_,i)=>L.includes(i)).length;
-  $('tdList').querySelectorAll('li.it').forEach(li=>li.classList.toggle('done',L.includes(+li.dataset.i)));
+  $('tdList').querySelectorAll('li.it').forEach(li=>{ const i=+li.dataset.i, on=L.includes(i), v=li.querySelector('.vol'), it=TD.items[i];
+    li.classList.toggle('done',on); if(v.dataset.o==null) v.dataset.o=v.textContent;
+    const today=it.labels.map(l=>todayLog(l)).filter(Boolean);
+    v.classList.toggle('logged',on&&today.length>0);
+    v.textContent=on&&today.length ? today.map(e=>(e.kg!=null?f1(e.kg)+' kg':'PDC')+' × '+e.r).join(' · ') : v.dataset.o; });
   $('tdProg').querySelector('b').style.width=(n?d/n*100:0)+'%'; $('tdProg').querySelector('span').textContent=`${d}/${n} exercices`;
   const dow=new Date().getDay(), sessionDone=dow>=1&&dow<=5&&!!state.days[dow-1];
   $('tdBtn').classList.toggle('pulse', n>0 && d===n && !sessionDone);
 }
-async function toggleEx(i){ const L=exDone(), j=L.indexOf(i); if(j<0) L.push(i); else L.splice(j,1);
+async function toggleEx(i){ const L=exDone(), j=L.indexOf(i); if(j<0) L.push(i); else { L.splice(j,1); TD.items[i].labels.forEach(dropTodayLog); }
   try{ navigator.vibrate&&navigator.vibrate(15); }catch(e){}
   paintEx(); await persist();
   if(j<0 && L.length===TD.items.length) toast('Tout est fait 💪 Valide ta séance'); }
@@ -915,6 +978,8 @@ function openSheet(i){
   const acts=[`<button class="btn${isDone?' ghost':''}" data-a="done">${isDone?'Pas encore fait':'C\'est fait ✓'}</button>`];
   if(it.k) acts.push(`<button class="btn ghost" data-a="swap" data-k="${it.k}">↻ Machine prise : autre exercice</button>`);
   if(it.k2) acts.push(`<button class="btn ghost" data-a="swap" data-k="${it.k2}">↻ Remplacer le 2e exercice</button>`);
+  const hl=it.labels.flatMap(l=>hist(l).slice(-4).reverse().map(e=>`<li><span>${it.labels.length>1?l+' · ':''}${fmtDate(e.d)}</span><b>${e.kg!=null?f1(e.kg)+' kg':'PDC'} × ${e.r}</b></li>`));
+  if(hl.length) $('shB').innerHTML+=`<div class="hl"><b>Tes dernières séances</b><ul>${hl.join('')}</ul></div>`;
   $('shA').innerHTML=acts.join('');
   $('shA').querySelectorAll('button').forEach(b=>b.onclick=async()=>{ closeSheet(); if(b.dataset.a==='done') toggleEx(i); else await swapExercise(b.dataset.k); });
   $('sheet').classList.add('on'); $('sheet').setAttribute('aria-hidden','false');
@@ -940,6 +1005,9 @@ function seg(id,max,key){
   }
 }
 
+function prefillBilan(){ /* charges notées pendant la semaine → bilan */
+  [['c2','Presse pectoraux'],['c3','Tirage vertical']].forEach(([id,l])=>{ const e=hist(l).filter(x=>x.kg!=null).slice(-1)[0];
+    if(e && (new Date()-new Date(e.d+'T00:00:00'))/864e5<7 && document.activeElement!==$(id)) $(id).value=e.kg; }); }
 function slider(id,key,face,lo,hi){
   const box=$(id), v=sel[key]??0; box.className='';
   box.innerHTML=`<div class="sl"><input type="range" min="0" max="10" step="1" value="${v}"><b>${v} ${face(v)}</b></div><div class="sl-scale"><span>${lo}</span><span>${hi}</span></div>`;
@@ -965,6 +1033,9 @@ function renderPerf(e){
     const [d1,c1]=perfDelta(last,first,u), [d2,c2]=perfDelta(last,prev,u);
     return `<div class="pf"><div><div class="n">${n}</div><span class="d ${c1}">départ ${vals.length>1?d1:'–'}</span><span class="d ${c2}">sem. passée ${prev!=null?d2:'–'}</span><span class="d flat">record ${f1(best)} ${u}</span></div><b>${f1(last)} ${u}</b></div>`;
   }).join('');
+  const rows=Object.values(state.log||{}).filter(h=>h.some(e=>e.kg!=null)).map(h=>{ const w=h.filter(e=>e.kg!=null), a=w[0], z=w[w.length-1]; return {n:z.n||'',a,z,best:Math.max(...w.map(e=>e.kg))}; })
+    .sort((x,y)=>x.z.d<y.z.d?1:-1).slice(0,12);
+  if(rows.length) box.innerHTML+=`<div class="allc"><b>Toutes tes charges</b>${rows.map(r=>{ const d=r.z.kg-r.a.kg; return `<div class="kv"><span>${r.n}<small>${fmtDate(r.z.d)} · record ${f1(r.best)} kg</small></span><b>${f1(r.z.kg)} kg × ${r.z.r}${d?` <em class="${d>0?'up':'down'}">${d>0?'+':''}${f1(d)}</em>`:''}</b></div>`; }).join('')}</div>`;
   $('perfHint').textContent='Une charge ne monte que si toutes les reps passent, technique propre, dos calme et 4 séances dans la semaine.';
 }
 
@@ -1304,6 +1375,7 @@ function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>{ if(b.dataset.v===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   setHead(v); window.scrollTo({top:0});
+  if(v==='bilan') prefillBilan();
   if(v==='home' && state.lastTrophy && !state.trophySeen){ state.trophySeen=true; persist(); }
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
