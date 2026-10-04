@@ -2,10 +2,23 @@
   "maj": "2026-10-04",
   "niveaux": [
     {
-      "id": 1, "nom": "Fondations", "min": 115, "max": 999,
+      "id": 1,
+      "nom": "Fondations",
+      "min": 115,
+      "max": 999,
       "deblocage": "On construit la base : technique, régularité, zéro blessure.",
       "force": [
-        { "t": "Farmer walk, haltères légers, buste droit", "d": "2 × 30 m" }
+        {
+          "t": "Farmer walk, haltères légers, buste droit",
+          "d": "2 × 30 m",
+          "fiche": [
+            "Un haltère dans chaque main, bras le long du corps, épaules basses.",
+            "Marche à petits pas réguliers, buste droit, regard devant.",
+            "Respire calmement, ventre serré.",
+            "Pencher d'un côté. Hausser les épaules.",
+            "Ramasse et repose les haltères jambes fléchies, dos droit."
+          ]
+        }
       ],
       "cardio": [],
       "messages": [
@@ -22,14 +35,47 @@
       ]
     },
     {
-      "id": 2, "nom": "Élan", "min": 105, "max": 115,
+      "id": 2,
+      "nom": "Élan",
+      "min": 105,
+      "max": 115,
       "deblocage": "Sous 115 kg : tu bouges plus facilement. On ajoute du travail de jambes et un peu d'intensité.",
       "force": [
-        { "t": "Farmer walk", "d": "3 × 30 m" },
-        { "t": "Goblet squat sur box", "d": "3 × 10" }
+        {
+          "t": "Farmer walk",
+          "d": "3 × 30 m",
+          "fiche": [
+            "Un haltère dans chaque main, bras le long du corps, épaules basses.",
+            "Marche à petits pas réguliers, buste droit, regard devant.",
+            "Respire calmement, ventre serré.",
+            "Pencher d'un côté. Hausser les épaules.",
+            "Ramasse et repose les haltères jambes fléchies, dos droit."
+          ]
+        },
+        {
+          "t": "Goblet squat sur box",
+          "d": "3 × 10",
+          "fiche": [
+            "Haltère contre la poitrine, banc derrière toi, pieds largeur d'épaules.",
+            "Fesses en arrière jusqu'à toucher le banc, remonte en poussant dans les talons.",
+            "Inspire en descendant, expire en montant.",
+            "Genoux qui rentrent. Dos qui s'arrondit.",
+            "Le banc limite la profondeur : on reste dans la zone confortable."
+          ]
+        }
       ],
       "cardio": [
-        { "t": "Stepper ou montée de marches, rythme régulier", "d": "8 min" }
+        {
+          "t": "Stepper ou montée de marches, rythme régulier",
+          "d": "8 min",
+          "fiche": [
+            "Stepper ou escalier, mains légèrement posées sur les barres.",
+            "Pas réguliers, pied entier sur la marche, buste droit.",
+            "Tu dois pouvoir dire une phrase.",
+            "S'appuyer de tout son poids sur les barres.",
+            null
+          ]
+        }
       ],
       "messages": [
         "Sous 115. Tu n'es plus au point de départ, tu es en route.",
@@ -45,14 +91,49 @@
       ]
     },
     {
-      "id": 3, "nom": "Puissance", "min": 95, "max": 105,
+      "id": 3,
+      "nom": "Puissance",
+      "min": 95,
+      "max": 105,
       "deblocage": "Sous 105 kg : place à la puissance. Swing, fentes et poussée de traîneau débloqués.",
       "force": [
-        { "t": "Kettlebell swing léger, hanches qui poussent", "d": "4 × 12", "impact": true, "alt": "Pont fessier 3 × 12" },
-        { "t": "Fentes arrière, main sur un support", "d": "3 × 8 par jambe" }
+        {
+          "t": "Kettlebell swing léger, hanches qui poussent",
+          "d": "4 × 12",
+          "impact": true,
+          "alt": "Pont fessier 3 × 12",
+          "fiche": [
+            "Kettlebell légère au sol devant toi, pieds un peu plus larges que les épaules.",
+            "Hanches en arrière (comme pour fermer une porte avec les fesses), puis pousse fort des hanches : la kettlebell monte à hauteur de poitrine, bras relâchés.",
+            "Expire fort quand les hanches poussent.",
+            "Tirer avec les bras. Faire un squat. Arrondir le dos.",
+            "Mouvement de hanches, dos plat. Si ça tire dans les lombaires : pont fessier à la place."
+          ]
+        },
+        {
+          "t": "Fentes arrière, main sur un support",
+          "d": "3 × 8 par jambe",
+          "fiche": [
+            "Debout, une main sur un support (rack, mur).",
+            "Recule une jambe, descends le genou arrière vers le sol, remonte en poussant sur la jambe avant.",
+            "Expire en remontant.",
+            "Genou avant qui part vers l'intérieur. Buste penché.",
+            "Buste droit, petite amplitude au début."
+          ]
+        }
       ],
       "cardio": [
-        { "t": "Poussée de traîneau (sled push), ou vélo en côte", "d": "6 × 15 m" }
+        {
+          "t": "Poussée de traîneau (sled push), ou vélo en côte",
+          "d": "6 × 15 m",
+          "fiche": [
+            "Traîneau peu chargé, mains sur les poignées, bras tendus, buste incliné.",
+            "Pousse avec de petits pas puissants, sur l'avant du pied.",
+            "Respire régulièrement.",
+            "Dos arrondi. Charge trop lourde qui bloque.",
+            "Dos plat et gainé. Si pas de traîneau : vélo en résistance forte."
+          ]
+        }
       ],
       "messages": [
         "Sous 105 kg. Tu n'es plus le même qu'au départ, et ça se voit.",
@@ -68,14 +149,53 @@
       ]
     },
     {
-      "id": 4, "nom": "Athlète", "min": 0, "max": 95,
+      "id": 4,
+      "nom": "Athlète",
+      "min": 0,
+      "max": 95,
       "deblocage": "Sous 95 kg : niveau athlète. Course légère et exercices dynamiques débloqués, si le dos est calme.",
       "force": [
-        { "t": "Burpees sans saut", "d": "4 × 8", "impact": true, "alt": "Mountain climbers lents 4 × 20 s" },
-        { "t": "Kettlebell swing", "d": "4 × 15", "impact": true, "alt": "Pont fessier 3 × 15" }
+        {
+          "t": "Burpees sans saut",
+          "d": "4 × 8",
+          "impact": true,
+          "alt": "Mountain climbers lents 4 × 20 s",
+          "fiche": [
+            "Debout, de l'espace devant toi.",
+            "Mains au sol, recule un pied puis l'autre en planche, reviens pied par pied, relève-toi.",
+            "Expire en te relevant.",
+            "Hanches qui tombent en planche. Aller trop vite.",
+            "Gainage serré en planche ; si le dos tire, mountain climbers lents."
+          ]
+        },
+        {
+          "t": "Kettlebell swing",
+          "d": "4 × 15",
+          "impact": true,
+          "alt": "Pont fessier 3 × 15",
+          "fiche": [
+            "Kettlebell légère au sol devant toi, pieds un peu plus larges que les épaules.",
+            "Hanches en arrière (comme pour fermer une porte avec les fesses), puis pousse fort des hanches : la kettlebell monte à hauteur de poitrine, bras relâchés.",
+            "Expire fort quand les hanches poussent.",
+            "Tirer avec les bras. Faire un squat. Arrondir le dos.",
+            "Mouvement de hanches, dos plat. Si ça tire dans les lombaires : pont fessier à la place."
+          ]
+        }
       ],
       "cardio": [
-        { "t": "Course légère : 6 × (1 min de course / 2 min de marche)", "d": "18 min", "impact": true, "alt": "Vélo 6 × (1 min fort / 2 min calme) 18 min" }
+        {
+          "t": "Course légère : 6 × (1 min de course / 2 min de marche)",
+          "d": "18 min",
+          "impact": true,
+          "alt": "Vélo 6 × (1 min fort / 2 min calme) 18 min",
+          "fiche": [
+            "Tapis à 0–1 % ou piste, bonnes chaussures.",
+            "Petites foulées, pied sous le bassin, 1 min de course puis 2 min de marche.",
+            "Tu dois pouvoir parler en courant.",
+            "Grandes foulées qui tapent du talon. Aller trop vite.",
+            "Si le dos ou les genoux tirent : vélo à la place, sans hésiter."
+          ]
+        }
       ],
       "messages": [
         "Sous 95. Tu cours maintenant. Rappelle-toi d'où tu viens.",

@@ -111,6 +111,12 @@
   .rem input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
   .rem input[type=time]{font:inherit;font-size:15px;padding:6px 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
   .swap{border:1.5px solid var(--line);background:var(--card);border-radius:8px;min-width:30px;height:26px;margin-left:6px;font-size:14px;line-height:1;cursor:pointer;color:var(--ink2);vertical-align:middle}
+  .timer{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border-radius:14px;padding:8px 10px;margin:10px 0 12px}
+  .timer span{font-size:13px;color:#A9B9D4;margin-right:2px}
+  .timer button{flex:1;min-height:40px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+  .timer button.on{background:var(--accent)}
+  .timer b{min-width:56px;text-align:right;font-size:20px;font-variant-numeric:tabular-nums}
+  .timer.end{background:var(--ok)}
   .hint{font-size:13px;color:var(--ink2);margin:4px 0 0}
   .sum{margin-top:12px}
   .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -199,6 +205,7 @@
       <div class="today-h"><h2 id="tdTitle">Lundi</h2><span class="tag" id="tdTag"></span></div>
       <div id="tdAdapt"></div>
       <ul class="exl" id="tdList"></ul>
+      <div class="timer" id="timer"><span>Repos</span><button data-s="60">60 s</button><button data-s="90">90 s</button><button data-s="120">2 min</button><b id="tmr" aria-live="polite">–</b></div>
       <button class="btn" id="tdBtn">Séance terminée</button>
       <div class="msg plain" id="tdMsg" style="margin-top:12px"></div>
       <div class="rule"><b>Règle des 10 minutes</b><span>Tu n'as pas besoin d'avoir envie. Tu dois seulement commencer.</span></div>
@@ -637,7 +644,7 @@ function render(){
   $('planCard').innerHTML=`<h2>Ta semaine à venir</h2>`+
     `<div class="decision"><b>Décision du coach</b>${P.decision}</div>`+
     P.msgs.map(m=>`<div class="msg ${m[0]}">${m[1]}</div>`).join('')+
-    [['Séries par exercice',P.sets],['Cardio en fin de séance',P.cardio+' min'],['Type de cardio',P.cardioType],['Rameur',P.noRower?'remplacé par vélo ou marche':(P.rowerMax?`${P.rowerMax} min max si confortable`:'ok, dos droit, damper 4–6')],['Corde à sauter',P.noRope?'remplacée par vélo ou marche cette semaine':(P.ropeMax?`${P.ropeMax} min max, seulement si confortable`:`${P.corde} s de saut / ${60-P.corde} s de marche, × 12`)],['Assault bike (mardi)',(P.noRower||P.rowerMax)?'15 min tranquille, pas d\'intervalles':`8 × ${P.abike} s fort / ${P.abikeRest}`+(P.tabata?' + Tabata en fin de séance':'')],['Charges',P.charge],['Féculents le soir',P.feculentsSoir],['Goûter',P.gouter]]
+    [['Séries par exercice',P.sets],['Cardio en fin de séance',P.cardio+' min'],['Type de cardio',P.cardioType],['Rameur',P.noRower?'remplacé par vélo ou marche':(P.rowerMax?`${P.rowerMax} min max si confortable`:'ok, dos droit, damper 4–6')],['Corde à sauter',P.noRope?'remplacée par vélo ou marche cette semaine':(P.ropeMax?`${P.ropeMax} min max, seulement si confortable`:`${P.corde} s de saut / ${60-P.corde} s de marche, × 12`)],['Assault bike (mercredi)',(P.noRower||P.rowerMax)?'15 min tranquille, pas d\'intervalles':`8 × ${P.abike} s fort / ${P.abikeRest}`+(P.tabata?' + Tabata en fin de séance':'')],['Charges',P.charge],['Féculents le soir',P.feculentsSoir],['Goûter',P.gouter]]
     .map(k=>`<div class="kv"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('');
 
   /* ---- aujourd'hui ---- */
@@ -652,7 +659,7 @@ function render(){
 
   /* ---- progression ---- */
   drawChart(e); renderPerf(e); renderHist(e); renderStoreInfo(); renderCoachNow();
-  if(!$('fiches').children.length) renderFiches();
+  renderFiches();
 }
 
 function fmtDate(iso){ if(!iso) return ''; const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }
@@ -680,7 +687,7 @@ function renderDays(id){
   const box=$(id); box.innerHTML='';
   const dow=(new Date().getDay()+6)%7; /* 0 = lundi */
   ['Lun','Mar','Mer','Jeu','Ven'].forEach((d,i)=>{
-    const b=document.createElement('button'); b.innerHTML=`<b>${d}</b>${['Poussée','Cardio','Dos','Tirage','Circuit'][i]}`;
+    const b=document.createElement('button'); b.innerHTML=`<b>${d}</b>${['Pecs','Dos','Cardio','Épaules','Pecs-dos'][i]}`;
     b.setAttribute('aria-pressed',!!state.days[i]); if(i===dow) b.classList.add('today');
     b.onclick=async()=>{ state.days[i]=state.days[i]?0:1; sel.s=null; await persist(); render(); toast(state.days[i]?'Séance cochée':'Séance décochée'); };
     box.appendChild(b);
@@ -737,10 +744,10 @@ function renderToday(P){
   if(dow===0||dow===6){
     $('tdTag').textContent='Repos actif';
     $('tdList').innerHTML=`<li><span>Foot si tu joues, sinon 45 min de marche</span><span></span></li><li><span>10 min d'échauffement avant le foot</span><span></span></li><li><span>Un repas libre, prévu à l'avance</span><span></span></li>`;
-    $('tdBtn').style.display='none'; $('tdMsg').textContent=dow===6?'Semaine finie. Le compteur repart lundi.':'Demain 17h05 : sac, salle, 10 minutes.';
+    $('tdBtn').style.display='none'; $('timer').style.display='none'; $('tdMsg').textContent=dow===6?'Semaine finie. Le compteur repart lundi.':'Demain 17h05 : sac, salle, 10 minutes.';
     $('tdAdapt').innerHTML=''; return;
   }
-  const s=SESSIONS[dow]; $('tdTag').textContent=s.tag;
+  const s=SESSIONS[dow]; $('tdTag').textContent=s.tag; $('timer').style.display='';
   const {out,adapt}=sessionLines(dow,P);
   const sw=k=>k?` <button class="swap" data-k="${k}" aria-label="Remplacer cet exercice" title="Machine prise ? Remplacer">↻</button>`:'';
   $('tdList').innerHTML=out.map(x=> x[0]==='sub' ? `<li class="sub">${x[1]}</li>` : (x[0]==='head' ? `<li class="head">${x[1]}</li>` : (x[0]==='ss' ? `<li class="ss"><span>${x[1]}${sw(x[2])}</span><span>binôme</span></li>` : (x[0]==='sub2' ? `<li class="sub2">${x[1]}${sw(x[2])}</li>` : `<li><span>${x[0]}${sw(x[2])}</span><span>${x[1]}</span></li>`)))).join('');
@@ -820,29 +827,45 @@ function drawChart(e){
    FICHES
 ===================================================================== */
 const FICHES=[
- ['Lundi, poussée',[
+ ['Poussée : pecs, épaules, triceps',[
   ['Presse pectoraux','Poignées au milieu de la poitrine, dos et tête collés au dossier, pieds à plat.','Pousse sans verrouiller les coudes, reviens en 2 s.','Expire en poussant, inspire en revenant.','Décoller le dos du dossier. Poignées trop hautes.','Généralement bien tolérée pour le dos tant que le bassin reste plaqué. Si ça pince, arrête.'],
   ['Développé épaules','Poignées à hauteur des oreilles, dossier haut. Haltères : banc à 80°.','Monte au-dessus de la tête, redescends aux oreilles.','Expire en montant.','Cambrer le bas du dos. Descendre trop bas.','Nombril rentré tout du long. Jamais debout ce mois-ci.'],
   ['Écarté poulie / pec-deck','Poulies à hauteur d\'épaule, coudes légèrement pliés et figés.','Ramène les mains devant la poitrine, serre 1 s, reviens lentement.',null,'Plier les coudes. Épaules qui montent.','Si la poulie tire sur le dos : pec-deck assis.'],
   ['Élévations latérales','Haltères légers, assis dos au dossier.','Monte jusqu\'à l\'horizontale, petit doigt un peu plus haut, descends en 2 s.',null,'Balancer le buste. Monter au-dessus de l\'épaule.','Assis, dossier haut : option généralement mieux tolérée pour les lombaires.'],
   ['Triceps poulie corde','Poulie haute, coudes collés au corps, léger penché du buste.','Tends vers le bas en écartant la corde, remonte à 90°.','Expire en tendant.','Coudes qui s\'écartent. Se pencher de plus en plus.','Alternative : extension haltère assis, dossier haut.'],
   ['Extension triceps au-dessus de la tête','Assis dossier haut, un haltère à deux mains derrière la nuque, ou corde à la poulie.','Tends les bras vers le plafond sans bouger les coudes, descends lentement derrière la tête.','Expire en tendant.','Écarter les coudes. Charge trop lourde qui tire sur l\'épaule.','Dos plaqué au dossier : évite de cambrer quand les bras passent derrière la tête.'],
+  ['Développé incliné','Banc incliné à 30°, pieds à plat, dos et tête appuyés.','Descends les haltères à hauteur de poitrine, pousse sans verrouiller. Cible le haut des pectoraux.','Expire en poussant.','Banc trop incliné : ce sont les épaules qui prennent. Cambrer le dos.','Dos plaqué au dossier du début à la fin.'],
+  ['Dips machine ou barre assistée','Machine à assistance réglée pour faire 10 reps propres, ou dips sur barres parallèles.','Descends jusqu\'à ce que les bras soient à 90°, remonte. Buste légèrement penché pour les pectoraux, vertical pour les triceps.','Expire en remontant.','Descendre trop bas : l\'épaule souffre. Se laisser tomber.','Machine assistée au début : tu contrôles la charge.'],
  ]],
- ['Jeudi, tirage',[
+ ['Tirage : dos, biceps',[
   ['Tirage vertical','Cuisses bloquées, prise un peu plus large que les épaules, paumes vers l\'avant.','Tire vers le haut de la poitrine, coudes vers les hanches, poitrine sortie. Remonte en contrôlant.','Expire en tirant.','Se pencher en arrière. Tirer derrière la nuque : jamais.','Buste stable, pas de balancement. Généralement bien toléré car la colonne n\'est pas chargée.'],
   ['Rowing poitrine appuyée','Coussin réglé pour avoir les bras tendus sans que les épaules soient tirées.','Tire en serrant les omoplates, coudes le long du corps, reviens lentement.','Expire en tirant.','Décoller la poitrine du coussin. Hausser les épaules.','Version choisie car le buste est soutenu. Pas de rowing barre penché pour l\'instant.'],
   ['Tirage horizontal poulie basse','Assis, genoux fléchis, buste droit à 90°.','Tire vers le nombril, buste immobile. Étire sans arrondir le dos.',null,'Buste qui avance et recule. Dos arrondi en étirement.','Si le dos parle : remplace par le rowing poitrine appuyée.'],
-  ['Développé incliné','Banc incliné à 30°, pieds à plat, dos et tête appuyés.','Descends les haltères à hauteur de poitrine, pousse sans verrouiller. Cible le haut des pectoraux.','Expire en poussant.','Banc trop incliné : ce sont les épaules qui prennent. Cambrer le dos.','Dos plaqué au dossier du début à la fin.'],
   ['Pull-over poulie haute','Debout face à la poulie haute, barre ou corde, bras presque tendus, léger penché.','Ramène la barre vers les cuisses en gardant les bras tendus, contracte les dorsaux, reviens en contrôlant.','Expire en tirant.','Plier les coudes : ça devient un triceps. Balancer le buste.','Buste stable, pas de balancement : aucune charge sur la colonne.'],
   ['Élévations buste penché','Assis buste penché en avant ou pec-deck inversé, haltères légers.','Ouvre les bras sur les côtés, omoplates serrées, coudes légèrement pliés. Léger et contrôlé.',null,'Trop lourd, le buste se relève à chaque rep.','Préfère la machine pec-deck inversé, buste appuyé : le dos ne travaille pas.'],
-  ['Dips machine ou barre assistée','Machine à assistance réglée pour faire 10 reps propres, ou dips sur barres parallèles.','Descends jusqu\'à ce que les bras soient à 90°, remonte. Buste légèrement penché pour les pectoraux, vertical pour les triceps.','Expire en remontant.','Descendre trop bas : l\'épaule souffre. Se laisser tomber.','Machine assistée au début : tu contrôles la charge.'],
   ['Face pull','Poulie à hauteur du visage, corde, charge légère.','Tire vers le visage en écartant les mains, coudes hauts, serre 1 s.',null,'Trop lourd. Coudes qui descendent.',null],
   ['Curl haltères','Assis dos droit, paumes vers l\'avant.','Coudes fixes, descends en 2 s.',null,'Balancer. Coudes qui partent en avant.','Assis dossier haut.'],
   ['Curl marteau','Assis ou debout, haltères tenus comme un marteau, pouces vers le haut.','Monte sans tourner le poignet, coudes fixes, descends en 2 s. Cible le brachial, celui qui épaissit le bras.',null,'Balancer le buste. Coude qui avance.','Assis dossier haut si tu le fais après le tirage.'],
  ]],
- ['Vendredi, circuit',[
+ ['Jambes et circuit',[
   ['Goblet squat sur box','Haltère contre la poitrine, banc derrière toi.','Fesses en arrière jusqu\'à toucher le banc, remonte par les talons, poitrine haute.','Inspire en descendant, expire en remontant.','Dos arrondi en bas. Genoux qui rentrent.','Le banc limite la descente. Si le dos gêne, pont fessier à la place.'],
   ['Circuit','Presse pecs, tirage vertical, goblet squat sur box, rowing appuyé, rameur 250 m, dead bug.','30 s entre exos, 2 min entre tours. 4 tours, 5 en semaine 4.',null,'Partir trop vite au tour 1.',null],
+ ]],
+ ['Variantes (nouveaux blocs et bouton ↻)',[
+  ['Développé couché haltères / Smith machine','Banc plat, pieds au sol, omoplates serrées. Smith : barre au-dessus du bas des pecs.','Descends en 2 s jusqu\'à la poitrine, pousse sans verrouiller.','Expire en poussant.','Rebondir sur la poitrine. Fesses qui décollent.','Pieds à plat, bas du dos naturel, pas de grand pont.'],
+  ['Presse pectoraux inclinée / développé incliné Smith','Siège réglé pour pousser vers le haut des pecs, dos collé.','Pousse vers le haut et l\'avant, reviens en 2 s.','Expire en poussant.','Épaules qui montent vers les oreilles.',null],
+  ['Pec-deck / écarté poulie basse vers le haut','Pec-deck : poignées à hauteur de poitrine. Poulie basse : poignées en bas, léger pas en avant.','Ferme les bras en arc de cercle, serre 1 s, reviens lentement.',null,'Plier les coudes en cours de route.',null],
+  ['Développé épaules haltères assis / Arnold','Banc à 80°, dossier haut. Arnold : départ paumes vers toi.','Monte au-dessus de la tête (Arnold : en tournant les paumes vers l\'avant), redescends aux oreilles.','Expire en montant.','Cambrer. Charge trop lourde.','Toujours assis, dos plaqué.'],
+  ['Élévations latérales poulie / machine','Poulie basse de côté, ou machine coudes contre les coussins.','Monte jusqu\'à l\'horizontale, descends en 2 s.',null,'Hausser les épaules. Élan.',null],
+  ['Triceps poulie barre droite / un bras','Poulie haute, coudes collés au corps.','Tends vers le bas, remonte à 90° sans bouger les coudes.','Expire en tendant.','Coudes qui avancent. Buste qui pompe.',null],
+  ['Extension triceps poulie haute dos à la machine / barre au front','Dos à la poulie, corde derrière la tête ; ou allongé sur banc, haltères au-dessus du front.','Tends les bras sans bouger les coudes, reviens lentement.','Expire en tendant.','Coudes qui s\'écartent. Charge trop lourde.','Allongé : pieds sur le banc si le dos se creuse.'],
+  ['Tirage vertical prise neutre / serrée','Poignées parallèles (paumes face à face) ou prise rapprochée, cuisses bloquées.','Tire vers le haut de la poitrine, coudes vers le bas, remonte lentement.','Expire en tirant.','Se pencher en arrière. Tirer avec les bras seulement.',null],
+  ['Rowing machine assis / haltère un bras','Machine : poitrine contre le coussin. Haltère : main et genou sur le banc, dos plat.','Tire le coude vers la hanche, serre l\'omoplate, descends lentement.','Expire en tirant.','Tourner le buste. Dos arrondi.','Un bras : dos bien plat, appui solide sur le banc.'],
+  ['Tirage horizontal prise large / un bras','Assis, buste droit, genoux fléchis.','Tire vers le bas de la poitrine (prise large) ou vers la hanche (un bras), buste immobile.','Expire en tirant.','Se balancer d\'avant en arrière.','Le buste ne bouge pas : c\'est le dos qui travaille, pas les lombaires.'],
+  ['Pull-over corde / tirage bras tendus un bras','Face à la poulie haute, bras presque tendus.','Ramène la corde vers les cuisses en gardant les bras tendus, remonte lentement.',null,'Plier les coudes. Cambrer.','Gainage serré, bassin neutre.'],
+  ['Curl poulie barre / pupitre machine','Poulie basse barre droite, ou pupitre : aisselles contre le coussin.','Monte sans bouger les coudes, descends en 2 s.',null,'Balancer. Descendre trop vite.',null],
+  ['Curl marteau corde / curl incliné','Corde à la poulie basse, ou assis sur banc incliné à 60°.','Monte sans tourner le poignet (corde) ou bras qui pendent derrière le corps (incliné).',null,'Coudes qui avancent.',null],
+  ['Oiseau pec-deck inversé / élévations arrière poulie / face pull assis','Pec-deck à l\'envers, poitrine contre le dossier ; ou poulies croisées ; ou assis face à la poulie.','Ouvre les bras vers l\'arrière, serre les omoplates 1 s, reviens lentement.',null,'Charge trop lourde. Hausser les épaules.',null],
  ]],
  ['Cardio',[
   ['Marche inclinée','Tapis à 6–8 %, 5 à 5,5 km/h.','Bras qui balancent, pas de course.','Respiration calme, tu dois pouvoir parler.','Se tenir aux barres. Trop de pente trop tôt.','Cardio de base : grosse dépense, très peu d\'impact.'],
@@ -862,7 +885,9 @@ const FICHES=[
  ]],
 ];
 function renderFiches(){
-  $('fiches').innerHTML=FICHES.map(([g,items])=>`<div class="fgroup">${g}</div>`+items.map(f=>`<details><summary>${f[0]}</summary><p><b>Réglage</b> ${f[1]}</p><p><b>Exécution</b> ${f[2]}</p>${f[3]?`<p><b>Respiration</b> ${f[3]}</p>`:''}<p><b>À éviter</b> ${f[4]}</p>${f[5]?`<p class="dos">Lombaires : ${f[5]}</p>`:''}</details>`).join('')).join('');
+  const L=level(), bonus=L?[...(L.force||[]),...(L.cardio||[])].filter(f=>f.fiche).map(f=>[f.t,...f.fiche]):[];
+  const groups=bonus.length?[[`Bonus de ton niveau (${L.nom})`,bonus],...FICHES]:FICHES;
+  $('fiches').innerHTML=groups.map(([g,items])=>`<div class="fgroup">${g}</div>`+items.map(f=>`<details><summary>${f[0]}</summary><p><b>Réglage</b> ${f[1]}</p><p><b>Exécution</b> ${f[2]}</p>${f[3]?`<p><b>Respiration</b> ${f[3]}</p>`:''}<p><b>À éviter</b> ${f[4]}</p>${f[5]?`<p class="dos">Lombaires : ${f[5]}</p>`:''}</details>`).join('')).join('');
 }
 
 /* =====================================================================
@@ -982,10 +1007,11 @@ function renderCoachNow(){
   const nw=CONTENT&&(CONTENT.nouveautes||[]).filter(x=>recent(x.date,7)).slice(-1)[0];
   if(nw) out.push(['info','Nouveau : '+nw.texte]);
   const c=cheer(n); if(c) out.push(['plain',`<b>Niveau ${L.id} · ${L.nom}</b> — ${c}`]);
+  if(state.entries.length && !recent(state.lastExport,30)) out.push(['info',state.lastExport?`Dernière sauvegarde le ${fmtDate(state.lastExport)}. Si tu perds ton téléphone, tout part avec : télécharge une copie.`:'Tu n\'as jamais sauvegardé. Si tu perds ton téléphone, tout part avec : télécharge une copie (10 secondes).','export','Télécharger ma sauvegarde']);
   if(state.remindersUntil){ const left=(new Date(state.remindersUntil+'T00:00:00')-d)/864e5;
     if(left<7) out.push(['info',left<0?'Tes rappels agenda sont terminés : recharge-les.':'Tes rappels agenda se terminent bientôt : recharge-les.','prog','Recharger']); }
   box.innerHTML=`<div class="card"><h2>Le mot du coach</h2>${out.map((m,i)=>`<div class="msg ${m[0]}">${m[1]}${m[2]?`<button class="btn ghost" data-go="${m[2]}" style="margin-top:8px;min-height:40px;padding:8px">${m[3]}</button>`:''}</div>`).join('')}</div>`;
-  box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ go(b.dataset.go); if(b.dataset.go==='prog') $('rappels').scrollIntoView({behavior:'smooth'}); });
+  box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ if(b.dataset.go==='export'){ exportFile(); renderCoachNow(); return; } go(b.dataset.go); if(b.dataset.go==='prog') $('rappels').scrollIntoView({behavior:'smooth'}); });
 }
 
 /* ---------- agenda (.ics) : les rappels marchent appli fermée ---------- */
@@ -1028,6 +1054,28 @@ $('rAdd').onclick=async()=>{
   state.reminders=o; state.remindersUntil=until; await persist(); renderCoachNow();
   $('rMsg').textContent=`Rappels prêts jusqu'au ${fmtDate(until)} — ouvre le fichier et choisis « Tout ajouter » / « Importer ». L'appli te préviendra quand il faudra les recharger.`;
 };
+
+
+/* ---------- chrono de repos ---------- */
+const T={end:0,id:null,ac:null,lock:null};
+function beep(){ try{ const ac=T.ac; if(!ac) return; [0,0.25,0.5].forEach(t=>{ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.value=880; g.gain.setValueAtTime(.25,ac.currentTime+t); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+t+.2); o.connect(g); g.connect(ac.destination); o.start(ac.currentTime+t); o.stop(ac.currentTime+t+.2); }); }catch(e){} }
+function tick(){
+  const left=Math.ceil((T.end-Date.now())/1000), el=$('tmr');
+  if(left>0){ el.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`; return; }
+  clearInterval(T.id); T.id=null; el.textContent='Go !'; $('timer').classList.add('end');
+  document.querySelectorAll('#timer button').forEach(b=>b.classList.remove('on'));
+  try{ navigator.vibrate&&navigator.vibrate([300,150,300]); }catch(e){} beep();
+  try{ T.lock&&T.lock.release(); }catch(e){} T.lock=null;
+  setTimeout(()=>{ if(!T.id){ $('timer').classList.remove('end'); el.textContent='–'; } },4000);
+}
+document.querySelectorAll('#timer button').forEach(b=>b.onclick=async()=>{
+  try{ T.ac=T.ac||new (window.AudioContext||window.webkitAudioContext)(); T.ac.resume(); }catch(e){}
+  if(T.id && b.classList.contains('on')){ clearInterval(T.id); T.id=null; b.classList.remove('on'); $('tmr').textContent='–'; return; }
+  document.querySelectorAll('#timer button').forEach(x=>x.classList.toggle('on',x===b)); $('timer').classList.remove('end');
+  T.end=Date.now()+b.dataset.s*1000; clearInterval(T.id); T.id=setInterval(tick,250); tick();
+  try{ if(!T.lock&&navigator.wakeLock) T.lock=await navigator.wakeLock.request('screen'); }catch(e){}
+});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&T.id) tick(); });
 
 /* ---------- navigation ---------- */
 const TITLES={home:'Accueil',today:'Aujourd\'hui',bilan:'Bilan',prog:'Progression',exos:'Exercices'};
