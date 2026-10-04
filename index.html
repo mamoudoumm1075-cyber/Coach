@@ -110,6 +110,7 @@
   .rem small{color:var(--ink2);font-size:13px}
   .rem input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
   .rem input[type=time]{font:inherit;font-size:15px;padding:6px 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+  .swap{border:1.5px solid var(--line);background:var(--card);border-radius:8px;min-width:30px;height:26px;margin-left:6px;font-size:14px;line-height:1;cursor:pointer;color:var(--ink2);vertical-align:middle}
   .hint{font-size:13px;color:var(--ink2);margin:4px 0 0}
   .sum{margin-top:12px}
   .kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -359,6 +360,39 @@ const SESSIONS={
 
 
 
+/* Variantes : l'app change d'exercice toutes les 4 semaines (nouveau bloc) pour relancer la progression.
+   Les deux exercices suivis dans le bilan (presse pecs, tirage vertical) restent fixes, sauf si tu les changes toi-même. */
+const VARIANTS={
+  'Presse pectoraux':['Presse pectoraux','Développé couché haltères','Développé couché à la Smith machine'],
+  'Tirage vertical':['Tirage vertical','Tirage vertical prise neutre','Tirage vertical prise serrée'],
+  'Développé incliné haltères ou machine':['Développé incliné haltères ou machine','Presse pectoraux inclinée','Développé incliné à la Smith machine'],
+  'Rowing poitrine appuyée':['Rowing poitrine appuyée','Rowing machine assis','Rowing haltère un bras, appui banc'],
+  'Développé épaules machine ou haltères':['Développé épaules machine ou haltères','Développé épaules haltères assis','Développé Arnold assis'],
+  'Écarté poulie / pec-deck':['Écarté poulie / pec-deck','Pec-deck','Écarté poulie basse vers le haut'],
+  'Écarté poulie':['Écarté poulie','Pec-deck','Écarté poulie basse vers le haut'],
+  'Élévations latérales':['Élévations latérales','Élévations latérales à la poulie','Élévations latérales machine'],
+  'Triceps poulie corde':['Triceps poulie corde','Triceps poulie barre droite','Triceps poulie un bras'],
+  'Extension triceps au-dessus de la tête':['Extension triceps au-dessus de la tête','Extension triceps poulie haute dos à la machine','Barre au front haltères, allongé'],
+  'Tirage horizontal poulie basse':['Tirage horizontal poulie basse','Tirage horizontal prise large','Tirage horizontal un bras'],
+  'Pull-over poulie haute':['Pull-over poulie haute','Pull-over corde','Tirage bras tendus un bras'],
+  'Curl haltères':['Curl haltères','Curl poulie barre','Curl pupitre machine'],
+  'Curl marteau':['Curl marteau','Curl marteau à la corde','Curl incliné haltères'],
+  'Face pull':['Face pull','Oiseau à la machine pec-deck inversé','Face pull assis'],
+  'Élévations buste penché':['Élévations buste penché','Oiseau à la machine pec-deck inversé','Élévations arrière à la poulie'],
+};
+const ANCHORS=new Set(['Presse pectoraux','Tirage vertical']);
+const VKEYS=Object.keys(VARIANTS).sort((a,b)=>b.length-a.length);
+function block(){ return Math.floor((programWeek()-1)/4); }
+function swapsNow(){ const b=block(); if(!state.swaps||state.swaps.block!==b) state.swaps={block:b,map:{}}; return state.swaps.map; }
+function variantIdx(k){ const m=swapsNow(); return m[k]!=null ? m[k] : (ANCHORS.has(k)?0:block()); }
+/* remplace le nom de l'exercice par la variante du moment ; renvoie [texte, clé ou null] */
+function variant(text){
+  const pre=text.startsWith('+ ')?'+ ':'', body=text.slice(pre.length);
+  const k=VKEYS.find(k=>body===k||body.startsWith(k+' ')); if(!k) return [text,null];
+  const alts=VARIANTS[k]; return [pre+alts[variantIdx(k)%alts.length]+body.slice(k.length), k];
+}
+async function swapExercise(k){ const m=swapsNow(); m[k]=(variantIdx(k)+1)%VARIANTS[k].length; await persist(); render(); toast('Exercice remplacé'); }
+
 /* Données mises à jour par le coach à chaque bilan : si l'app ne garde rien, c'est ceci qui s'affiche. */
 const SEED={v:21,
   entries:[
@@ -468,7 +502,8 @@ function computePlan(entries){
     feculentsSoir:'après une séance seulement', gouter:'skyr ou 30 g de noix', charge:'On note, on ne change rien',
     noRope:false, noRower:false, ropeMax:null, rowerMax:null, cardioType:'marche inclinée, vélo, rameur',
     abike:week<=2?30:(week===3?40:45), abikeRest:week<=2?'2 min':(week===3?'1 min 50':'1 min 45'), tabata:false,
-    msgs:[], decision:'', mission:[], alert:null, tag:week<=4?`semaine ${week} sur 4`:`bloc 2, semaine ${week}`};
+    msgs:[], decision:'', mission:[], alert:null, tag:`bloc ${Math.floor((week-1)/4)+1}, semaine ${(week-1)%4+1} sur 4`};
+  if(week>4 && (week-1)%4===0) P.msgs.push(['info',`Nouveau bloc : certains exercices changent cette semaine pour relancer la progression (onglet Aujourd'hui). Presse pecs et tirage restent les mêmes pour suivre tes charges.`]);
   if(!last){
     P.decision='Semaine 1 : apprentissage. Charges légères, technique parfaite, 3 séries. Ton seul objectif : 5 passages à la salle.';
     P.mission=['5 séances, même courtes','Technique avant charge','Ne rate pas deux jours d\'affilée'];
@@ -540,6 +575,15 @@ function computePlan(entries){
   else if(P.stall) P.mission=['5 séances, mêmes charges','Un seul repas libre, prévu','Tour de taille vendredi'];
   else P.mission=['5 séances', `–${f1(tr!==null&&tr>0?Math.min(tr,1):0.8)} kg environ`, 'Ne rate pas deux jours d\'affilée'];
 
+  /* OBJECTIF ATTEINT : l'app passe seule en stabilisation */
+  if(Math.min(...entries.map(x=>x.w))<=FINAL){
+    const gap=last.w-FINAL;
+    P.cardio=Math.min(P.cardio,20); P.feculentsSoir='oui, une portion normale'; P.gouter='libre, plutôt protéiné'; P.stall=false;
+    P.tag='stabilisation';
+    P.mission=['4 séances par semaine','Poids entre '+(FINAL-2)+' et '+(FINAL+2)+' kg','Pesée chaque vendredi'];
+    if(gap>2){ dec.length=0; dec.push(`+${f1(gap)} kg au-dessus de l'objectif : on revient au cadre de perte quelques semaines (féculents le soir seulement après séance, un seul repas libre) jusqu'à repasser sous ${FINAL+1} kg.`); P.feculentsSoir='après une séance seulement'; P.mission=['5 séances','Un seul repas libre','Retour sous '+(FINAL+1)+' kg']; }
+    else dec.unshift(`Objectif ${FINAL} kg atteint : phase de stabilisation. On ne cherche plus à perdre, on garde la routine et on mange un peu plus (féculents le soir autorisés). Si tu dépasses ${FINAL+2} kg, l'app resserre toute seule.`);
+  }
   P.decision=dec.join(' ');
   return P;
 }
@@ -658,10 +702,10 @@ function sessionLines(dow,P){
       out.push(['sub','Dead bug 2 × 10 par côté']);
     } else if(a==='CIRCUITABS'){
       out.push(['Circuit abdos, 3 tours','30 s entre exos']);
-    } else if(a==='ss'){ out.push(['ss',b]); out.push(['sub2',c||'']);
+    } else if(a==='ss'){ const [vb,kb]=variant(b), [vc,kc]=variant(c||''); out.push(['ss',vb,kb]); out.push(['sub2',vc,kc]);
     } else if(a==='head'){ out.push(['head',b]);
     } else {
-      out.push([a.replace('SETS',P.sets), b.replace('CARDIO',P.cardio+' min')]);
+      const [va,ka]=variant(a); out.push([va.replace('SETS',P.sets), b.replace('SETS',P.sets).replace('CARDIO',P.cardio+' min'), ka]);
     }
   });
   return {out,adapt};
@@ -677,7 +721,9 @@ function renderToday(P){
   }
   const s=SESSIONS[dow]; $('tdTag').textContent=s.tag;
   const {out,adapt}=sessionLines(dow,P);
-  $('tdList').innerHTML=out.map(x=> x[0]==='sub' ? `<li class="sub">${x[1]}</li>` : (x[0]==='head' ? `<li class="head">${x[1]}</li>` : (x[0]==='ss' ? `<li class="ss"><span>${x[1]}</span><span>binôme</span></li>` : (x[0]==='sub2' ? `<li class="sub2">${x[1]}</li>` : `<li><span>${x[0]}</span><span>${x[1]}</span></li>`)))).join('');
+  const sw=k=>k?` <button class="swap" data-k="${k}" aria-label="Remplacer cet exercice" title="Machine prise ? Remplacer">↻</button>`:'';
+  $('tdList').innerHTML=out.map(x=> x[0]==='sub' ? `<li class="sub">${x[1]}</li>` : (x[0]==='head' ? `<li class="head">${x[1]}</li>` : (x[0]==='ss' ? `<li class="ss"><span>${x[1]}${sw(x[2])}</span><span>binôme</span></li>` : (x[0]==='sub2' ? `<li class="sub2">${x[1]}${sw(x[2])}</li>` : `<li><span>${x[0]}${sw(x[2])}</span><span>${x[1]}</span></li>`)))).join('');
+  $('tdList').querySelectorAll('.swap').forEach(b=>b.onclick=()=>swapExercise(b.dataset.k));
   $('tdAdapt').innerHTML=(P.alert?`<div class="msg warn">${P.alert}</div>`:'')+(adapt.length?`<div class="msg info">Adaptation du coach : ${adapt.join(' · ')}</div>`:'');
   const done=!!state.days[dow-1]; const b=$('tdBtn'); b.style.display='block';
   b.textContent=done?'Séance terminée ✓':'Séance terminée'; b.classList.toggle('done',done);
