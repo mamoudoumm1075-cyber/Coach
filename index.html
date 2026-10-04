@@ -262,7 +262,7 @@
     </div>
     <div class="card" id="rappels">
       <h2>Rappels du coach</h2>
-      <p class="muted" style="margin:0 0 10px">Des notifications sur ton téléphone, avec un message différent à chaque fois. Elles passent par l'agenda : ça marche même appli fermée et sans internet.</p>
+      <p class="muted" style="margin:0 0 10px">De vraies notifications Coach sur ton téléphone, même appli fermée, avec un message différent à chaque fois.</p>
       <div class="rem">
         <label><input type="checkbox" id="rGym" checked> <span>Heure de la salle <small>· rappel 30 min avant</small></span></label>
         <input type="time" id="rGymT" value="17:05" aria-label="Heure">
@@ -274,8 +274,18 @@
         <input type="time" id="rSoirT" value="20:30" aria-label="Heure">
         <label style="grid-column:1/-1"><input type="checkbox" id="rWe" checked> Week-end <small>(foot, repas libre, courses)</small></label>
       </div>
-      <button class="btn" id="rAdd" style="margin-top:12px">Ajouter les rappels à mon agenda</button>
-      <p class="hint" id="rMsg">8 semaines de rappels. iPhone : ouvre l'appli dans Safari si rien ne s'affiche, puis « Tout ajouter ».</p>
+      <button class="btn" id="pushOn" style="margin-top:12px">Activer les notifications</button>
+      <p class="hint" id="pushMsg">Après avoir changé une heure, appuie de nouveau ici et recolle le code dans GitHub.</p>
+      <div id="pushBox" style="display:none;margin-top:10px">
+        <textarea id="pushCode" readonly rows="4" style="width:100%;font-size:12px;border:1.5px solid var(--line);border-radius:10px;padding:8px"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn ghost" id="pushCopy">Copier le code</button>
+          <button class="btn ghost" id="pushTest">Notif d'essai</button>
+        </div>
+        <p class="hint">Colle ce code dans GitHub : dépôt Coach → Settings → Secrets and variables → Actions → New repository secret, nom <b>COACH_PUSH</b>.</p>
+      </div>
+      <button class="btn ghost" id="rAdd" style="margin-top:12px">Plutôt passer par l'agenda</button>
+      <p class="hint" id="rMsg">Sans internet : 8 semaines de rappels dans l'agenda du téléphone.</p>
     </div>
     <div class="card">
       <h2>Sauvegarde</h2>
@@ -1015,7 +1025,7 @@ function renderCoachNow(){
 }
 
 /* ---------- agenda (.ics) : les rappels marchent appli fermée ---------- */
-function icsEsc(t){ return t.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function icsEsc(t){ return t.replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
 function icsFold(line){ const enc=new TextEncoder(); let out='', cur='', len=0;
   for(const ch of line){ const b=enc.encode(ch).length; if(len+b>73){ out+=cur+'\r\n '; cur=''; len=1; } cur+=ch; len+=b; } return out+cur; }
 function icsDate(d,hm){ const [H,M]=hm.split(':').map(Number); const p=x=>String(x).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(H)}${p(M)}00`; }
@@ -1077,6 +1087,34 @@ document.querySelectorAll('#timer button').forEach(b=>b.onclick=async()=>{
   try{ if(!T.lock&&navigator.wakeLock) T.lock=await navigator.wakeLock.request('screen'); }catch(e){}
 });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&T.id) tick(); });
+
+/* ---------- vraies notifications (Web Push) ----------
+   L'appli crée sa propre clé, s'abonne, et donne un code à coller dans GitHub (secret COACH_PUSH).
+   L'envoyeur .github/workflows/notifs.yml lit ce code et envoie les notifs aux heures choisies. */
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+$('pushOn').onclick=async()=>{
+  const o=readRem(); if(!o.gym&&!o.midi&&!o.pesee&&!o.soir&&!o.we){ toast('Coche au moins un rappel'); return; }
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent), installed=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+    $('pushMsg').textContent= ios&&!installed ? 'Sur iPhone : Partager → « Sur l\'écran d\'accueil », puis ouvre Coach depuis l\'icône et appuie de nouveau ici.'
+      : 'Ce navigateur ne gère pas les notifications. Sur iPhone il faut iOS 16.4 ou plus, sur Android utilise Chrome.'; return; }
+  if(await Notification.requestPermission()!=='granted'){ $('pushMsg').textContent='Notifications refusées. Autorise-les dans les réglages du téléphone pour Coach, puis réessaie.'; return; }
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const old=await reg.pushManager.getSubscription(); if(old) await old.unsubscribe();
+    const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign']);
+    const pub=await crypto.subtle.exportKey('raw',kp.publicKey), priv=(await crypto.subtle.exportKey('jwk',kp.privateKey)).d;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pub});
+    const cfg={sub:sub.toJSON(),pub:b64u(pub),priv,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris',rem:o};
+    $('pushCode').value='COACH1.'+b64u(new TextEncoder().encode(JSON.stringify(cfg)));
+    $('pushBox').style.display='block';
+    state.reminders=o; await persist();
+    $('pushMsg').textContent='Abonnement prêt. Dernière étape : copie le code et colle-le dans GitHub (une seule fois).';
+  }catch(e){ $('pushMsg').textContent='Impossible d\'activer les notifications ('+(e.message||e)+'). Réessaie, et si ça continue envoie ce message au coach.'; }
+};
+$('pushCopy').onclick=async()=>{ try{ await navigator.clipboard.writeText($('pushCode').value); toast('Code copié'); }catch(e){ $('pushCode').select(); toast('Sélectionne et copie le code'); } };
+$('pushTest').onclick=async()=>{ const reg=await navigator.serviceWorker.ready;
+  reg.showNotification('Coach',{body:'C\'est comme ça que tes notifications vont arriver 💪',icon:'icon-192.png',badge:'icon-192.png'}); };
 
 /* ---------- navigation ---------- */
 const TITLES={home:'Accueil',today:'Aujourd\'hui',bilan:'Bilan',prog:'Progression',exos:'Exercices'};
