@@ -346,7 +346,43 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 .donerow:first-child{border-top:0}
 .donerow .row{flex-wrap:nowrap;gap:6px}
 @media (max-width:380px){.gbtns{grid-template-columns:1fr 1fr}}
-@media (max-width:340px){.pot{grid-template-columns:1fr}}
+@media (max-width:340px){.pot{grid-template-columns:1fr;gap:6px}.pot div{flex-direction:row;justify-content:space-between;align-items:baseline;padding:8px 12px}}
+
+/* Accueil : reste à vivre en premier */
+.hstate{margin:0;font-size:.85rem;font-weight:800;border-radius:99px;padding:6px 12px;line-height:1.3;max-width:100%}
+.hstate.ok{background:var(--good-soft);color:var(--good)}
+.hstate.est{background:var(--warn-soft);color:var(--warn)}
+.flow{width:100%;display:flex;flex-direction:column;text-align:left;border-top:1px solid var(--line);padding-top:4px}
+.fl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 2px;font-size:.92rem}
+.fl span{color:var(--muted);font-weight:600;min-width:0}
+.fl small{display:block;font-size:.78rem;font-weight:600;color:var(--muted)}
+.fl b{white-space:nowrap;font-weight:800}
+.fl.sub{border-top:1px dashed var(--line)}
+.fl.sub span{color:var(--fg);font-weight:700}
+.fl.total{border-top:2px solid var(--line);padding-top:10px}
+.fl.total span{color:var(--fg);font-weight:800;font-size:1rem}
+.fl.total b{font-size:1.15rem}
+.hero.over .fl.total b{color:var(--bad)}
+.explain{width:100%;text-align:left}
+.explain summary{font-size:.95rem;color:var(--muted)}
+.explain ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.88rem}
+.simbox summary{font-size:1.15rem}
+.tips details summary{font-size:.95rem;color:var(--muted)}
+.tips details[open]{display:flex;flex-direction:column;gap:10px}
+.dephead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dephead b{font-size:1.5rem;font-weight:800;white-space:nowrap}
+.gstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.gstats div{display:flex;flex-direction:column;min-width:0}
+.gstats small{color:var(--muted);font-weight:700;font-size:.72rem}
+.gstats b{font-weight:800;font-size:.95rem;overflow-wrap:anywhere}
+.cfbody{font-size:.95rem}
+.cfbody p{margin:0}
+.cfbody ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.ring-center span{text-align:center;line-height:1.2}
+.lsec{display:flex;justify-content:space-between;gap:8px;font-size:.95rem;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.lsec:first-child{border-top:0;padding-top:0;margin-top:0}
+.lsec span{font-variant-numeric:tabular-nums}
+@media (max-width:360px){.tabbar nav{gap:2px;padding:5px}.tabbar .tab{font-size:.64rem;min-width:0;padding:0 1px}.tabbar .tab span{font-size:1.1rem}.tabbar .plus{width:54px;height:54px;font-size:1.8rem}}
 @media (max-width:420px){#cmpSel{grid-template-columns:1fr}}
 
 /* Barre d'onglets, feuille de saisie, toast */
@@ -389,6 +425,8 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 
   <div class="tip bad" id="noStore" hidden><b>Cette page n'enregistre pas entre deux ouvertures</b>Ouvre l'appli depuis ton lien GitHub dans Safari. En attendant, télécharge ou copie ta sauvegarde avant de fermer.</div>
 
+  <div class="tip bad" id="saveFail" hidden><b>Le dernier enregistrement a échoué</b><p>La mémoire du navigateur est peut-être pleine. Tes dernières modifications ne sont pas enregistrées sur ce téléphone.</p><p class="tip-a">👉 Copie ou télécharge ta sauvegarde maintenant (Gérer → Sauvegarde).</p></div>
+
   <div class="tip bad" id="badData" hidden>
     <b>Tes données enregistrées n'ont pas pu être lues</b>
     <p>Elles n'ont pas été effacées : une copie brute est gardée sur ce téléphone. Tant que tu n'as pas choisi quoi faire, l'appli affiche des exemples et n'enregistre rien.</p>
@@ -423,45 +461,57 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
   <!-- ===== Accueil ===== -->
   <div class="view" id="v-home">
     <section class="card hero" id="hero" aria-live="polite">
+      <p class="hstate" id="hState"></p>
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="52"></circle><circle class="fg" id="ringFg" cx="60" cy="60" r="52" stroke-dasharray="0 400"></circle></svg>
-        <div class="ring-center"><small id="hLabel">Reste à dépenser</small><b id="hReste">0 €</b><span id="hPct">0 % dépensé</span></div>
-      </div>
-      <div class="duo">
-        <div><small><i style="background:var(--accent)"></i>Dépensé</small><b id="hDep">0 €</b></div>
-        <div><small><i style="background:var(--blue)"></i><span id="hDayLbl">Par jour</span></small><b id="hDayAmt">0 €</b></div>
+        <div class="ring-center"><small id="hLabel">Reste à vivre</small><b id="hReste">0 €</b><span id="hPct">0 % du budget utilisé</span></div>
       </div>
       <p class="daymsg" id="hDay"></p>
-      <div class="lines">
-        <div><span>Net du mois</span><b id="hNet">0 €</b></div>
-        <div><span>Charges fixes</span><b id="hCh">0 €</b></div>
-        <div><span>Épargne du mois</span><b id="hEp">0 €</b></div>
-        <div><span>Budget pour vivre</span><b id="hVivre">0 €</b></div>
-        <div id="hDepVenirRow" hidden><span>Dont dépenses datées à venir</span><b id="hDepVenir">0 €</b></div>
-        <div><span>Encore à prélever / virer</span><b id="hVenir">0 €</b></div>
-        <div><span>Solde théorique*</span><b id="hCompte">0 €</b></div>
+      <div class="duo">
+        <div><small><i style="background:var(--accent)"></i>Déjà dépensé</small><b id="hDep">0 €</b></div>
+        <div><small><i style="background:var(--blue)"></i><span id="hDayLbl">Par jour conseillé</span></small><b id="hDayAmt">0 €</b></div>
       </div>
-      <p class="hint" style="text-align:left;width:100%">* Net reçu − charges cochées − épargne virée − dépenses déjà passées. Calculé avec ce que tu saisis, pas lu sur ton compte bancaire.</p>
-      <div class="tag" id="hTag" hidden></div>
+      <div class="flow" id="hFlow">
+        <div class="fl"><span id="hNetLbl">Salaire du mois</span><b id="hNet">0 €</b></div>
+        <div class="fl"><span>− Charges fixes<small id="hChSub"></small></span><b id="hCh">0 €</b></div>
+        <div class="fl"><span>− Épargne du mois<small id="hEpSub"></small></span><b id="hEp">0 €</b></div>
+        <div class="fl sub"><span>= Budget pour vivre</span><b id="hVivre">0 €</b></div>
+        <div class="fl"><span>− Dépenses déjà faites</span><b id="hDepFait">0 €</b></div>
+        <div class="fl" id="hDepVenirRow"><span>− Dépenses prévues<small>datées plus tard ce mois-ci</small></span><b id="hDepVenir">0 €</b></div>
+        <div class="fl total"><span id="hResteLbl">= Reste à vivre</span><b id="hReste2">0 €</b></div>
+      </div>
+      <details class="explain">
+        <summary>Comprendre ces montants</summary>
+        <ul>
+          <li><b>Reste à vivre</b> : ce qu'il te reste pour le mois, après charges, épargne prévue et toutes tes dépenses (faites et prévues).</li>
+          <li><b>Déjà dépensé</b> : dépenses datées d'aujourd'hui ou avant. <span id="xDep"></span></li>
+          <li><b>Réservé aux prélèvements</b> : charges pas encore cochées comme payées. <span id="xCh"></span></li>
+          <li><b>Épargne transférée</b> : versements notés dans l'onglet Épargne. <span id="xEpF"></span></li>
+          <li><b>Épargne prévue</b> : objectif du mois pas encore versé, déjà mis de côté dans le calcul. <span id="xEpP"></span></li>
+          <li><b>Sur ton compte (théorique)</b> : salaire reçu − charges payées − épargne transférée − dépenses déjà faites. <span id="hCompte"></span> Ce n'est pas lu sur ton compte bancaire.</li>
+        </ul>
+      </details>
     </section>
 
     <section>
-      <h2>Alertes</h2>
+      <div class="row" style="justify-content:space-between"><h2>Alertes</h2><span class="pill off" id="tipsCount" hidden></span></div>
       <div class="tips" id="tips"></div>
     </section>
 
-    <section class="card">
-      <h2>Et si je dépense… ?</h2>
-      <p class="hint">Teste un achat sans l'enregistrer.</p>
-      <input class="txt" id="simAmt" inputmode="decimal" placeholder="Montant à tester, ex. 150" aria-label="Montant à tester">
-      <p class="simres num" id="simRes">Entre un montant pour voir ce qu'il te resterait.</p>
-    </section>
+    <details class="card simbox">
+      <summary>Et si je dépense… ?</summary>
+      <div class="vstack" style="padding-top:6px">
+        <p class="hint">Teste un achat sans l'enregistrer.</p>
+        <input class="txt" id="simAmt" inputmode="decimal" placeholder="Montant à tester, ex. 150" aria-label="Montant à tester">
+        <p class="simres num" id="simRes">Entre un montant pour voir ce qu'il te resterait.</p>
+      </div>
+    </details>
   </div>
 
   <!-- ===== Dépenses ===== -->
   <div class="view" id="v-dep" hidden>
     <section class="card">
-      <div class="row" style="justify-content:space-between"><h2 id="depTitle">Dépenses</h2><b id="depTotal" style="font-size:1.1rem"></b></div>
+      <div class="dephead"><div><h2 id="depTitle">Dépenses</h2><small class="hint" id="depSplit"></small></div><b id="depTotal"></b></div>
       <div class="seg" role="group" aria-label="Affichage des dépenses">
         <button id="dvList" aria-pressed="true">Liste</button>
         <button id="dvCal" aria-pressed="false">Calendrier</button>
@@ -525,6 +575,36 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
   <!-- ===== Épargne ===== -->
   <div class="view" id="v-ep" hidden>
     <section class="card">
+      <h2>Mon épargne</h2>
+      <div class="pot" id="pot"></div>
+      <p class="hint" id="potDetail"></p>
+      <details class="explain"><summary>Totale, affectée, libre : quelle différence ?</summary>
+        <ul>
+          <li><b>Épargne totale</b> : l'argent réellement mis de côté (épargne de départ + versements − argent utilisé).</li>
+          <li><b>Affectée</b> : la part de cette épargne réservée à tes objectifs. Ce n'est pas de l'argent en plus.</li>
+          <li><b>Libre</b> : ce qui n'est réservé à aucun objectif. C'est la seule part que tu peux affecter.</li>
+        </ul>
+      </details>
+    </section>
+
+    <button class="btn primary addep" id="epOpen">+ Ajouter à mon épargne</button>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between"><h2>Mes objectifs</h2><button class="btn small" id="goalNew">+ Nouvel objectif</button></div>
+      <div class="goals" id="goals"></div>
+      <details id="goalsDoneBox" hidden><summary style="font-size:1rem" id="goalsDoneSum">Objectifs terminés</summary><div id="goalsDone" style="padding-top:6px"></div></details>
+    </section>
+
+    <section class="card">
+      <div class="mstat"><h2 id="epMonthTitle">Ce mois-ci</h2><span id="epPill"></span></div>
+      <div class="mstat"><span class="hint">Versé ce mois</span><b class="num" id="epMonthVal">0 €</b></div>
+      <div class="track sv-track"><i id="epMonthGauge" style="width:0;--c:var(--good)"></i></div>
+      <div class="field"><label for="fEpP">Objectif de ce mois (0 = pause)</label><input id="fEpP" inputmode="decimal"></div>
+      <p class="err" id="fEpPErr" hidden></p>
+    </section>
+
+    <section class="card">
+      <h2 id="planTitle">Mon plan d'épargne</h2>
       <div class="jarzone">
         <div class="jarbox">
           <div class="lid" aria-hidden="true"></div>
@@ -537,31 +617,10 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
         <div class="ticks num" id="jarTicks" aria-hidden="true"></div>
       </div>
       <div class="ephead"><b id="epHead"></b><span class="hint" id="epNext"></span><span class="hint" id="epTotLine"></span></div>
-    </section>
-
-    <button class="btn primary addep" id="epOpen">+ Ajouter à mon épargne</button>
-
-    <section class="card">
-      <div class="mstat"><h2 id="epMonthTitle">Ce mois-ci</h2><span id="epPill"></span></div>
-      <div class="mstat"><span class="hint">Mis de côté</span><b class="num" id="epMonthVal">0 €</b></div>
-      <div class="track sv-track"><i id="epMonthGauge" style="width:0;--c:var(--good)"></i></div>
-      <div class="field"><label for="fEpP">Objectif de ce mois (0 = pause)</label><input id="fEpP" inputmode="decimal"></div>
-      <p class="err" id="fEpPErr" hidden></p>
-    </section>
-
-    <section class="card">
-      <div class="row" style="justify-content:space-between"><h2>Mes objectifs</h2><button class="btn small" id="goalNew">+ Nouvel objectif</button></div>
-      <div class="pot" id="pot"></div>
-      <p class="hint" id="potDetail"></p>
-      <p class="hint">L'argent affecté à un objectif est une partie de ton épargne totale, pas une somme en plus : il n'est jamais compté deux fois. Tu ne peux affecter que ton épargne libre.</p>
-      <div class="goals" id="goals"></div>
-      <details id="goalsDoneBox" hidden><summary style="font-size:1rem" id="goalsDoneSum">Objectifs terminés</summary><div id="goalsDone" style="padding-top:6px"></div></details>
-    </section>
-
-    <section class="card">
-      <h2>Mois par mois</h2>
-      <div class="cols" id="cols"></div>
-      <div class="leg"><span><i style="background:var(--good)"></i>Objectif atteint</span><span><i style="background:var(--warn)"></i>En partie</span><span><i style="background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)"></i>Pause ou à venir</span></div>
+      <details><summary style="font-size:1rem">Mois par mois</summary>
+        <div class="cols" id="cols"></div>
+        <div class="leg"><span><i style="background:var(--good)"></i>Objectif atteint</span><span><i style="background:var(--warn)"></i>En partie</span><span><i style="background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)"></i>Pause ou à venir</span></div>
+      </details>
     </section>
 
     <section class="card">
@@ -577,6 +636,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
             <div class="field"><label for="sObj">Objectif par mois</label><input id="sObj" inputmode="decimal"></div>
             <div class="field"><label for="epStart">Je commence en</label><input id="epStart" type="month"></div>
           </div>
+          <p class="hint">Changer ces réglages met à jour les mois à venir dont tu n'as pas modifié l'objectif. Les versements déjà faits ne sont jamais effacés.</p>
           <p class="err" id="sObjErr" hidden></p>
           <div class="field"><label for="sEpInit">Épargne déjà constituée avant l'appli</label><input id="sEpInit" inputmode="decimal" placeholder="0"></div>
           <p class="hint">Elle compte dans ton épargne totale et peut être affectée à tes objectifs. Ne la saisis pas aussi comme versement : elle serait comptée deux fois.</p>
@@ -671,7 +731,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
             <button class="btn small" id="ncAdd">Ajouter</button>
           </div>
           <p class="err" id="ncErr" hidden></p>
-          <div class="block"><button class="btn danger" id="delMonth">Supprimer ce mois</button></div>
+          <div class="block"><button class="btn danger" id="delMonth">Supprimer ce mois…</button></div>
         </div>
       </details>
     </section>
@@ -753,6 +813,15 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
     </div>
     <p class="err" id="mvErr" hidden></p>
     <button class="btn primary addep" id="mvGo">Valider</button>
+  </div>
+</div>
+
+<div class="sheet" id="cfSheet" hidden>
+  <button class="shade" data-sclose aria-label="Fermer"></button>
+  <div class="panel" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfBody">
+    <div class="head"><h2 id="cfTitle">Confirmer</h2><button class="x" data-sclose aria-label="Fermer">✕</button></div>
+    <div class="vstack cfbody" id="cfBody"></div>
+    <div class="vstack" id="cfBtns"></div>
   </div>
 </div>
 
@@ -1013,7 +1082,7 @@ function sample(){
 /* ---------- Chargement et enregistrement ---------- */
 /* Test d'enregistrement : écrire puis relire */
 const storeOk=(()=>{try{const k='ma-paie-test';localStorage.setItem(k,'1');const ok=localStorage.getItem(k)==='1';localStorage.removeItem(k);return ok}catch(e){return false}})();
-let S, saveOk=storeOk, savedAt=null, lockSave=false, rawBad=null, loadNote=[];
+let S, saveOk=storeOk, saveFailed=false, savedAt=null, lockSave=false, rawBad=null, loadNote=[];
 let editId=null, selCat=null, pendingRestore=null, confirmKey='';
 let HIST=[], tab=ls.get(KEY_TAB)||'home';
 if(!['home','dep','ep','stats','gerer'].includes(tab))tab='home';
@@ -1037,12 +1106,13 @@ function load(){
 }
 function save(){
   if(lockSave){saveOk=false;renderSave();return}
-  try{localStorage.setItem(KEY,JSON.stringify(S));saveOk=storeOk;savedAt=new Date()}catch(e){saveOk=false}
+  try{localStorage.setItem(KEY,JSON.stringify(S));saveOk=storeOk;saveFailed=false;savedAt=new Date()}catch(e){saveOk=false;saveFailed=storeOk}
   renderSave();
 }
 function renderSave(){
   const el=$('saveState');
   el.classList.toggle('ko',!saveOk);
+  $('saveFail').hidden=!saveFailed;
   el.textContent=lockSave?'⚠ Données illisibles':!saveOk?'⚠ Non enregistré':'Enregistré ✓';
   if(saveOk&&!lockSave&&savedAt){const t=document.createElement('span');t.className='t';t.textContent=' '+hm(savedAt);el.appendChild(t)}
 }
@@ -1060,7 +1130,7 @@ function pushHist(label){
 function undoLast(){
   const h=HIST.pop();if(!h)return;
   try{S=sanitize(JSON.parse(h.snap))}catch(e){toast('Impossible d’annuler.',false);return}
-  ls.set(KEY_HIST,JSON.stringify(HIST));closeAll();save();render();toast('Annulé : '+h.label,false);
+  ls.set(KEY_HIST,JSON.stringify(HIST));closeAll();finOpen=null;save();render();toast('Annulé : '+h.label,false);
 }
 function autoSnap(){
   if(S.example||lockSave)return;
@@ -1080,10 +1150,20 @@ function catsByUse(){
   const cnt={};S.months.forEach(m=>m.depenses.forEach(d=>{cnt[d.cat]=(cnt[d.cat]||0)+1}));
   const base=allCats();return{list:[...base].sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)||base.indexOf(a)-base.indexOf(b)),cnt};
 }
+/* Objectif d'épargne par défaut d'un mois : 0 avant le début de l'épargne ou un mois de pause, sinon l'objectif mensuel */
+const epDefaut=id=>(id<S.epStart||S.pauses.includes(+id.slice(5)))?0:S.objMensuel;
 function newMonth(id){
-  const pause=S.pauses.includes(+id.slice(5));
-  return{id,jours:15,abs:0,netRecu:'',epPrevue:(id<S.epStart||pause)?0:S.objMensuel,epFaite:0,
+  return{id,jours:15,abs:0,netRecu:'',epPrevue:epDefaut(id),epFaite:0,
     charges:S.chargesModele.map(c=>Object.assign({},c,{id:uid(),paye:false})),depenses:[]};
+}
+/* Applique un changement de réglage d'épargne aux mois en cours et à venir dont l'objectif n'a pas été personnalisé
+   (objectif égal à l'ancienne valeur par défaut). Mois passés et versements ne sont jamais modifiés. Renvoie le nombre de mois changés. */
+function appliqueReglageEp(change){
+  const avant=S.months.map(m=>epDefaut(m.id));
+  change();
+  let n=0;
+  S.months.forEach((m,i)=>{if(m.id<ymNow)return;const apres=epDefaut(m.id);if(Math.abs(m.epPrevue-avant[i])<0.005&&apres!==avant[i]){m.epPrevue=apres;n++}});
+  return n;
 }
 function ajouteMois(id){if(monthOf(id))return false;pushHist('Ajout du mois '+mLabel(id));S.months.push(newMonth(id));S.months.sort((a,b)=>a.id.localeCompare(b.id));return true}
 
@@ -1118,7 +1198,7 @@ const parJour=c=>c.st==='encours'&&c.jours>0&&c.reste>0?Math.floor(c.reste/c.jou
 const byCat=deps=>{const o={};for(const x of deps)o[x.cat]=r2((o[x.cat]||0)+x.montant);return o};
 
 /* Épargne : une seule cagnotte. Objectifs = parts affectées de cette cagnotte. */
-const alloue=g=>r2(Math.max(0,sum(g.mouvements,'montant')));
+const alloue=g=>r2(sum(g.mouvements,'montant'));
 function epargne(){
   const verse=r2(sum(S.depots,'montant')),retire=r2(sum(S.retraits,'montant'));
   const total=r2(S.epInitial+verse-retire),affecte=r2(S.goals.reduce((a,g)=>a+alloue(g),0));
@@ -1126,7 +1206,7 @@ function epargne(){
 }
 function rythmeEpargne(){const p=S.months.filter(m=>m.id<ymNow).slice(-3);return p.length<2?null:{n:p.length,avg:r2(sum(p,'epFaite')/p.length)}}
 function goalInfo(g,r){
-  const a=alloue(g),reste=r2(Math.max(0,g.cible-a)),pct=g.cible>0?Math.min(100,a/g.cible*100):0,atteint=a>=g.cible;
+  const a=alloue(g),reste=r2(Math.max(0,g.cible-a)),pct=g.cible>0?Math.min(100,Math.max(0,a/g.cible*100)):0,atteint=g.cible>0&&a>=g.cible;
   let parMois=null,depassee=false;
   if(g.statut==='actif'&&g.echeance&&!atteint){
     if(g.echeance<isoToday)depassee=true;
@@ -1143,6 +1223,7 @@ function showTab(t){
   ['home','dep','ep','stats','gerer'].forEach(k=>{$('v-'+k).hidden=k!==t});
   document.querySelectorAll('.tab,#gearBtn').forEach(b=>{if((b.dataset.tab||'gerer')===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   $('viewTitle').textContent=TITLES[t];
+  $('setup').hidden=!S.example||lockSave||t!=='home';
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);window.scrollTo({top:0})}));
 $('gearBtn').addEventListener('click',()=>{showTab(tab==='gerer'?'home':'gerer');window.scrollTo({top:0})});
@@ -1155,12 +1236,12 @@ function showErr(pId,msg){const p=$(pId);p.textContent=msg||'';p.hidden=!msg}
 function render(){
   S.months.sort((a,b)=>a.id.localeCompare(b.id));
   const m=cur(),c=calc(m);
-  $('setup').hidden=!S.example||lockSave;
+  $('setup').hidden=!S.example||lockSave||tab!=='home';
   $('noStore').hidden=storeOk;
   $('badData').hidden=!lockSave;
   $('loadNote').hidden=!loadNote.length;$('loadNoteTxt').textContent=loadNote.join(' ');
   if(S.example&&!$('suStart').value)$('suStart').value=nextId(ymNow);
-  setHTML($('monthSel'),S.months.map(x=>`<option value="${x.id}" ${x.id===m.id?'selected':''}>${mLabel(x.id)}${x.id===ymNow?' (en cours)':''}</option>`).join(''));
+  setHTML($('monthSel'),S.months.map(x=>`<option value="${x.id}" ${x.id===m.id?'selected':''}>${mLabel(x.id)}${x.id===ymNow?' •':''}</option>`).join(''));
   if(document.activeElement!==$('monthSel'))$('monthSel').value=m.id;
   const idx=S.months.findIndex(x=>x.id===m.id);
   $('mPrev').disabled=idx<=0;
@@ -1170,32 +1251,43 @@ function render(){
 }
 
 function renderHero(m,c){
-  const over=c.reste<0,used=c.vivre>0?Math.min(1,c.dep/c.vivre):1,C=2*Math.PI*52;
+  const over=c.reste<0,theo=!c.recu,used=c.vivre>0?Math.min(1,Math.max(0,c.dep/c.vivre)):1,C=2*Math.PI*52;
+  const signe=v=>v<0?'−'+eur(-v):eur(v);
   $('hero').classList.toggle('over',over);
   $('ringFg').setAttribute('stroke-dasharray',(used*C).toFixed(1)+' '+C.toFixed(1));
-  $('hLabel').textContent=over?'Dépassement':(c.recu?'Reste à dépenser':'Reste à dépenser (estimé)');
+  const st=$('hState');st.className='hstate '+(c.recu?'ok':'est');
+  st.textContent=c.recu?`✓ Salaire reçu : ${eur(c.net)}`:`≈ Salaire estimé : ${eur(c.net)} · pas encore reçu`;
+  $('hLabel').textContent=(over?'Dépassement':'Reste à vivre')+(c.st==='futur'?' prévu':theo?' (théorique)':'');
   $('hReste').textContent=over?'−'+eur(-c.reste):eur(c.reste);
-  $('hPct').textContent=c.vivre>0?Math.round(c.dep/c.vivre*100)+' % dépensé':'budget négatif';
-  $('hDep').textContent=eur(c.dep);
-  $('hDayLbl').textContent=c.st==='encours'&&!c.recu?'Par jour (estimé)':'Par jour';
-  $('hDayAmt').textContent=c.st!=='encours'?'—':(c.recu?'':'≈ ')+eur(parJour(c));
+  $('hPct').textContent=c.vivre>0?Math.round(c.dep/c.vivre*100)+' % du budget utilisé':'budget négatif';
+  $('hDep').textContent=eur(c.depFait);
+  $('hDayLbl').textContent='Par jour conseillé';
+  $('hDayAmt').textContent=c.st!=='encours'||c.reste<=0?'—':(theo?'≈ ':'')+eur(parJour(c));
   const mois=MOIS[+m.id.slice(5)-1].toLowerCase();
   let day;
-  if(c.vivre<=0)day='Charges + épargne dépassent ton net. Regarde les alertes.';
+  if(c.vivre<=0)day='Charges + épargne dépassent ton salaire. Regarde les alertes.';
   else if(over)day=c.st==='passe'?'Mois terminé en dépassement.':'Plus rien à dépenser ce mois-ci.';
-  else if(c.st==='encours')day=pl(c.jours,'jour')+' restant'+(c.jours>1?'s':'')+' en '+mois+' (aujourd’hui compris)';
-  else if(c.st==='futur')day='Mois à venir : budget prévisionnel'+(c.recu?'.':', basé sur une estimation du salaire.');
-  else day='Mois terminé. Non dépensé (théorique) : '+eur(c.reste);
+  else if(c.st==='encours')day=pl(c.jours,'jour')+' restant'+(c.jours>1?'s':'')+' en '+mois+', aujourd’hui compris.';
+  else if(c.st==='futur')day='Mois à venir : budget prévisionnel.';
+  else day='Mois terminé.';
+  if(theo&&c.st!=='futur')day+=' Résultat théorique tant que le salaire n’est pas saisi.';
   $('hDay').textContent=day;
-  $('hNet').textContent=c.recu?eur(c.net)+' reçu':'≈ '+eur(c.net)+' estimé';
-  $('hCh').textContent=eur(c.chTot)+(c.chTot>0?' (dont '+eur(c.chPaye)+' payé)':'');
-  $('hEp').textContent=eur(c.epFaite)+' virée / '+eur(c.epPrevue)+' prévue';
-  $('hVivre').textContent=(c.recu?'':'≈ ')+eur(c.vivre);
-  $('hDepVenirRow').hidden=!(c.depVenir>0);$('hDepVenir').textContent=eur(c.depVenir);
-  $('hVenir').textContent=eur(c.chVenir+c.epVenir);
-  $('hCompte').textContent=c.compte==null?'— (net non reçu)':eur(c.compte);
-  $('hTag').hidden=c.recu;
-  $('hTag').textContent=`Net pas encore reçu : calcul basé sur une estimation de ${eur(c.est.net)} (entre ${eur(c.est.min)} et ${eur(c.est.max)}). Ce n'est pas de l'argent encaissé.`;
+  $('hNetLbl').textContent=c.recu?'Salaire reçu':'Salaire estimé (≈)';
+  $('hNet').textContent=(c.recu?'':'≈ ')+eur(c.net);
+  $('hCh').textContent='−'+eur(c.chTot);
+  $('hChSub').textContent=c.chTot>0?(c.chVenir>0?`dont ${eur(c.chVenir)} encore à payer`:'tout est payé'):'';
+  $('hEp').textContent='−'+eur(c.ep);
+  $('hEpSub').textContent=`${eur(c.epFaite)} versée`+(c.epVenir>0?` · ${eur(c.epVenir)} prévue, pas encore versée`:'');
+  $('hVivre').textContent=signe(c.vivre);
+  $('hDepFait').textContent='−'+eur(c.depFait);
+  $('hDepVenirRow').hidden=!(c.depVenir>0);$('hDepVenir').textContent='−'+eur(c.depVenir);
+  $('hResteLbl').textContent='= Reste à vivre'+(theo?' (théorique)':'');
+  $('hReste2').textContent=signe(c.reste);
+  $('xDep').textContent=`Ce mois : ${eur(c.depFait)}.`;
+  $('xCh').textContent=`Ce mois : ${eur(c.chVenir)}.`;
+  $('xEpF').textContent=`Ce mois : ${eur(c.epFaite)}.`;
+  $('xEpP').textContent=`Ce mois : ${eur(c.epVenir)}.`;
+  $('hCompte').textContent=c.compte==null?'Non calculé : salaire pas encore reçu.':`Ce mois : ${signe(c.compte)}.`;
 }
 
 function itemHTML(x){
@@ -1203,18 +1295,22 @@ function itemHTML(x){
   return `<button class="item" data-edit="${x.id}">${icon(k)}<span class="d"><span>${esc(x.detail||k.n)}</span><small>${esc(k.n)}${fut?'<span class="soon">à venir</span>':''}</small></span><span class="m">−${eur(x.montant)}</span></button>`;
 }
 function renderList(m,c){
-  const showCal=depView==='cal'&&calMonth!==m.id,cm=showCal?monthOf(calMonth):m;
+  const showCal=depView==='cal'&&calMonth!==m.id,cm=showCal?monthOf(calMonth):m,cc=cm?(cm===m?c:calc(cm)):null;
   $('depTitle').textContent=mLabel(showCal?calMonth:m.id);
-  $('depTotal').textContent=cm?eur(sum(cm.depenses,'montant')):'—';
-  const deps=[...m.depenses].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+  $('depTotal').textContent=cc?eur(cc.dep):'—';
+  $('depSplit').textContent=!cc?'Mois pas encore créé':!cm.depenses.length?'Aucune dépense':
+    (cc.depVenir>0?`${eur(cc.depFait)} déjà payées · ${eur(cc.depVenir)} prévues`:`${pl(cm.depenses.length,'dépense')}, toutes déjà payées`);
   const y=new Date(today.getFullYear(),today.getMonth(),today.getDate()-1),isoY=isoOf(y);
   const dayName=d=>d===isoToday?'Aujourd’hui':d===isoY?'Hier':dateFr(d,{weekday:'long',day:'numeric',month:'long'});
-  let html='',lastD='';
-  for(const x of deps){
-    if(x.date!==lastD){const tot=sum(deps.filter(z=>z.date===x.date),'montant');html+=(lastD?'</div>':'')+`<p class="dayh">${dayName(x.date)} · ${eur(tot)}</p><div class="list">`;lastD=x.date}
-    html+=itemHTML(x);
-  }
-  $('list').innerHTML=deps.length?html+'</div>':'<p class="empty">Aucune dépense ce mois-ci. Appuie sur le bouton + en bas.</p>';
+  const groupe=list=>{let h='',lastD='';for(const x of list){
+      if(x.date!==lastD){h+=(lastD?'</div>':'')+`<p class="dayh">${dayName(x.date)} · ${eur(sum(list.filter(z=>z.date===x.date),'montant'))}</p><div class="list">`;lastD=x.date}
+      h+=itemHTML(x)}return h?h+'</div>':''};
+  const fut=m.depenses.filter(d=>d.date>isoToday).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  const past=m.depenses.filter(d=>d.date<=isoToday).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+  let html='';
+  if(fut.length)html+=`<h3 class="lsec">Prévues · pas encore payées <span>${eur(sum(fut,'montant'))}</span></h3>`+groupe(fut);
+  if(past.length)html+=(fut.length?`<h3 class="lsec">Déjà payées <span>${eur(sum(past,'montant'))}</span></h3>`:'')+groupe(past);
+  $('list').innerHTML=html||'<p class="empty">Aucune dépense ce mois-ci. Appuie sur le bouton + en bas.</p>';
 }
 
 /* ---------- Calendrier (utilise les dépenses déjà enregistrées, aucun stockage en plus) ---------- */
@@ -1317,7 +1413,7 @@ function histCats(id){
   return{n:prev.length,avg};
 }
 function renderAlerts(m,c){
-  const A=[],add=(k,key,titre,montant,pourquoi,action)=>A.push({k,key,titre,montant,pourquoi,action});
+  const A=[],add=(k,key,titre,montant,pourquoi,action,btn)=>A.push({k,key,titre,montant,pourquoi,action,btn:btn||''});
   const isNow=c.st==='encours',dmax=daysIn(m.id),d0=today.getDate(),mois=mLabel(m.id).toLowerCase();
   /* Données manquantes ou incohérentes */
   if(c.joursKo)add('warn','jours','Jours saisis incohérents',`${fr(m.jours,1)} j en entreprise + ${fr(m.abs,1)} j d’absence pour ${c.wd} jours ouvrés`,'Le salaire estimé serait faux : l’appli plafonne les jours en attendant.','Corrige les jours dans Gérer → Paie.');
@@ -1339,9 +1435,9 @@ function renderAlerts(m,c){
   }
   if(c.epVenir>0&&c.st!=='futur'&&c.net>c.chTot){
     if(c.recu){
-      const dispo=r2(c.compte-c.chVenir);
+      const dispo=r2(c.compte-c.chVenir-c.depVenir);
       if(dispo<c.epVenir){const z=Math.max(0,Math.floor((c.epFaite+Math.max(0,dispo))/10)*10);
-        add('warn','epreal','Épargne prévue difficile à tenir',`${eur(c.epVenir)} à virer, ${eur(Math.max(0,dispo))} disponibles après les prélèvements à venir`,'Virer plus que ce qui reste te mettrait à découvert.',`Baisse l’objectif de ce mois à ${eur(z)} dans l’onglet Épargne.`)}
+        add('warn','epreal','Épargne prévue difficile à tenir',`${eur(c.epVenir)} à virer, ${eur(Math.max(0,dispo))} disponibles après les prélèvements et dépenses prévus`,'Virer plus que ce qui reste te mettrait à découvert.',`Baisse l’objectif de ce mois à ${eur(z)} dans l’onglet Épargne.`)}
       else add('info','epvenir','Épargne pas encore virée',`${eur(c.epVenir)} à mettre de côté`,'Plus tu attends, plus cet argent risque d’être dépensé.','Fais le virement maintenant, puis note-le dans l’onglet Épargne.');
     }else add('info','epvenir','Épargne à virer après la paie',`${eur(c.epVenir)} prévus`,'Ton net n’est pas encore saisi : le montant que tu peux vraiment mettre de côté n’est pas sûr.','Saisis ton net dès la paie, puis fais le virement.');
   }
@@ -1382,7 +1478,7 @@ function renderAlerts(m,c){
   }
   /* Épargne et objectifs */
   const P=epargne(),R=rythmeEpargne();
-  if(P.libre<-0.005)add('bad','surallocation','Plus d’argent affecté aux objectifs que d’épargne',`${eur(P.affecte)} affectés pour ${eur(P.total)} d’épargne (manque ${eur(-P.libre)})`,'Le même argent serait compté deux fois : tes objectifs paraissent plus avancés qu’ils ne le sont.','Retire de l’argent d’un objectif, ou ajoute le versement manquant ou ton épargne de départ.');
+  if(P.libre<-0.005)add('bad','surallocation','Plus d’argent affecté aux objectifs que d’épargne',`${eur(P.affecte)} affectés pour ${eur(P.total)} d’épargne (manque ${eur(-P.libre)})`,'Le même argent serait compté deux fois : tes objectifs paraissent plus avancés qu’ils ne le sont.','Ajuste les objectifs, ou ajoute le versement manquant ou ton épargne de départ.','<button class="btn small" data-reconcile>Ajuster les objectifs…</button>');
   let besoin=0,resteObj=0;
   for(const g of S.goals.filter(g=>g.statut==='actif')){
     const i=goalInfo(g,R);
@@ -1394,15 +1490,23 @@ function renderAlerts(m,c){
 
   const vis=A.filter(a=>a.k==='bad'||!S.masquees.includes(m.id+'|'+a.key)),nbMask=A.length-vis.length;
   const ord={bad:0,warn:1,info:2,ok:3};
-  let html=vis.sort((a,b)=>ord[a.k]-ord[b.k]).map(a=>`<div class="tip ${a.k}"><b>${a.titre}</b><p class="tip-m">${a.montant}</p><p>${a.pourquoi}</p><p class="tip-a">👉 ${a.action}</p>`
-    +(a.k!=='bad'?`<button class="linkbtn" data-mask="${esc(a.key)}">Masquer pour ${esc(mois)}</button>`:'')+'</div>').join('');
+  const tipH=a=>`<div class="tip ${a.k}"><b>${a.titre}</b><p class="tip-m">${a.montant}</p><p>${a.pourquoi}</p><p class="tip-a">👉 ${a.action}</p>${a.btn}`
+    +(a.k!=='bad'?`<button class="linkbtn" data-mask="${esc(a.key)}">Masquer pour ${esc(mois)}</button>`:'')+'</div>';
+  vis.sort((a,b)=>ord[a.k]-ord[b.k]);
+  const first=vis.slice(0,3),rest=vis.slice(3);
+  let html=first.map(tipH).join('');
+  if(rest.length)html+=`<details><summary>Voir ${rest.length} autre${rest.length>1?'s':''} alerte${rest.length>1?'s':''}</summary>${rest.map(tipH).join('')}</details>`;
   if(!vis.length)html=`<div class="tip ok"><b>Rien à signaler</b>${S.example?'Données d’exemple.':'Aucune alerte pour ce mois avec les données saisies.'}</div>`;
   if(nbMask)html+=`<button class="linkbtn" id="unmask">${pl(nbMask,'alerte')} masquée${nbMask>1?'s':''} · tout réafficher</button>`;
+  const open=$('tips').querySelector('details[open]');
   $('tips').innerHTML=html;
+  if(open){const d=$('tips').querySelector('details');if(d)d.open=true}
+  const nb=vis.filter(a=>a.k!=='info').length;$('tipsCount').hidden=!nb;$('tipsCount').textContent=pl(nb,'point')+' à surveiller';
 }
 $('tips').addEventListener('click',e=>{
   const b=e.target.closest('[data-mask]');
   if(b){S.masquees.push(S.current+'|'+b.dataset.mask);S.masquees=S.masquees.slice(-300);save();render();return}
+  if(e.target.closest('[data-reconcile]')){proposeAjust();return}
   if(e.target.closest('#unmask')){S.masquees=S.masquees.filter(s=>!s.startsWith(S.current+'|'));save();render()}
 });
 
@@ -1410,10 +1514,10 @@ $('tips').addEventListener('click',e=>{
 function renderStats(){
   const isM=S.view==='month';
   $('vMonth').setAttribute('aria-pressed',isM);$('vAll').setAttribute('aria-pressed',!isM);
-  const deps=isM?cur().depenses:S.months.flatMap(m=>m.depenses);
+  const cm=cur(),cc=calc(cm),deps=isM?cm.depenses:S.months.filter(m=>m.id<=ymNow).flatMap(m=>m.depenses.filter(d=>d.date<=isoToday));
   const o=byCat(deps),tot=Object.values(o).reduce((a,b)=>a+b,0);
   $('donutTot').textContent=eur(tot);
-  $('donutLbl').textContent=isM?'Dépensé en '+MOIS[+S.current.slice(5)-1].toLowerCase():'Dépensé au total';
+  $('donutLbl').textContent=isM?'Dépenses de '+MOIS[+S.current.slice(5)-1].toLowerCase()+(cc.depVenir>0?' (dont '+eur(cc.depVenir)+' prévues)':''):'Dépensé jusqu’à aujourd’hui';
   const R=80,C=2*Math.PI*R,rows=allCats().filter(k=>o[k.id]>0).sort((a,b)=>o[b.id]-o[a.id]);
   let off=0,segs=`<circle cx="100" cy="100" r="${R}" style="stroke:var(--surface-2)"></circle>`;
   const gap=rows.length>1?2:0;
@@ -1486,7 +1590,7 @@ function goalPlan(){
   const byId=Object.fromEntries(S.months.map(m=>[m.id,m]));
   let id=S.epStart<S.months[0].id?S.epStart:S.months[0].id,tot=0,steps=[];
   for(let i=0;i<240&&id<=S.endId;i++,id=nextId(id)){
-    const m=byId[id];const v=m?m.epPrevue:(id<S.epStart||S.pauses.includes(+id.slice(5))?0:S.objMensuel);
+    const m=byId[id];const v=m?m.epPrevue:epDefaut(id);
     tot+=v;steps.push({id,v,cum:tot,done:m?m.epFaite:0});
   }
   return{tot,steps};
@@ -1495,13 +1599,14 @@ function renderEp(){
   const g=goalPlan(),fait=r2(sum(S.months,'epFaite')),pct=g.tot?Math.min(100,fait/g.tot*100):0,P=epargne();
   $('jarFill').style.height=pct+'%';
   $('jarAmt').textContent=eurR(fait);
-  $('jarOf').textContent='sur '+eurR(g.tot);
+  $('jarOf').textContent='versés sur '+eurR(g.tot);
+  $('planTitle').textContent='Mon plan d’épargne jusqu’à '+mLabel(S.endId).toLowerCase();
   $('jarPct').textContent=(pct>0&&pct<1?'< 1':Math.floor(pct))+' %';
   $('jarTicks').innerHTML=[1,.75,.5,.25].map(f=>`<span style="bottom:${f*100}%">${eurR(g.tot*f)}</span>`).join('');
   $('epHead').textContent=g.tot<=0?'Aucun objectif mensuel programmé (vérifie les réglages)':fait>=g.tot?'Objectif atteint 🎉':`Encore ${eurR(Math.max(0,g.tot-fait))} d'ici ${mLabel(S.endId).toLowerCase()}`;
   const nx=g.steps.find(x=>x.cum>fait&&x.v>0);
   $('epNext').textContent=nx?`Prochaine étape : ${eurR(nx.cum)} en ${mLabel(nx.id).toLowerCase()}`:'';
-  $('epTotLine').textContent=`Le pot compte les versements faits dans l’appli. Épargne totale aujourd’hui : ${eur(P.total)}`+(P.initial||P.retire?' (avec épargne de départ et argent utilisé).':'.');
+  $('epTotLine').textContent=P.initial||P.retire?`La cagnotte suit les versements prévus par ton plan. Ton épargne totale (${eur(P.total)}) compte aussi l’épargne de départ et l’argent utilisé.`:'La cagnotte suit les versements prévus par ton plan.';
   const m=cur();
   $('epMonthTitle').textContent=mLabel(m.id);
   $('epMonthVal').innerHTML=eur(m.epFaite)+(m.epPrevue>0?` <span>/ ${eur(m.epPrevue)}</span>`:'');
@@ -1530,8 +1635,9 @@ function renderEp(){
 let finOpen=null;
 function renderGoals(){
   const P=epargne(),R=rythmeEpargne();
-  $('pot').innerHTML=`<div><small>Épargne totale</small><b>${eur(P.total)}</b></div><div><small>Affectée aux objectifs</small><b>${eur(P.affecte)}</b></div><div><small>Libre</small><b class="${P.libre<0?'neg':''}">${eur(P.libre)}</b></div>`;
-  $('potDetail').textContent=`Épargne totale = épargne de départ ${eur(P.initial)} + versements ${eur(P.verse)} − argent utilisé ${eur(P.retire)}.`;
+  const sg=v=>v<0?'−'+eur(-v):eur(v);
+  $('pot').innerHTML=`<div><small>Épargne totale</small><b class="${P.total<0?'neg':''}">${sg(P.total)}</b></div><div><small>Affectée aux objectifs</small><b>${sg(P.affecte)}</b></div><div><small>Libre</small><b class="${P.libre<0?'neg':''}">${sg(P.libre)}</b></div>`;
+  $('potDetail').textContent=`${eur(P.initial)} de départ + ${eur(P.verse)} versés − ${eur(P.retire)} utilisés = ${sg(P.total)}.`+(P.libre<-0.004?` Attention : ${eur(-P.libre)} affectés en trop (voir l’alerte sur l’accueil).`:'');
   const act=S.goals.filter(g=>g.statut==='actif'),fini=S.goals.filter(g=>g.statut==='termine');
   $('goals').innerHTML=act.length?act.map(g=>goalCard(g,goalInfo(g,R))).join(''):'<p class="empty">Aucun objectif pour l’instant : permis, vacances, voiture, épargne de sécurité…</p>';
   $('goalsDoneBox').hidden=!fini.length;$('goalsDoneSum').textContent=`Objectifs terminés (${fini.length})`;
@@ -1539,19 +1645,19 @@ function renderGoals(){
     <span class="row"><button class="btn small" data-gact="rouvrir">Rouvrir</button><button class="x" data-gact="supprfini" aria-label="Supprimer l’objectif ${esc(g.nom)}">✕</button></span></div>`).join(''));
 }
 function goalCard(g,i){
-  const pill=i.atteint?'<span class="pill ok">Atteint ✓</span>':i.depassee?'<span class="pill late">Date dépassée</span>':i.retard?'<span class="pill wait">En retard</span>':g.echeance?`<span class="pill off">${dateFr(g.echeance,{day:'numeric',month:'short',year:'numeric'})}</span>`:'';
-  const meta=[i.atteint?'Montant atteint':`Reste ${eur(i.reste)}`];
-  if(g.echeance&&!i.atteint)meta.push(i.depassee?`date limite dépassée (${dateFr(g.echeance)})`:`≈ ${eur(i.parMois)} par mois jusqu’au ${dateFr(g.echeance)}`);
+  const etat=i.atteint?'<span class="pill ok">Atteint ✓</span>':i.depassee?'<span class="pill late">Date dépassée</span>':i.retard?'<span class="pill wait">En retard</span>':'<span class="pill off">En cours</span>';
+  const meta=[];
+  if(g.echeance)meta.push(i.atteint?`Date limite : ${dateFr(g.echeance)}`:i.depassee?`Date limite dépassée (${dateFr(g.echeance)})`:`≈ ${eur(i.parMois)} par mois jusqu’au ${dateFr(g.echeance)}`);
   let fin='';
   if(finOpen===g.id)fin=`<div class="fin"><p>Terminer « ${esc(g.nom)} » ?${i.a>0?` ${eur(i.a)} y sont affectés.`:''}</p>`
     +(i.a>0?`<button class="btn small primary" data-gact="finUse">J’ai utilisé l’argent : retirer ${eur(i.a)} de mon épargne</button><button class="btn small" data-gact="finKeep">Je garde l’argent : il redevient de l’épargne libre</button>`
       :'<button class="btn small primary" data-gact="finKeep">Confirmer</button>')
     +'<button class="btn small" data-gact="finCancel">Annuler</button></div>';
   return `<div class="gcard" data-g="${g.id}">
-    <div class="gh"><b>${esc(g.nom)}</b>${pill}</div>
-    <div class="track sv-track" role="progressbar" aria-label="Progression de ${esc(g.nom)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(i.pct)}"><i style="width:${i.pct.toFixed(1)}%"></i></div>
-    <div class="sv-meta"><span>${eur(i.a)} / ${eur(g.cible)}</span><span>${Math.floor(i.pct)} %</span></div>
-    <p class="hint">${meta.join(' · ')}</p>
+    <div class="gh"><b>${esc(g.nom)}</b>${etat}</div>
+    <div class="gstats"><div><small>Affecté</small><b>${eur(i.a)}</b></div><div><small>Cible</small><b>${eur(g.cible)}</b></div><div><small>Restant</small><b>${eur(i.reste)}</b></div></div>
+    <div class="bar" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center"><div class="track sv-track" role="progressbar" aria-label="Progression de ${esc(g.nom)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(i.pct)}"><i style="width:${i.pct.toFixed(1)}%"></i></div><b>${Math.floor(i.pct)} %</b></div>
+    ${meta.length?`<p class="hint">${meta.join(' · ')}</p>`:''}
     <div class="gbtns"><button class="btn small" data-gact="plus">+ Ajouter</button><button class="btn small" data-gact="moins" ${i.a>0?'':'disabled'}>− Retirer</button><button class="btn small" data-gact="edit">Modifier</button><button class="btn small" data-gact="fin">Terminer</button></div>
     ${fin}</div>`;
 }
@@ -1719,14 +1825,38 @@ function toast(txt,undo){
 $('toastUndo').addEventListener('click',()=>{$('toast').hidden=true;undoLast()});
 
 /* ---------- Feuilles (fenêtres du bas) ---------- */
-const SHEETS=['sheet','epSheet','goalSheet','mvSheet'];
+const SHEETS=['sheet','epSheet','goalSheet','mvSheet','cfSheet'];
 let lastFocus=null;
 function openS(id){lastFocus=document.activeElement;SHEETS.forEach(s=>{$(s).hidden=s!==id});$('toast').hidden=true}
 function closeAll(){const was=SHEETS.some(s=>!$(s).hidden);SHEETS.forEach(s=>{$(s).hidden=true});editId=null;confirmKey='';goalEdit=null;mvGoal=null;
   if(was&&lastFocus&&lastFocus.isConnected)try{lastFocus.focus()}catch(e){}}
 function disarm(b,txt){b.dataset.armed='';b.classList.remove('armed');b.textContent=txt}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SHEETS.some(s=>!$(s).hidden))closeAll()});
-['goalSheet','mvSheet'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target.closest('[data-sclose]'))closeAll()}));
+['goalSheet','mvSheet','cfSheet'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target.closest('[data-sclose]'))closeAll()}));
+/* Confirmation avant une action importante : explique ce qui va changer, puis propose les choix */
+let cfActions=[];
+function confirmBox(titre,corps,actions){
+  $('cfTitle').textContent=titre;$('cfBody').innerHTML=corps;cfActions=actions;
+  $('cfBtns').innerHTML=actions.map((a,i)=>`<button class="btn ${a.cls||''}" data-cf="${i}">${esc(a.label)}</button>`).join('')+'<button class="btn" data-cf="-1">Annuler</button>';
+  openS('cfSheet');setTimeout(()=>{const b=$('cfBtns').querySelector('button');if(b)b.focus()},50);
+}
+$('cfBtns').addEventListener('click',e=>{const b=e.target.closest('[data-cf]');if(!b)return;const a=cfActions[+b.dataset.cf];closeAll();cfActions=[];if(a)a.fn()});
+/* Quand l'argent affecté dépasse l'épargne totale : on retire la différence des objectifs, les plus récents d'abord */
+function planAjust(manque){
+  const gs=S.goals.map((g,i)=>({g,i,a:alloue(g)})).filter(x=>x.a>0).sort((x,y)=>y.g.cree.localeCompare(x.g.cree)||y.i-x.i);
+  let r=r2(manque);const plan=[];
+  for(const x of gs){if(r<=0.004)break;const t=r2(Math.min(x.a,r));plan.push({g:x.g,avant:x.a,t});r=r2(r-t)}
+  return plan;
+}
+const planHTML=plan=>'<ul>'+plan.map(p=>`<li>« ${esc(p.g.nom)} » : ${eur(p.avant)} → ${eur(p.avant-p.t)}</li>`).join('')+'</ul>';
+function appliqueAjust(plan){for(const p of plan)p.g.mouvements.push({id:uid(),date:isoToday,montant:-p.t,type:'correction'})}
+function proposeAjust(){
+  const P=epargne(),manque=r2(-P.libre);
+  if(manque<=0.004){toast('Rien à ajuster.',false);return}
+  const plan=planAjust(manque);
+  confirmBox('Ajuster les objectifs',`<p>Tes objectifs ont <b>${eur(P.affecte)}</b> affectés pour <b>${eur(P.total)}</b> d’épargne totale : il manque <b>${eur(manque)}</b>.</p><p>Ajustement proposé (objectifs les plus récents d’abord) :</p>${planHTML(plan)}<p>Aucun versement n’est modifié. Tu pourras annuler juste après.</p>`,
+    [{label:`Retirer ${eur(manque)} des objectifs`,cls:'primary',fn:()=>{pushHist('Ajustement des objectifs');appliqueAjust(plan);save();render();toast('Objectifs ajustés')}}]);
+}
 
 /* ---------- Saisie d'une dépense ---------- */
 function renderCats(){
@@ -1858,13 +1988,23 @@ $('addIdBtn').addEventListener('click',()=>{
 $('tbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-m]');if(!tr)return;goMonth(tr.dataset.m);showTab('home');window.scrollTo({top:0})});
 $('vMonth').addEventListener('click',()=>{S.view='month';save();renderStats()});
 $('vAll').addEventListener('click',()=>{S.view='all';save();renderStats()});
-$('delMonth').addEventListener('click',e=>{
-  const b=e.currentTarget;
+$('delMonth').addEventListener('click',()=>{
   if(S.months.length<=1){toast('Il faut garder au moins un mois.',false);return}
-  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.classList.add('armed');b.textContent='Confirmer : supprimer '+mLabel(S.current)+' (dépenses, charges et versements)';setTimeout(()=>{if(b.isConnected)disarm(b,'Supprimer ce mois')},4000);return}
-  disarm(b,'Supprimer ce mois');
-  const id=S.current;pushHist('Suppression du mois '+mLabel(id));
-  S.months=S.months.filter(m=>m.id!==id);S.depots=S.depots.filter(d=>d.month!==id);goMonth(S.months[S.months.length-1].id);toast('Mois supprimé : '+mLabel(id));
+  const m=cur(),id=m.id,vs=S.depots.filter(d=>d.month===id),sv=r2(sum(vs,'montant')),sd=r2(sum(m.depenses,'montant'));
+  const P=epargne(),apres=r2(P.total-sv),manque=r2(P.affecte-apres),plan=manque>0.004?planAjust(manque):[];
+  let corps=`<p>Seront supprimés définitivement de ${esc(mLabel(id))} :</p><ul><li>${pl(m.depenses.length,'dépense')} (${eur(sd)})</li><li>${pl(m.charges.length,'charge fixe')}, salaire et objectif du mois</li><li>${pl(vs.length,'versement')} d’épargne (${eur(sv)})</li></ul>`;
+  if(sv>0)corps+=`<p>Ton épargne totale passera de <b>${eur(P.total)}</b> à <b>${eur(apres)}</b>.</p>`;
+  if(plan.length)corps+=`<p><b>Tes objectifs ont ${eur(P.affecte)} affectés : il manquerait ${eur(manque)}.</b> Ajustement proposé :</p>${planHTML(plan)}`;
+  corps+='<p>Tu pourras annuler juste après (Gérer → Sauvegarde → Annuler).</p>';
+  const doDel=adj=>{
+    pushHist('Suppression du mois '+mLabel(id));
+    S.months=S.months.filter(x=>x.id!==id);S.depots=S.depots.filter(d=>d.month!==id);
+    if(adj){const P2=epargne();if(P2.libre<-0.004)appliqueAjust(planAjust(r2(-P2.libre)))}
+    goMonth(S.months[S.months.length-1].id);toast('Mois supprimé : '+mLabel(id));
+  };
+  confirmBox('Supprimer '+mLabel(id)+' ?',corps,plan.length
+    ?[{label:'Supprimer et ajuster les objectifs',cls:'danger',fn:()=>doDel(true)},{label:'Supprimer sans ajuster (une alerte restera)',cls:'danger',fn:()=>doDel(false)}]
+    :[{label:'Supprimer '+mLabel(id),cls:'danger',fn:()=>doDel(false)}]);
 });
 
 /* ---------- Démarrage réel (passage des exemples à tes chiffres) ---------- */
@@ -1887,14 +2027,17 @@ $('suGo').addEventListener('click',()=>{
 /* ---------- Réglages ---------- */
 document.querySelectorAll('[data-theme-set]').forEach(b=>b.addEventListener('click',()=>{theme=b.dataset.themeSet;ls.set(KEY_THEME,theme);applyTheme()}));
 $('sEnd').addEventListener('change',e=>{if(validId(e.target.value)){pushHist('Modification : fin d’alternance');S.endId=e.target.value;save();render()}});
-$('pause').addEventListener('change',e=>{const n=+e.target.dataset.p;if(!n)return;pushHist('Modification : mois sans épargne');
-  S.pauses=e.target.checked?[...new Set(S.pauses.concat(n))]:S.pauses.filter(x=>x!==n);
-  /* applique aux mois déjà créés qui n'ont pas commencé et sans épargne virée */
-  S.months.forEach(m=>{if(+m.id.slice(5)===n&&m.id>=ymNow&&m.epFaite===0&&m.id>=S.epStart)m.epPrevue=e.target.checked?0:S.objMensuel});
-  e.target.blur();save();render()});
-bindField('sObj','objectif par défaut',v=>lireMontant(v,{label:'Objectif par mois'}),(m,r)=>{S.objMensuel=r.v});
+$('pause').addEventListener('change',e=>{const n=+e.target.dataset.p;if(!n)return;const on=e.target.checked;pushHist('Modification : mois sans épargne');
+  const k=appliqueReglageEp(()=>{S.pauses=on?[...new Set(S.pauses.concat(n))]:S.pauses.filter(x=>x!==n)});
+  e.target.blur();save();render();if(k)toast(`${pl(k,'mois')} à venir mis à jour. Versements conservés.`,false)});
+bindField('sObj','objectif par défaut',v=>lireMontant(v,{label:'Objectif par mois'}),(m,r)=>{appliqueReglageEp(()=>{S.objMensuel=r.v})});
 bindField('sEpInit','épargne de départ',v=>lireMontant(v,{vide:true,max:MAX_OBJ,label:'Épargne de départ'}),(m,r)=>{S.epInitial=r.vide?0:r.v});
-$('epStart').addEventListener('change',e=>{if(validId(e.target.value)){pushHist('Modification : début de l’épargne');S.epStart=e.target.value;save();render()}});
+$('epStart').addEventListener('change',e=>{
+  const v=e.target.value;if(!validId(v)||v===S.epStart)return;
+  pushHist('Modification : début de l’épargne');
+  const k=appliqueReglageEp(()=>{S.epStart=v});save();render();
+  toast(`Début de l’épargne : ${mLabel(v)}. ${k?pl(k,'mois')+' en cours ou à venir mis à jour':'Aucun mois à venir à modifier'}. Versements conservés.`,false);
+});
 $('budgets').addEventListener('input',e=>{const k=e.target.dataset.b;if(!k)return;
   const r=lireMontant(e.target.value,{vide:true,label:'Budget'});e.target.classList.toggle('bad',!r.ok);if(!r.ok)return;
   pushHist('Modification : budget '+catOf(k).n);if(!r.vide&&r.v>0)S.budgets[k]=r.v;else delete S.budgets[k];save();render()});
@@ -2024,8 +2167,13 @@ $('vers').addEventListener('click',e=>{
   const b=e.target.closest('[data-delv]');if(!b)return;
   if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Suppr. ?';setTimeout(()=>{if(b.isConnected){b.classList.remove('arm');b.textContent='✕'}},3000);return}
   const d=S.depots.find(x=>x.id===b.dataset.delv);if(!d)return;
-  pushHist('Suppression versement '+eur(d.montant));S.depots=S.depots.filter(x=>x.id!==d.id);syncEp();save();render();
-  const P=epargne();toast('Versement supprimé : '+eur(d.montant)+(P.libre<0?' · objectifs à ajuster':''));
+  const P=epargne(),apres=r2(P.total-d.montant),manque=r2(P.affecte-apres);
+  const doDel=adj=>{pushHist('Suppression versement '+eur(d.montant));S.depots=S.depots.filter(x=>x.id!==d.id);syncEp();
+    if(adj){const P2=epargne();if(P2.libre<-0.004)appliqueAjust(planAjust(r2(-P2.libre)))}
+    save();render();toast('Versement supprimé : '+eur(d.montant))};
+  if(manque<=0.004)return doDel(false);
+  confirmBox('Supprimer ce versement ?',`<p>Ton épargne totale passera de <b>${eur(P.total)}</b> à <b>${eur(apres)}</b>, mais tes objectifs ont <b>${eur(P.affecte)}</b> affectés : il manquerait <b>${eur(manque)}</b>.</p><p>Ajustement proposé :</p>${planHTML(planAjust(manque))}`,
+    [{label:'Supprimer et ajuster les objectifs',cls:'danger',fn:()=>doDel(true)},{label:'Supprimer sans ajuster (une alerte restera)',cls:'danger',fn:()=>doDel(false)}]);
 });
 $('cols').addEventListener('click',e=>{const b=e.target.closest('[data-col]');if(b&&monthOf(b.dataset.col))goMonth(b.dataset.col)});
 
