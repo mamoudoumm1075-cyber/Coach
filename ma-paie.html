@@ -1823,7 +1823,7 @@ function openGoal(id){
   $('gDejaField').hidden=!!g;$('gDel').hidden=!g;disarm($('gDel'),'Supprimer');
   $('gHint').textContent=g?`${eur(alloue(g))} affectés. Pour changer ce montant, utilise « + Ajouter » ou « − Retirer ».`
     :`Épargne libre disponible : ${eur(Math.max(0,P.libre))}. « Déjà économisé » est pris sur cette épargne libre.`;
-  gErr('');openS('goalSheet');setTimeout(()=>$('gNom').focus(),50);
+  gErr('');openS('goalSheet');focusLater($('gNom'));
 }
 $('goalNew').addEventListener('click',()=>openGoal(null));
 $('gSave').addEventListener('click',()=>{
@@ -1865,7 +1865,7 @@ function openMv(id,sens){
   const ch=sens>0?[...new Set([Math.min(Math.max(0,P.libre),reste)].filter(v=>v>0))]:(a>0?[a]:[]);
   $('mvChips').innerHTML=ch.map(v=>`<button class="chip" data-v="${v}">${sens>0?'Tout ce qui est possible · ':'Tout · '}${eur(v)}</button>`).join('');
   $('mvGo').textContent=sens>0?'Ajouter à l’objectif':'Retirer de l’objectif';
-  mvErr('');openS('mvSheet');setTimeout(()=>$('mvAmt').focus(),50);
+  mvErr('');openS('mvSheet');focusLater($('mvAmt'));
 }
 $('mvChips').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b){$('mvAmt').value=b.dataset.v.replace('.',',');mvErr('')}});
 $('mvNew').addEventListener('change',e=>{$('mvDateField').hidden=!e.target.checked});
@@ -1960,6 +1960,8 @@ let lastFocus=null;
 function openS(id){lastFocus=document.activeElement;SHEETS.forEach(s=>{$(s).hidden=s!==id});$('toast').hidden=true}
 function closeAll(){const was=SHEETS.some(s=>!$(s).hidden);SHEETS.forEach(s=>{$(s).hidden=true});editId=null;confirmKey='';goalEdit=null;mvGoal=null;
   if(was&&lastFocus&&lastFocus.isConnected)try{lastFocus.focus()}catch(e){}}
+/* Place le curseur à l'ouverture d'une fenêtre, sauf si tu as déjà touché un champ de cette fenêtre entre-temps */
+function focusLater(el){if(!el)return;const box=el.closest('.sheet');setTimeout(()=>{const a=document.activeElement;if(box&&a&&a!==document.body&&box.contains(a)&&a!==el&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))return;try{el.focus()}catch(e){}},50)}
 function disarm(b,txt){b.dataset.armed='';b.classList.remove('armed');b.textContent=txt}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SHEETS.some(s=>!$(s).hidden))closeAll()});
 ['goalSheet','mvSheet','cfSheet','impSheet'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target.closest('[data-sclose]'))closeAll()}));
@@ -1968,7 +1970,7 @@ let cfActions=[];
 function confirmBox(titre,corps,actions){
   $('cfTitle').textContent=titre;$('cfBody').innerHTML=corps;cfActions=actions;
   $('cfBtns').innerHTML=actions.map((a,i)=>`<button class="btn ${a.cls||''}" data-cf="${i}">${esc(a.label)}</button>`).join('')+'<button class="btn" data-cf="-1">Annuler</button>';
-  openS('cfSheet');setTimeout(()=>{const b=$('cfBtns').querySelector('button');if(b)b.focus()},50);
+  openS('cfSheet');focusLater($('cfBtns').querySelector('button'));
 }
 $('cfBtns').addEventListener('click',e=>{const b=e.target.closest('[data-cf]');if(!b)return;const a=cfActions[+b.dataset.cf];closeAll();cfActions=[];if(a)a.fn()});
 /* Quand l'argent affecté dépasse l'épargne totale : on retire la différence des objectifs, les plus récents d'abord */
@@ -2012,7 +2014,7 @@ function openSheet(id,preset){
   $('sheetFavs').hidden=!!x||!S.favoris.length;
   $('sheetFavs').innerHTML=x?'':S.favoris.map(favChip).join('');
   renderCats();openS('sheet');
-  setTimeout(()=>{$('dAmt').focus()},50);
+  focusLater($('dAmt'));
 }
 function readForm(){
   const r=lireMontant($('dAmt').value);
@@ -2551,7 +2553,7 @@ function openEp(){
   $('epChips').innerHTML=ch.map(v=>`<button class="chip" data-v="${v}">${v===left&&left?'Reste du mois · ':''}${eurR(v)}</button>`).join('');
   $('epDate').value=m.id===ymNow?isoToday:(m.id<ymNow?m.id+'-'+pad(daysIn(m.id)):m.id+'-01');
   $('epDate').min=m.id+'-01';$('epDate').max=m.id+'-'+pad(daysIn(m.id));
-  epErr('');openS('epSheet');setTimeout(()=>{$('epAmt').focus()},50);
+  epErr('');openS('epSheet');focusLater($('epAmt'));
 }
 $('epOpen').addEventListener('click',openEp);
 $('epChips').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b){$('epAmt').value=b.dataset.v.replace('.',',');epErr('')}});
@@ -2602,7 +2604,7 @@ function useFav(id,fromSheet){
     if(!fromSheet){const mNow=monthOf(ymNow);if(mNow&&S.current!==ymNow)goMonth(ymNow);openSheet(null,monthOf(ymNow)?isoToday:null)}
     selCat=f.cat;renderCats();$('dDet').value=f.nom;$('sheetFavs').hidden=true;
     $('sheetHint').textContent=`${k.e} ${f.nom} : tape le montant, puis Entrée ou touche la catégorie.`;
-    setTimeout(()=>$('dAmt').focus(),60);return;
+    focusLater($('dAmt'));return;
   }
   let date=fromSheet?($('dDate').value||isoToday):isoToday;
   if(!validDate(date))date=isoToday;
