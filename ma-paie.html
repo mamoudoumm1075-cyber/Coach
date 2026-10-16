@@ -7,6 +7,10 @@
 <meta name="theme-color" content="#F4F6F9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ma Paie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="ma-paie.webmanifest">
+<link rel="apple-touch-icon" href="ma-paie-icon-192.png">
+<link rel="icon" href="ma-paie-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
 <style>
@@ -382,6 +386,21 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 .lsec{display:flex;justify-content:space-between;gap:8px;font-size:.95rem;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
 .lsec:first-child{border-top:0;padding-top:0;margin-top:0}
 .lsec span{font-variant-numeric:tabular-nums}
+/* Bandeaux de l'accueil, favoris, recherche, verrouillage */
+.banner .row{margin-top:8px}
+.favs{display:flex;gap:8px;flex-wrap:wrap}
+.fav{min-height:48px;border-radius:14px;border:1px solid var(--line);background:color-mix(in srgb,var(--c) 10%,var(--surface));padding:6px 12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;max-width:100%;text-align:left}
+.fav b{font-weight:800;white-space:nowrap}
+.fav span{overflow-wrap:anywhere}
+.favs.mini .fav{min-height:40px;font-size:.88rem}
+.newfav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.newfav select,.newfav button{grid-column:1/-1}
+.bilan{display:flex;flex-direction:column;gap:8px}
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.lockbox{width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.lockbox .lockico{font-size:2.6rem}
+.lockbox input{text-align:center;letter-spacing:.4em;font-size:1.4rem}
+body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visibility:hidden}
 @media (max-width:360px){.tabbar nav{gap:2px;padding:5px}.tabbar .tab{font-size:.64rem;min-width:0;padding:0 1px}.tabbar .tab span{font-size:1.1rem}.tabbar .plus{width:54px;height:54px;font-size:1.8rem}}
 @media (max-width:420px){#cmpSel{grid-template-columns:1fr}}
 
@@ -493,6 +512,13 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
       </details>
     </section>
 
+    <section class="card" id="favCard">
+      <div class="row" style="justify-content:space-between"><h2>Ajout rapide</h2><button class="linkbtn" id="favManage">Gérer mes favoris</button></div>
+      <div class="favs" id="favs"></div>
+    </section>
+
+    <div class="vstack" id="homeBanners"></div>
+
     <section>
       <div class="row" style="justify-content:space-between"><h2>Alertes</h2><span class="pill off" id="tipsCount" hidden></span></div>
       <div class="tips" id="tips"></div>
@@ -512,6 +538,8 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
   <div class="view" id="v-dep" hidden>
     <section class="card">
       <div class="dephead"><div><h2 id="depTitle">Dépenses</h2><small class="hint" id="depSplit"></small></div><b id="depTotal"></b></div>
+      <input class="txt" id="search" type="search" placeholder="🔎 Rechercher dans toutes mes dépenses" aria-label="Rechercher dans toutes les dépenses (détail, catégorie ou montant)" autocomplete="off">
+      <div id="searchRes" class="vstack" hidden></div>
       <div class="seg" role="group" aria-label="Affichage des dépenses">
         <button id="dvList" aria-pressed="true">Liste</button>
         <button id="dvCal" aria-pressed="false">Calendrier</button>
@@ -535,6 +563,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 
   <!-- ===== Stats ===== -->
   <div class="view" id="v-stats" hidden>
+    <section class="card" id="bilanStats" hidden></section>
     <section class="card">
       <h2>Je dépense dans quoi ?</h2>
       <div class="seg" role="group" aria-label="Période">
@@ -722,6 +751,25 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
             </div></div>
 
 
+          <div class="block" id="favBlock"><h3>Dépenses favorites</h3>
+            <p class="hint">Un favori ajoute la dépense en une touche, à la date du jour. Sans montant, il ouvre la saisie avec la catégorie déjà choisie.</p>
+            <div id="favList"></div>
+            <div class="newfav">
+              <input class="txt" id="nfN" placeholder="Nom (ex. Plein)" maxlength="24" aria-label="Nom du favori">
+              <input class="txt" id="nfM" inputmode="decimal" placeholder="Montant (facultatif)" aria-label="Montant du favori">
+              <select class="txt" id="nfC" aria-label="Catégorie du favori"></select>
+              <button class="btn small" id="nfAdd">Ajouter ce favori</button>
+            </div>
+            <p class="err" id="nfErr" hidden></p>
+          </div>
+          <div class="block"><h3>Rappels</h3>
+            <p class="hint">Ajoute un rappel à l'agenda de ton téléphone : il te prévient même quand l'appli est fermée.</p>
+            <div class="row"><label for="rapH" style="font-weight:700">Chaque soir à</label><input id="rapH" type="time" class="txt" value="20:30" style="width:auto"></div>
+            <button class="btn" id="icsSoir">📅 Rappel quotidien : noter mes dépenses</button>
+            <button class="btn" id="icsSave">📅 Rappel chaque dimanche : faire ma sauvegarde</button>
+          </div>
+          <div class="block"><h3>Verrouillage</h3><div id="lockSet" class="vstack"></div></div>
+          <div class="block"><h3>Installer l'appli</h3><p class="hint" id="installInfo"></p></div>
           <div class="field"><label for="addId">Ajouter un mois précis</label>
             <div class="row"><input id="addId" type="month" class="txt grow"><button class="btn small" id="addIdBtn">Ajouter</button></div></div>
           <p class="err" id="addIdErr" hidden></p>
@@ -757,6 +805,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
     <div class="head"><h2 id="sheetTitle">Nouvelle dépense</h2><button class="x" data-close aria-label="Fermer">✕</button></div>
     <div class="amount-box"><input class="amount" id="dAmt" inputmode="decimal" placeholder="0" aria-label="Montant en euros" autocomplete="off"><span>€</span></div>
     <p class="hint" id="sheetHint" style="text-align:center">Tape le montant, puis touche une catégorie : c'est enregistré.</p>
+    <div class="favs mini" id="sheetFavs"></div>
     <div class="cats" id="cats" role="group" aria-label="Catégorie"></div>
     <details id="moreOpts"><summary style="font-size:1rem">Détail et date</summary>
       <div class="row" style="padding-top:8px">
@@ -768,6 +817,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
     <div class="row" id="editRow" hidden>
       <button class="btn primary grow" id="dSave">Enregistrer</button>
       <button class="btn danger" id="dDelete">Supprimer</button>
+      <button class="btn" id="dFav" aria-label="En faire une dépense favorite">★</button>
     </div>
   </div>
 </div>
@@ -825,6 +875,19 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
     <div class="head"><h2 id="cfTitle">Confirmer</h2><button class="x" data-sclose aria-label="Fermer">✕</button></div>
     <div class="vstack cfbody" id="cfBody"></div>
     <div class="vstack" id="cfBtns"></div>
+  </div>
+</div>
+
+<div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="lockbox">
+    <div class="lockico" aria-hidden="true">🔒</div>
+    <h2 id="lockTitle">Ma Paie est verrouillée</h2>
+    <input id="lockPin" class="txt" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Code" aria-label="Code de déverrouillage">
+    <p class="err" id="lockErr" hidden></p>
+    <button class="btn primary" id="lockGo">Déverrouiller</button>
+    <button class="btn" id="lockBio" hidden>Utiliser Face ID / empreinte</button>
+    <button class="linkbtn" id="lockForgot" style="align-self:center">Code oublié ?</button>
+    <p class="hint" id="lockForgotTxt" hidden></p>
   </div>
 </div>
 
@@ -1069,6 +1132,16 @@ function sanitize(o,rep){
     if(v==null||v<=0){note('Un retrait d’épargne invalide a été ignoré.');continue}
     n.retraits.push({id:fixId(x.id),date:validDate(x.date)?x.date:isoToday,montant:v,nom:String(x.nom??'').slice(0,40)});
   }
+  /* Dépenses favorites (12 au maximum) */
+  n.favoris=[];
+  if(Array.isArray(o.favoris))for(const f of o.favoris){
+    if(!f||typeof f!=='object'||n.favoris.length>=12)continue;
+    const nom=String(f.nom??'').trim().slice(0,24);if(!nom)continue;
+    let mt=f.montant==null||f.montant===''?null:montantOk(f.montant);if(mt===0)mt=null;
+    n.favoris.push({id:fixId(f.id),nom,montant:mt,cat:catIds.has(f.cat)?f.cat:'general'});
+  }
+  n.bilanVu=validId(o.bilanVu)?o.bilanVu:'';
+  n.joursVides=Array.isArray(o.joursVides)?[...new Set(o.joursVides.filter(validDate))].slice(-400):[];
   if(Array.isArray(o.masquees))n.masquees=[...new Set(o.masquees.filter(s=>typeof s==='string'&&/^\d{4}-\d{2}\|[A-Za-z0-9_:-]{1,60}$/.test(s)))].slice(-300);
   return n;
 }
@@ -1079,7 +1152,7 @@ function sample(){
       d(p,3,52.4,'transport','Plein'),d(p,6,38.9,'courses','Exemple'),d(p,12,14.5,'resto','Exemple'),d(p,24,41.2,'transport','Plein')]},
     {id:c,jours:15,abs:0,netRecu:'',epPrevue:200,epFaite:0,charges:[{nom:'Loyer (exemple)',montant:450,jour:5,paye:true},{nom:'Forfait (exemple)',montant:20,jour:Math.min(28,today.getDate()+2),paye:false}],depenses:[
       d(c,2,48,'transport','Plein'),d(c,4,31.6,'courses','Exemple'),d(c,7,12.9,'resto','Exemple'),d(c,9,45,'transport','Plein'),d(c,11,25,'divert','Exemple'),d(c,12,18,'achats','Exemple')]}
-  ],goals:[{nom:'Permis (exemple)',cible:1200,cree:p+'-01',mouvements:[{montant:150,type:'initial',date:p+'-28'}]}]});
+  ],favoris:[{nom:'Plein',montant:50,cat:'transport'},{nom:'Boulangerie',montant:null,cat:'courses'}],goals:[{nom:'Permis (exemple)',cible:1200,cree:p+'-01',mouvements:[{montant:150,type:'initial',date:p+'-28'}]}]});
 }
 
 /* ---------- Chargement et enregistrement ---------- */
@@ -1249,7 +1322,7 @@ function render(){
   const idx=S.months.findIndex(x=>x.id===m.id);
   $('mPrev').disabled=idx<=0;
   $('mNext').setAttribute('aria-label',idx===S.months.length-1?'Créer '+mLabel(nextId(m.id)):'Mois suivant');
-  renderHero(m,c);renderList(m,c);renderCal();renderSim();renderMonth(m,c);
+  renderBanners();renderHero(m,c);renderFavs();renderList(m,c);renderCal();renderSearch();renderSim();renderMonth(m,c);renderBilanStats(m);
   renderAlerts(m,c);renderStats();renderCmp();renderEp();renderGoals();renderTable();renderSettings();renderBackup();renderSave();
 }
 
@@ -1489,7 +1562,7 @@ function renderAlerts(m,c){
     if(i.parMois!=null){besoin+=i.parMois;resteObj+=i.reste}
   }
   if(R&&besoin>R.avg+0.5&&P.libre<resteObj)add('warn','goalrythme','Objectifs en retard sur ton rythme d’épargne',`${eur(besoin)} par mois nécessaires, tu épargnes ≈ ${eur(R.avg)} par mois (moyenne de ${R.n} mois)`,'À ce rythme, au moins un objectif ne sera pas atteint à sa date.','Augmente ton épargne mensuelle, repousse une date ou baisse un montant cible.');
-  if(!S.example&&Date.now()-S.lastBackup>14*864e5)add('info','backup','Pense à ta sauvegarde',S.lastBackup?'Dernière sauvegarde le '+new Date(S.lastBackup).toLocaleDateString('fr-FR'):'Aucune sauvegarde faite','Tes données ne sont que sur ce téléphone : si tu le perds ou vides le navigateur, elles disparaissent.','Va dans Gérer → « Sauvegarde et historique » et télécharge le fichier.');
+  if(false)add('info','backup','Pense à ta sauvegarde',S.lastBackup?'Dernière sauvegarde le '+new Date(S.lastBackup).toLocaleDateString('fr-FR'):'Aucune sauvegarde faite','Tes données ne sont que sur ce téléphone : si tu le perds ou vides le navigateur, elles disparaissent.','Va dans Gérer → « Sauvegarde et historique » et télécharge le fichier.');
 
   const vis=A.filter(a=>a.k==='bad'||!S.masquees.includes(m.id+'|'+a.key)),nbMask=A.length-vis.length;
   const ord={bad:0,warn:1,info:2,ok:3};
@@ -1797,6 +1870,8 @@ function renderSettings(){
     <input data-b="${k.id}" inputmode="decimal" placeholder="—" value="${S.budgets[k.id]?String(S.budgets[k.id]).replace('.',','):''}" aria-label="Budget ${esc(k.n)}">
     ${k.id.startsWith('c_')?`<button class="x" data-delcat="${k.id}" aria-label="Supprimer la catégorie ${esc(k.n)}">✕</button>`:'<span></span>'}</div>`).join(''));
   applyTheme();
+  renderFavSet();renderLockSet();
+  $('installInfo').textContent=installTxt();
 }
 
 function counts(st){return{mois:st.months.length,dep:st.months.reduce((a,m)=>a+m.depenses.length,0),obj:(st.goals||[]).length,de:st.months[0].id,a:st.months[st.months.length-1].id}}
@@ -1882,6 +1957,8 @@ function openSheet(id,preset){
   $('sheetTitle').textContent=x?'Corriger la dépense':'Nouvelle dépense';
   $('sheetHint').textContent=x?'Change ce qu’il faut, puis Enregistrer.':(preset?dateFr(def,{weekday:'long',day:'numeric',month:'long'}):mLabel(m.id))+' · tape le montant, puis touche une catégorie.';
   $('editRow').hidden=!x;disarm($('dDelete'),'Supprimer');
+  $('sheetFavs').hidden=!!x||!S.favoris.length;
+  $('sheetFavs').innerHTML=x?'':S.favoris.map(favChip).join('');
   renderCats();openS('sheet');
   setTimeout(()=>{$('dAmt').focus()},50);
 }
@@ -2050,6 +2127,7 @@ $('budgets').addEventListener('click',e=>{
   pushHist('Suppression : catégorie '+catOf(id).n);
   S.cats=S.cats.filter(c=>c.id!==id);delete S.budgets[id];
   S.months.forEach(m=>m.depenses.forEach(d=>{if(d.cat===id)d.cat='general'}));
+  S.favoris.forEach(f=>{if(f.cat===id)f.cat='general'});
   b.blur();save();render();
 });
 $('ncAdd').addEventListener('click',()=>{
@@ -2447,12 +2525,291 @@ $('vers').addEventListener('click',e=>{
 });
 $('cols').addEventListener('click',e=>{const b=e.target.closest('[data-col]');if(b&&monthOf(b.dataset.col))goMonth(b.dataset.col)});
 
+/* ---------- Téléchargement générique ---------- */
+function telecharger(name,blob){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+
+/* ---------- Dépenses favorites ---------- */
+const favChip=f=>{const k=catOf(f.cat);return `<button class="fav" data-fav="${f.id}" style="--c:${k.c}" aria-label="Ajouter ${esc(f.nom)}${f.montant!=null?' '+eur(f.montant):''}"><span aria-hidden="true">${esc(k.e)}</span><span>${esc(f.nom)}</span>${f.montant!=null?`<b>${eur(f.montant)}</b>`:'<b>…</b>'}</button>`};
+function renderFavs(){
+  $('favs').innerHTML=S.favoris.length?S.favoris.map(favChip).join('')
+    :'<p class="hint">Crée tes dépenses habituelles (plein, courses, cantine…) pour les ajouter en une touche.</p>';
+}
+function useFav(id,fromSheet){
+  const f=S.favoris.find(x=>x.id===id);if(!f)return;
+  const k=catOf(f.cat);
+  if(f.montant==null){
+    /* Sans montant : on ouvre la saisie avec la catégorie et le détail déjà remplis */
+    if(!fromSheet){const mNow=monthOf(ymNow);if(mNow&&S.current!==ymNow)goMonth(ymNow);openSheet(null,monthOf(ymNow)?isoToday:null)}
+    selCat=f.cat;renderCats();$('dDet').value=f.nom;$('sheetFavs').hidden=true;
+    $('sheetHint').textContent=`${k.e} ${f.nom} : tape le montant, puis Entrée ou touche la catégorie.`;
+    setTimeout(()=>$('dAmt').focus(),60);return;
+  }
+  let date=fromSheet?($('dDate').value||isoToday):isoToday;
+  if(!validDate(date))date=isoToday;
+  const target=monthOf(date.slice(0,7));
+  if(!target){toast(`${mLabel(date.slice(0,7))} n’existe pas encore : crée ce mois d’abord.`,false);return}
+  pushHist('Ajout : '+eur(f.montant)+' '+f.nom);
+  target.depenses.push({id:uid(),montant:f.montant,cat:f.cat,detail:f.nom,date});
+  if(fromSheet)closeAll();
+  save();render();
+  toast(`Ajouté : ${eur(f.montant)} · ${k.e} ${f.nom}`+(target.id!==S.current?` · ${mLabel(target.id)}`:''));
+}
+$('favs').addEventListener('click',e=>{const b=e.target.closest('[data-fav]');if(b)useFav(b.dataset.fav,false)});
+$('sheetFavs').addEventListener('click',e=>{const b=e.target.closest('[data-fav]');if(b)useFav(b.dataset.fav,true)});
+function ouvreReglages(blockId){showTab('gerer');$('setBox').open=true;setTimeout(()=>{const el=$(blockId);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})},50)}
+$('favManage').addEventListener('click',()=>ouvreReglages('favBlock'));
+function renderFavSet(){
+  setHTML($('nfC'),allCats().map(k=>`<option value="${k.id}">${esc(k.e)} ${esc(k.n)}</option>`).join(''));
+  $('favList').innerHTML=S.favoris.length?S.favoris.map(f=>{const k=catOf(f.cat);return `<div class="donerow"><span>${esc(k.e)} <b>${esc(f.nom)}</b> · ${f.montant!=null?eur(f.montant):'montant à saisir'}</span><button class="x" data-delfav="${f.id}" aria-label="Supprimer le favori ${esc(f.nom)}">✕</button></div>`}).join('')
+    :'<p class="hint">Aucun favori pour l’instant.</p>';
+}
+function ajouteFav(nom,montant,cat){
+  nom=String(nom||'').trim().slice(0,24);
+  if(!nom)return 'Donne un nom au favori.';
+  if(S.favoris.length>=12)return '12 favoris au maximum.';
+  if(S.favoris.some(f=>f.nom.toLowerCase()===nom.toLowerCase()))return 'Un favori porte déjà ce nom.';
+  pushHist('Nouveau favori : '+nom);
+  S.favoris.push({id:uid(),nom,montant:montant>0?montant:null,cat});
+  save();render();return '';
+}
+$('nfAdd').addEventListener('click',()=>{
+  const r=lireMontant($('nfM').value,{vide:true,label:'Montant'});
+  const err=!r.ok?r.err:ajouteFav($('nfN').value,r.vide?null:r.v,$('nfC').value||'general');
+  showErr('nfErr',err);
+  if(!err){$('nfN').value='';$('nfM').value='';toast('Favori ajouté',false)}
+});
+$('favList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-delfav]');if(!b)return;
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Suppr. ?';setTimeout(()=>{if(b.isConnected){b.classList.remove('arm');b.textContent='✕'}},3000);return}
+  const f=S.favoris.find(x=>x.id===b.dataset.delfav);if(!f)return;
+  pushHist('Suppression favori : '+f.nom);S.favoris=S.favoris.filter(x=>x!==f);save();render();
+});
+$('dFav').addEventListener('click',()=>{
+  const r=lireMontant($('dAmt').value,{vide:true});
+  if(!selCat)return dErr('Choisis d’abord une catégorie.');
+  const nom=$('dDet').value.trim()||catOf(selCat).n;
+  const err=ajouteFav(nom,r.ok&&!r.vide?r.v:null,selCat);
+  if(err)dErr(err);else toast(`★ « ${nom.slice(0,24)} » ajouté aux favoris`,false);
+});
+
+/* ---------- Recherche dans toutes les dépenses ---------- */
+const normTxt=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function renderSearch(){
+  const q=$('search').value.trim(),on=!!q;
+  $('searchRes').hidden=!on;
+  if(on){$('listWrap').hidden=true;$('calWrap').hidden=true}
+  if(!on)return;
+  const nq=normTxt(q),nv=parseNombre(q),res=[];
+  for(const m of S.months)for(const d of m.depenses){const k=catOf(d.cat);
+    if(normTxt(d.detail).includes(nq)||normTxt(k.n).includes(nq)||(isFinite(nv)&&Math.abs(d.montant-nv)<0.005))res.push({m:m.id,d})}
+  res.sort((a,b)=>b.d.date.localeCompare(a.d.date));
+  const tot=r2(res.reduce((a,x)=>a+x.d.montant,0));
+  let h=`<p class="hint">${pl(res.length,'résultat')} · ${eur(tot)}${res.length>200?' (200 premiers affichés)':''}</p>`,last='';
+  for(const x of res.slice(0,200)){
+    if(x.m!==last){const sm=r2(res.filter(z=>z.m===x.m).reduce((a,z)=>a+z.d.montant,0));h+=(last?'</div>':'')+`<h3 class="lsec">${mLabel(x.m)} <span>${eur(sm)}</span></h3><div class="list">`;last=x.m}
+    const k=catOf(x.d.cat);
+    h+=`<button class="item" data-edit="${x.d.id}" data-month="${x.m}">${icon(k)}<span class="d"><span>${esc(x.d.detail||k.n)}</span><small>${esc(k.n)} · ${dateFr(x.d.date,{day:'numeric',month:'short'})}${x.d.date>isoToday?'<span class="soon">à venir</span>':''}</small></span><span class="m">−${eur(x.d.montant)}</span></button>`;
+  }
+  $('searchRes').innerHTML=res.length?h+'</div>':h+'<p class="empty">Aucune dépense ne correspond.</p>';
+}
+$('search').addEventListener('input',()=>{renderList(cur(),calc(cur()));renderCal();renderSearch()});
+$('searchRes').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(!b)return;if(b.dataset.month!==S.current)goMonth(b.dataset.month);openSheet(b.dataset.edit)});
+
+/* ---------- Bilan de fin de mois ---------- */
+function bilanHTML(m,titre){
+  const c=calc(m),p=monthOf(prevId(m.id)),cp=p?calc(p):null,o=byCat(m.depenses);
+  const top=allCats().filter(k=>o[k.id]>0).sort((a,b)=>o[b.id]-o[a.id])[0];
+  const over=allCats().filter(k=>S.budgets[k.id]&&(o[k.id]||0)>S.budgets[k.id]);
+  const sg=v=>v<0?'−'+eur(-v):eur(v);
+  const delta=cp&&cp.dep>=1?` <small>(${c.dep>=cp.dep?'+':'−'}${fr(Math.abs((c.dep-cp.dep)/cp.dep*100),0)} % par rapport à ${MOIS[+p.id.slice(5)-1].toLowerCase()})</small>`:'';
+  const rows=[['Dépensé',eur(c.dep)+delta],['Épargne versée',eur(c.epFaite)+(c.epPrevue>0?` <small>sur ${eur(c.epPrevue)} prévus</small>`:'')],
+    ['Reste en fin de mois',sg(c.reste)+(c.recu?'':' <small>(théorique)</small>')]];
+  if(top)rows.push(['Plus gros poste',`${esc(top.e)} ${esc(top.n)} · ${eur(o[top.id])}`]);
+  if(Object.keys(S.budgets).length)rows.push(['Budgets',over.length?`${pl(over.length,'budget')} dépassé${over.length>1?'s':''} : ${over.map(k=>esc(k.n)).join(', ')}`:'tous respectés ✓']);
+  return `<div class="bilan"><h2>${titre||'Bilan de '+mLabel(m.id).toLowerCase()}</h2><div class="flow">${rows.map(([l,v])=>`<div class="fl"><span>${l}</span><b style="white-space:normal;text-align:right">${v}</b></div>`).join('')}</div>`
+    +(c.recu?'':'<p class="hint">Salaire non saisi pour ce mois : le reste est une estimation.</p>')+'</div>';
+}
+function renderBilanStats(m){
+  const show=statut(m.id)==='passe';$('bilanStats').hidden=!show;
+  if(show)$('bilanStats').innerHTML=bilanHTML(m);
+}
+
+/* ---------- Bandeaux de l'accueil : sauvegarde, installation, rappel du soir, bilan ---------- */
+const KEY_SNOOZE='ma-paie-rappel-sauvegarde',KEY_INST='ma-paie-install-vu',KEY_RAPH='ma-paie-rappel-heure';
+const estInstallee=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
+const estIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let bip=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bip=e;renderBanners()});
+function installTxt(){
+  if(estInstallee())return 'Ma Paie est installée sur ton écran d’accueil : elle fonctionne hors ligne.';
+  if(location.protocol==='file:')return 'Pour l’installer, ouvre l’appli depuis son adresse internet (GitHub Pages), pas depuis un fichier.';
+  return (estIOS()?'Dans Safari : bouton Partager ⬆️, puis « Sur l’écran d’accueil ».':'Menu du navigateur, puis « Installer l’application ».')
+    +' Attention : l’appli installée a sa propre mémoire. Télécharge d’abord ta sauvegarde ici, puis importe-la dans l’appli installée.';
+}
+function renderBanners(){
+  const b=[],now=Date.now(),add=(prio,html)=>b.push({prio,html});
+  if(!S.example&&!lockSave&&now-S.lastBackup>7*864e5&&now>(+ls.get(KEY_SNOOZE)||0))
+    add(2,`<div class="tip warn banner"><b>💾 Fais ta sauvegarde de la semaine</b><p>${S.lastBackup?'Dernière sauvegarde le '+new Date(S.lastBackup).toLocaleDateString('fr-FR')+'.':'Tu n’as encore jamais sauvegardé.'} Tes données ne sont que sur ce téléphone.</p><div class="row"><button class="btn small primary grow" data-bn="backup">Sauvegarder maintenant</button><button class="btn small" data-bn="snooze">Demain</button></div></div>`);
+  if(estInstallee()&&S.example)
+    add(1,'<div class="tip info banner"><b>Tu viens d’installer Ma Paie ?</b><p>L’appli installée démarre vide : importe la sauvegarde faite dans Safari pour retrouver tes données.</p><div class="row"><button class="btn small primary grow" data-bn="importer">Importer ma sauvegarde</button></div></div>');
+  else if(!estInstallee()&&location.protocol.startsWith('http')&&ls.get(KEY_INST)!=='1')
+    add(4,`<div class="tip info banner"><b>📲 Installe Ma Paie sur ton écran d’accueil</b><p>Elle s’ouvre comme une vraie appli, marche sans internet et tes données sont mieux protégées.</p><p>${esc(installTxt())}</p><div class="row">${bip?'<button class="btn small primary grow" data-bn="install">Installer</button>':''}${S.example?'':'<button class="btn small grow" data-bn="backup">Sauvegarder d’abord</button>'}<button class="btn small" data-bn="installok">Compris</button></div></div>`);
+  const mNow=monthOf(ymNow);
+  if(!S.example&&mNow&&new Date().getHours()>=19&&!mNow.depenses.some(d=>d.date===isoToday)&&!S.joursVides.includes(isoToday))
+    add(1,'<div class="tip info banner"><b>🌙 Tu as noté tes dépenses d’aujourd’hui ?</b><div class="row"><button class="btn small primary grow" data-bn="addtoday">+ Ajouter</button><button class="btn small grow" data-bn="rien">Rien dépensé aujourd’hui</button></div></div>');
+  const pm=monthOf(prevId(ymNow));
+  if(!S.example&&pm&&S.bilanVu!==pm.id&&(pm.depenses.length||pm.netRecu!==''))
+    add(3,`<div class="card">${bilanHTML(pm,'📊 Bilan de '+mLabel(pm.id).toLowerCase())}<div class="row"><button class="btn small primary grow" data-bn="bilanok">OK, vu</button><button class="btn small grow" data-bn="bilanstats">Voir les stats</button></div></div>`);
+  /* Deux bandeaux au plus, les plus importants d'abord, pour garder l'accueil lisible */
+  const vis=b.sort((x,y)=>x.prio-y.prio).slice(0,2);
+  $('homeBanners').innerHTML=vis.map(x=>x.html).join('');$('homeBanners').hidden=!vis.length;
+}
+$('homeBanners').addEventListener('click',e=>{
+  const b=e.target.closest('[data-bn]');if(!b)return;const a=b.dataset.bn;
+  if(a==='backup'){$('bkFile').click();return}
+  if(a==='snooze'){ls.set(KEY_SNOOZE,String(Date.now()+864e5));renderBanners();return}
+  if(a==='install'&&bip){bip.prompt();bip.userChoice.finally(()=>{bip=null;renderBanners()});return}
+  if(a==='installok'){ls.set(KEY_INST,'1');renderBanners();return}
+  if(a==='importer'){ouvreReglages('bkBox');$('bkBox').open=true;return}
+  if(a==='addtoday'){if(S.current!==ymNow)goMonth(ymNow);openSheet(null,isoToday);return}
+  if(a==='rien'){S.joursVides=[...S.joursVides.filter(d=>d!==isoToday),isoToday].slice(-400);save();renderBanners();toast('Noté : aucune dépense aujourd’hui',false);return}
+  if(a==='bilanok'||a==='bilanstats'){const pm=monthOf(prevId(ymNow));if(pm){S.bilanVu=pm.id;save()}
+    if(a==='bilanstats'&&pm){goMonth(pm.id);showTab('stats');window.scrollTo({top:0})}else render()}
+});
+
+/* ---------- Rappels dans l'agenda du téléphone (.ics) ---------- */
+const icsTxt=t=>String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+const icsDate=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+function icsFile(nom,titre,texte,debut,rrule){
+  const now=new Date(),stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const url=location.protocol.startsWith('http')?location.href.split('#')[0]:'';
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ma Paie//FR','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+    `UID:ma-paie-${nom}-${now.getTime()}@ma-paie`,`DTSTAMP:${stamp}`,`DTSTART:${debut}`,'DURATION:PT5M',`RRULE:${rrule}`,
+    `SUMMARY:${icsTxt(titre)}`,`DESCRIPTION:${icsTxt(texte+(url?'\n'+url:''))}`,...(url?[`URL:${url}`]:[]),
+    'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsTxt(titre)}`,'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'];
+  telecharger(`ma-paie-rappel-${nom}.ics`,new Blob([L.join('\r\n')+'\r\n'],{type:'text/calendar'}));
+}
+$('rapH').value=ls.get(KEY_RAPH)||'20:30';
+$('rapH').addEventListener('change',()=>{if(/^\d{2}:\d{2}$/.test($('rapH').value))ls.set(KEY_RAPH,$('rapH').value)});
+$('icsSoir').addEventListener('click',()=>{
+  const h=/^\d{2}:\d{2}$/.test($('rapH').value)?$('rapH').value:'20:30';ls.set(KEY_RAPH,h);
+  icsFile('soir','Ma Paie : note tes dépenses du jour','Ouvre Ma Paie et ajoute ce que tu as dépensé aujourd’hui.',icsDate(new Date())+'T'+h.replace(':','')+'00','FREQ=DAILY');
+  toast('Rappel créé : ouvre le fichier pour l’ajouter à ton agenda.',false);
+});
+$('icsSave').addEventListener('click',()=>{
+  const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7||7));
+  icsFile('sauvegarde','Ma Paie : fais ta sauvegarde','Ouvre Ma Paie, Gérer, puis « Télécharger ma sauvegarde ».',icsDate(d)+'T180000','FREQ=WEEKLY;BYDAY=SU');
+  toast('Rappel créé : ouvre le fichier pour l’ajouter à ton agenda.',false);
+});
+
+/* ---------- Verrouillage par code (et Face ID / empreinte si disponible) ----------
+   Le verrou empêche d'ouvrir l'appli sans le code. Il ne chiffre pas les données : c'est une protection contre les curieux. */
+const KEY_LOCK='ma-paie-verrou',KEY_LOCKTRY='ma-paie-verrou-essais';
+const lockCfg=()=>{try{const c=JSON.parse(ls.get(KEY_LOCK)||'null');return c&&typeof c.hash==='string'&&typeof c.salt==='string'?c:null}catch(e){return null}};
+const subtleOk=!!(window.crypto&&crypto.subtle&&window.isSecureContext);
+const b64e=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const b64d=t=>Uint8Array.from(atob(t),ch=>ch.charCodeAt(0));
+async function sha(t){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+let locked=false,hiddenAt=0,forgotT=null,bioAvail=false;
+try{if(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(v=>{bioAvail=!!v;renderLockSet();if(locked)$('lockBio').hidden=!(bioAvail&&lockCfg()&&lockCfg().cred)}).catch(()=>{})}catch(e){}
+const tries=()=>{try{const t=JSON.parse(ls.get(KEY_LOCKTRY)||'{}');return{n:+t.n||0,until:+t.until||0}}catch(e){return{n:0,until:0}}};
+function lockMsg(t){showErr('lockErr',t)}
+function lockNow(){
+  const c=lockCfg();if(!c)return;
+  locked=true;closeAll();document.body.classList.add('locked');$('lock').hidden=false;
+  $('lockPin').value='';lockMsg('');$('lockBio').hidden=!(c.cred&&bioAvail);$('lockForgotTxt').hidden=true;
+  setTimeout(()=>{if(locked)$('lockPin').focus()},50);
+}
+function unlock(){locked=false;clearInterval(forgotT);forgotT=null;document.body.classList.remove('locked');$('lock').hidden=true;ls.del(KEY_LOCKTRY);render()}
+async function tryPin(){
+  const t=tries();
+  if(t.until>Date.now()){lockMsg(`Trop d’essais. Réessaie dans ${Math.ceil((t.until-Date.now())/1000)} s.`);return}
+  const pin=$('lockPin').value.trim(),c=lockCfg();
+  if(!c){unlock();return}
+  if(!/^\d{4,8}$/.test(pin)){lockMsg('Entre ton code (4 à 8 chiffres).');return}
+  if(await sha(c.salt+pin)===c.hash){unlock();return}
+  const n=t.n+1,until=n>=5?Date.now()+Math.min(900,30*2**(n-5))*1000:0;
+  ls.set(KEY_LOCKTRY,JSON.stringify({n,until}));$('lockPin').value='';
+  lockMsg(n>=5?`Code incorrect. Attends ${Math.round((until-Date.now())/1000)} s avant de réessayer.`:`Code incorrect (${pl(n,'essai')}).`);
+}
+async function bioUnlock(){
+  const c=lockCfg();if(!c||!c.cred)return;
+  try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:b64d(c.cred)}],userVerification:'required',timeout:60000}});unlock()}
+  catch(e){lockMsg('Face ID / empreinte non reconnu. Utilise ton code.')}
+}
+$('lockGo').addEventListener('click',tryPin);
+$('lockPin').addEventListener('keydown',e=>{if(e.key==='Enter')tryPin()});
+$('lockBio').addEventListener('click',bioUnlock);
+$('lockForgot').addEventListener('click',()=>{
+  if(forgotT)return;let n=60;const el=$('lockForgotTxt');el.hidden=false;
+  const msg=()=>{el.textContent=`Tes données ne sont pas chiffrées : ce verrou sert à décourager un curieux. Pour l’enlever sans le code, garde l’appli ouverte ${n} s.`};
+  msg();forgotT=setInterval(()=>{n--;msg();if(n<=0){clearInterval(forgotT);forgotT=null;ls.del(KEY_LOCK);unlock();renderLockSet(true);toast('Verrou retiré. Tu peux en remettre un dans Gérer → Réglages.',false)}},1000);
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')hiddenAt=Date.now();
+  else if(lockCfg()&&!locked&&hiddenAt&&Date.now()-hiddenAt>60000)lockNow();
+});
+function lkErr(t){const p=$('lkErr');if(p)showErr('lkErr',t)}
+function renderLockSet(force){
+  const box=$('lockSet');if(!box)return;
+  const put=html=>{if(force)box.innerHTML=html;else setHTML(box,html)};
+  if(!subtleOk){put('<p class="hint">Disponible quand l’appli est ouverte depuis son adresse https (pas depuis un fichier).</p>');return}
+  const c=lockCfg();
+  put(!c?`<p class="hint">Protège l’appli par un code${bioAvail?', et par Face ID / empreinte':''}. Le verrou empêche un curieux de l’ouvrir ; il ne chiffre pas les données.</p>
+    <div class="fields"><div class="field"><label for="lkNew">Nouveau code (4 à 8 chiffres)</label><input id="lkNew" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div>
+    <div class="field"><label for="lkNew2">Confirme le code</label><input id="lkNew2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div></div>
+    <button class="btn" id="lkOn">Activer le verrouillage</button><p class="err" id="lkErr" hidden></p>`
+   :`<p class="ok-msg">🔒 Verrouillage activé${c.cred?' · Face ID / empreinte activé':''}. L’appli se verrouille à l’ouverture et après 1 minute en arrière-plan.</p>
+    ${bioAvail&&!c.cred?'<button class="btn" id="lkBioOn">Activer Face ID / empreinte</button>':''}${c.cred?'<button class="btn" id="lkBioOff">Désactiver Face ID / empreinte</button>':''}
+    <button class="btn" id="lkNow">Verrouiller maintenant</button>
+    <div class="field"><label for="lkCur">Code actuel (pour désactiver le verrou)</label><input id="lkCur" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"></div>
+    <button class="btn danger" id="lkOff">Désactiver le verrouillage</button><p class="err" id="lkErr" hidden></p>`);
+}
+$('lockSet').addEventListener('click',async e=>{
+  const id=e.target.id;
+  if(id==='lkOn'){
+    const a=$('lkNew').value.trim(),b=$('lkNew2').value.trim();
+    if(!/^\d{4,8}$/.test(a))return lkErr('Le code doit faire 4 à 8 chiffres.');
+    if(a!==b)return lkErr('Les deux codes ne sont pas identiques.');
+    const salt=b64e(crypto.getRandomValues(new Uint8Array(16)));
+    ls.set(KEY_LOCK,JSON.stringify({salt,hash:await sha(salt+a)}));ls.del(KEY_LOCKTRY);
+    renderLockSet(true);toast('Verrouillage activé. Retiens bien ton code.',false);return;
+  }
+  if(id==='lkNow'){lockNow();return}
+  if(id==='lkOff'){
+    const c=lockCfg(),v=$('lkCur').value.trim();
+    if(!c||!(await sha(c.salt+v)===c.hash))return lkErr('Code actuel incorrect.');
+    ls.del(KEY_LOCK);renderLockSet(true);toast('Verrouillage désactivé',false);return;
+  }
+  if(id==='lkBioOff'){const c=lockCfg();if(c){delete c.cred;ls.set(KEY_LOCK,JSON.stringify(c))}renderLockSet(true);return}
+  if(id==='lkBioOn'){
+    try{
+      const cr=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Ma Paie'},
+        user:{id:crypto.getRandomValues(new Uint8Array(16)),name:'ma-paie',displayName:'Ma Paie'},
+        pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+        authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000}});
+      const c=lockCfg();if(c){c.cred=b64e(cr.rawId);ls.set(KEY_LOCK,JSON.stringify(c))}
+      renderLockSet(true);toast('Face ID / empreinte activé',false);
+    }catch(err){lkErr('Impossible d’activer Face ID / empreinte sur cet appareil.')}
+  }
+});
+
+/* ---------- Appli installable et hors ligne ---------- */
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))
+  navigator.serviceWorker.register('ma-paie-sw.js',{scope:'./ma-paie'}).catch(()=>{});
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persisted().then(p=>p||navigator.storage.persist()).catch(()=>{})}catch(e){}
+
 /* ---------- Changement de jour pendant que l'appli est ouverte ---------- */
 function verifJour(){const old=isoToday;majDate();if(old!==isoToday){autoSnap();render()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verifJour()});
 setInterval(verifJour,60000);
 
 showTab(tab);save();autoSnap();render();
+if(lockCfg())lockNow();
 })();
 </script>
 
