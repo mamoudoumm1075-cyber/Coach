@@ -2889,7 +2889,7 @@ $('revList').addEventListener('click',e=>{
 const nk=t=>normTxt(t).replace(/[^a-z0-9]+/g,' ').trim();
 const titre=t=>t===t.toUpperCase()?t.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(a,b,c)=>b+c.toUpperCase()):t;
 const ALIAS={
-  date:['date transaction','completed date','date de fin','date de realisation','date de l operation','date operation','date','date comptabilisation','date de valeur','started date','date de debut'],
+  date:['date transaction','started date','date de debut','completed date','date de fin','date de realisation','date de l operation','date operation','date','date comptabilisation','date de valeur'],
   lib:['libelle operation','description','detail de l ecriture','libelle','details','libelle complet'],
   lib2:['libelle complet'],
   amt:['montant','amount','montant de l operation','montant eur','montant en euros'],
@@ -3000,8 +3000,10 @@ function impPrepare(rows,nom,cols,hi){
   for(const r of rows.slice(hi+1)){
     const date=lireDateBanque(r[c.date]);if(!date)continue;
     let mt=c.amt>=0?parseNombre(r[c.amt]):(parseNombre(r[c.cre])||0)-Math.abs(parseNombre(r[c.deb])||0);
-    if(!isFinite(mt)||mt===0)continue;
-    const fee=c.fee>=0?Math.abs(parseNombre(r[c.fee])||0):0;if(mt<0&&fee)mt-=fee;
+    if(!isFinite(mt))continue;
+    /* Revolut met parfois le prix dans « Frais » avec un montant à 0 (ex. abonnement Metal) : les frais sont toujours une sortie */
+    const fee=c.fee>=0?Math.abs(parseNombre(r[c.fee])||0):0;if(fee)mt-=fee;
+    if(Math.abs(mt)<0.005)continue;
     const raw=String(r[c.lib]||'').slice(0,300),full=(c.lib2>=0&&c.lib2!==c.lib?raw+' '+String(r[c.lib2]||''):raw).slice(0,500),k=[banque,date,r2(mt),nk(raw).slice(0,60)].join('|');vus[k]=(vus[k]||0)+1;
     let h2=5381;for(const ch of k+'#'+vus[k])h2=((h2*33)^ch.charCodeAt(0))>>>0;
     ops.push({date,montant:r2(mt),raw,full,nom:nettoieLibelle(raw),type:c.type>=0?nk(r[c.type]):'',state:c.state>=0?nk(r[c.state]):'',prod:c.prod>=0?nk(r[c.prod]):'',
@@ -3035,7 +3037,7 @@ function impClasser(){
     if(/exchange|echange|change/.test(o.type)){o.note='Change de devise';continue}
     if(mid<first&&!IMP.avant){o.note='Avant ton premier mois dans l’appli';continue}
     if(o.montant>0){
-      if(estMoi(o.raw,noms)||RE_REVOLUT.test(t)||/topup|recharge|top up/.test(o.type+' '+t)||/depot d especes/.test(nk(o.nom))){o.note='Virement entre tes comptes';continue}
+      if(estMoi(o.raw,noms)||RE_REVOLUT.test(t)||/topup|recharge|top up|ajout de fonds/.test(o.type+' '+t)&&!/\bcaf\b|cibtp/.test(t)||/depot d especes/.test(nk(o.nom))){o.note='Virement entre tes comptes';continue}
       if(RE_EPARGNE.test(t)){o.note='Retrait de ton épargne';continue}
       if(m&&((m.revenus||[]).some(r=>r.nom===o.nom&&Math.abs(r.montant-o.montant)<0.006))){o.note='Déjà enregistré';continue}
       const connu=S.revenusConnus[cleKey(o.nom)];
