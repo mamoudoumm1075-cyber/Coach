@@ -569,6 +569,7 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
         </table>
       </div>
       <p class="hint" id="tableNote">≈ : net estimé, pas encore reçu. Touche une ligne pour ouvrir le mois.</p>
+      <button class="btn" id="xlExport2">📊 Exporter mes mois vers Excel</button>
     </section>
   </div>
 
@@ -686,6 +687,8 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
           <p class="hint" id="bkInfo"></p>
           <button class="btn primary" id="bkFile">Télécharger ma sauvegarde (.json)</button>
           <button class="btn" id="bkCopy">Copier ma sauvegarde</button>
+          <button class="btn" id="xlExport">Exporter vers Excel (.xlsx)</button>
+          <p class="hint">Le fichier Excel sert à analyser tes chiffres sur ordinateur. Ce n’est pas une sauvegarde : seul le fichier .json permet de restaurer tes données.</p>
           <label class="btn" for="bkImport" style="display:flex;align-items:center;justify-content:center">Importer un fichier de sauvegarde</label>
           <input id="bkImport" type="file" accept=".json,application/json,text/plain" hidden>
           <textarea id="bkText" placeholder="…ou colle ici le texte d'une sauvegarde" aria-label="Texte de sauvegarde"></textarea>
@@ -2134,6 +2137,273 @@ $('snaps').addEventListener('click',e=>{
   const x=Array.isArray(a)&&a.find(s=>s&&s.d===b.dataset.snap);if(x)prepareRestore(x.snap);
 });
 $('undoBtn').addEventListener('click',undoLast);
+
+/* ---------- Export Excel (.xlsx) : fichier généré dans le téléphone, sans connexion ni bibliothèque externe ----------
+   Mêmes onglets et mêmes formules que le classeur Ma Paie. Chaque formule est accompagnée de sa valeur calculée par l'appli,
+   pour que le fichier s'affiche même dans un aperçu qui ne recalcule pas ; Excel recalcule tout à l'ouverture. */
+const XL_STYLES='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+ +'<numFmts count="3"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="#,##0.00 &quot;€&quot;;-#,##0.00 &quot;€&quot;;&quot;-&quot;"/><numFmt numFmtId="166" formatCode="0%"/></numFmts>'
+ +'<fonts count="10">'+[['',10,''],['<b/>',10,'FFFFFFFF'],['',10,'FF0000FF'],['<b/>',20,'FF127A55'],['<i/>',9,'FF667085'],['<b/>',10,''],['<b/>',24,'FF127A55'],['<b/>',12,'FF0000FF'],['<b/>',12,''],['<b/>',10,'FF008000']]
+   .map(([b,sz,c])=>`<font>${b}<sz val="${sz}"/>${c?`<color rgb="${c}"/>`:''}<name val="Arial"/></font>`).join('')+'</fonts>'
+ +'<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF127A55"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>'
+ +'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+ +'<cellXfs count="17">'+[[0,0,0],[0,1,2,'<alignment horizontal="center" vertical="center" wrapText="1"/>'],[165,0,0],[0,2,0],[165,2,0],[164,2,0],[0,3,0],[0,4,0],[0,5,0],[165,5,0],[166,0,0],[165,6,0],[0,7,3],[0,8,0],[165,9,0],[0,0,0,'<alignment wrapText="1" vertical="top"/>'],[0,2,0]]
+   .map(([n,f,fi,al])=>`<xf numFmtId="${n}" fontId="${f}" fillId="${fi}" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"${al?' applyAlignment="1">'+al+'</xf>':'/>'}`).join('')+'</cellXfs>'
+ +'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+/* Styles : 1 en-tête vert, 2 €, 3 saisie, 4 saisie €, 5 saisie date, 6 titre, 7 note, 8 gras, 9 € gras, 10 %, 11 grand montant, 12 sélecteur, 13 sous-titre, 14 € repris d'un autre onglet, 15 texte long, 16 saisie nombre */
+const XS={h:1,eur:2,in:3,inEur:4,inDate:5,title:6,note:7,b:8,eurB:9,pct:10,big:11,sel:12,sec:13,link:14,wrap:15,inNum:16};
+const xesc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const xcol=n=>{let s='';n++;while(n){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+const xserial=iso=>{const[y,m,d]=iso.split('-').map(Number);return(Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5};
+const xnum=v=>Math.round(v*100)/100;
+function xlSheet(name,widths){
+  const sh={name,rows:new Map(),widths:widths||[],merges:[],dv:[],freeze:0,heights:{}};
+  /* set('B4', valeur, style, formule) : la valeur sert de résultat mis en cache quand il y a une formule */
+  sh.set=(ref,v,s,f)=>{
+    const m=/^([A-Z]+)(\d+)$/.exec(ref),r=+m[2],c=[...m[1]].reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1;
+    const sa=s?` s="${s}"`:'';let x='';
+    if(f!=null){const fx=`<f>${xesc(f.replace(/^=/,''))}</f>`;
+      x=typeof v==='number'&&isFinite(v)?`<c r="${ref}"${sa}>${fx}<v>${v}</v></c>`:`<c r="${ref}"${sa} t="str">${fx}<v>${xesc(v==null?'':v)}</v></c>`}
+    else if(v==null||v==='')x=s?`<c r="${ref}"${sa}/>`:'';
+    else if(typeof v==='number')x=`<c r="${ref}"${sa}><v>${v}</v></c>`;
+    else x=`<c r="${ref}"${sa} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+    if(!x)return;
+    if(!sh.rows.has(r))sh.rows.set(r,new Map());
+    sh.rows.get(r).set(c,x);
+  };
+  sh.header=(row,labels,col0)=>labels.forEach((l,i)=>sh.set(xcol((col0||0)+i)+row,l,XS.h));
+  return sh;
+}
+function xlSheetXml(sh){
+  const rows=[...sh.rows.keys()].sort((a,b)=>a-b).map(r=>{const cs=sh.rows.get(r);
+    return `<row r="${r}"${sh.heights[r]?` ht="${sh.heights[r]}" customHeight="1"`:''}>${[...cs.keys()].sort((a,b)=>a-b).map(c=>cs.get(c)).join('')}</row>`}).join('');
+  const pane=sh.freeze?`<pane ySplit="${sh.freeze-1}" topLeftCell="A${sh.freeze}" activePane="bottomLeft" state="frozen"/>`:'';
+  const cols=sh.widths.length?'<cols>'+sh.widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>':'';
+  const merges=sh.merges.length?`<mergeCells count="${sh.merges.length}">${sh.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>`:'';
+  const dv=sh.dv.length?`<dataValidations count="${sh.dv.length}">${sh.dv.map(d=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${d.ref}"><formula1>${xesc(d.f)}</formula1></dataValidation>`).join('')}</dataValidations>`:'';
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +`<sheetViews><sheetView workbookViewId="0" showGridLines="0">${pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${rows}</sheetData>${merges}${dv}</worksheet>`;
+}
+/* Archive ZIP sans compression (format accepté par Excel, Numbers, LibreOffice et Google Sheets) */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name),data=enc.encode(f.data);let c=0xFFFFFFFF;
+    for(let i=0;i<data.length;i++)c=CRC_T[(c^data[i])&255]^(c>>>8);c=(c^0xFFFFFFFF)>>>0;
+    const h=new DataView(new ArrayBuffer(30));
+    [[0,0x04034b50,4],[4,20,2],[6,0x0800,2],[8,0,2],[10,0,2],[12,0x21,2],[14,c,4],[18,data.length,4],[22,data.length,4],[26,name.length,2],[28,0,2]]
+      .forEach(([o,v,n])=>n===4?h.setUint32(o,v,true):h.setUint16(o,v,true));
+    const cd=new DataView(new ArrayBuffer(46));
+    [[0,0x02014b50,4],[4,20,2],[6,20,2],[8,0x0800,2],[10,0,2],[12,0,2],[14,0x21,2],[16,c,4],[20,data.length,4],[24,data.length,4],[28,name.length,2],[30,0,2],[32,0,2],[34,0,2],[36,0,2],[38,0,4],[42,off,4]]
+      .forEach(([o,v,n])=>n===4?cd.setUint32(o,v,true):cd.setUint16(o,v,true));
+    parts.push(new Uint8Array(h.buffer),name,data);central.push(new Uint8Array(cd.buffer),name);
+    off+=30+name.length+data.length;
+  }
+  const cdSize=central.reduce((a,p)=>a+p.length,0),end=new DataView(new ArrayBuffer(22));
+  [[0,0x06054b50,4],[4,0,2],[6,0,2],[8,files.length,2],[10,files.length,2],[12,cdSize,4],[16,off,4],[20,0,2]]
+    .forEach(([o,v,n])=>n===4?end.setUint32(o,v,true):end.setUint16(o,v,true));
+  return new Blob([...parts,...central,new Uint8Array(end.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+function buildXlsx(){
+  const q=n=>`'${n}'`,fx2=v=>v.toFixed(2).replace('.',',');
+  const months=[...S.months],NM=months.length+120,cats=allCats();
+  const deps=months.flatMap(m=>m.depenses).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  const ND=deps.length+1000,NV=S.depots.length+500,NR=S.retraits.length+200;
+  const MR=c=>`${q('Mois')}!$${c}$5:$${c}$${4+NM}`,DR=c=>`${q('Dépenses')}!$${c}$5:$${c}$${4+ND}`;
+  const CHN=months.reduce((a,m)=>a+m.charges.length,0)+1000,CR=c=>`${q('Charges')}!$${c}$5:$${c}$${4+CHN}`;
+  const PR=r=>`${q('Paramètres')}!$B$${r}`,NOW=PR(4);
+  const P=epargne(),calcs=new Map(months.map(m=>[m.id,calc(m)]));
+
+  /* Paramètres */
+  const Pa=xlSheet('Paramètres',[46,16,70]);
+  Pa.set('A1','Paramètres',XS.title);Pa.set('A2','Texte bleu = valeur à saisir. Texte noir = calcul automatique.',XS.note);
+  const prm=[['Mois en cours (automatique)',ymNow,0,'=YEAR(TODAY())&"-"&TEXT(MONTH(TODAY()),"00")','Calculé à partir de la date du jour.'],
+    ['Épargne déjà constituée avant le suivi',S.epInitial,XS.inEur,null,'Compte dans l’épargne totale.'],
+    ['Objectif d’épargne par mois',S.objMensuel,XS.inEur,null,'Valeur par défaut des nouveaux mois.'],
+    ['Début de l’épargne (AAAA-MM)',S.epStart,XS.in,null,'Texte au format 2026-11.'],
+    ['— Paie (fiche de septembre 2026, à vérifier) —','',XS.b,null,''],
+    ['Salaire de base brut',PAIE.base,XS.inEur,null,'Fiche de paie de septembre 2026.'],
+    ['Part soumise du panier / jour',PAIE.panierSoumis,XS.inEur,null,'À confirmer.'],
+    ['Indemnité de trajet / jour',PAIE.trajet,XS.inEur,null,'À confirmer.'],
+    ['Panier non soumis / jour',PAIE.panierNet,XS.inEur,null,'Ajouté au net, sans cotisations.'],
+    ['Taux horaire de retenue d’absence (€/h)',PAIE.tauxAbs,XS.inNum,null,'Différent de base ÷ 151,67 h : à vérifier.'],
+    ['Heures par jour d’absence',PAIE.hJour,XS.inNum,null,''],
+    ['Cotisations de référence',PAIE.cotisRef,XS.inEur,null,'Pour le brut de référence ci-dessous.'],
+    ['Brut de référence',PAIE.brutRef,XS.inEur,null,'Plus bas que le salaire de base : à confirmer.'],
+    ['Taux marginal de cotisations',PAIE.tauxMarg,XS.pct,null,'Approximation linéaire.']];
+  prm.forEach(([l,v,s,f,n],i)=>{const r=4+i;Pa.set('A'+r,l,i===4?XS.b:0);Pa.set('B'+r,v,s,f);Pa.set('C'+r,n,XS.note)});
+  Pa.set('A20','Catégories de dépenses',XS.sec);Pa.header(21,['Catégorie','Budget / mois']);
+  cats.slice(0,16).forEach((k,i)=>{Pa.set('A'+(22+i),k.n,XS.in);Pa.set('B'+(22+i),S.budgets[k.id]||'',XS.inEur)});
+  Pa.set('A38','Lignes libres jusqu’à la ligne 37 pour ajouter des catégories.',XS.note);
+
+  /* Dépenses */
+  const De=xlSheet('Dépenses',[13,13,18,32,10,12]);De.freeze=5;
+  De.set('A1','Dépenses',XS.title);De.set('A2','Une ligne par dépense. Une date future = dépense prévue (pas encore payée).',XS.note);
+  De.header(4,['Date','Montant','Catégorie','Détail','Mois','Statut']);
+  deps.forEach((d,i)=>{const r=5+i;
+    De.set('A'+r,xserial(d.date),XS.inDate);De.set('B'+r,d.montant,XS.inEur);De.set('C'+r,catOf(d.cat).n,XS.in);De.set('D'+r,d.detail,XS.in);
+    De.set('E'+r,d.date.slice(0,7),XS.note,`=IF(A${r}="","",YEAR(A${r})&"-"&TEXT(MONTH(A${r}),"00"))`);
+    De.set('F'+r,d.date<=isoToday?'Payée':'Prévue',0,`=IF(A${r}="","",IF(A${r}<=TODAY(),"Payée","Prévue"))`)});
+  De.dv.push({ref:`C5:C${4+ND}`,f:`${q('Paramètres')}!$A$22:$A$37`});
+
+  /* Charges */
+  const Ch=xlSheet('Charges',[11,26,13,8,9]);Ch.freeze=5;
+  Ch.set('A1','Charges fixes',XS.title);Ch.set('A2','Une ligne par charge et par mois. « Payée » = Oui quand elle est prélevée.',XS.note);
+  Ch.header(4,['Mois','Charge','Montant','Jour','Payée']);
+  let rc=5;for(const m of months)for(const c of[...m.charges].sort((a,b)=>a.jour-b.jour)){
+    Ch.set('A'+rc,m.id,XS.in);Ch.set('B'+rc,c.nom,XS.in);Ch.set('C'+rc,c.montant,XS.inEur);Ch.set('D'+rc,Math.min(c.jour,daysIn(m.id)),XS.inNum);Ch.set('E'+rc,c.paye?'Oui':'Non',XS.in);rc++}
+  Ch.dv.push({ref:`E5:E${4+CHN}`,f:'"Oui,Non"'});
+
+  /* Épargne */
+  const Ep=xlSheet('Épargne',[13,22,14,3,13,22,14,3,22,13,13,13,10,13,16,3,22,13,34]);Ep.freeze=8;
+  Ep.set('A1','Épargne',XS.title);Ep.set('A2','Totale = départ + versements − argent utilisé. Affectée = part réservée aux objectifs (pas de l’argent en plus). Libre = le reste.',XS.note);
+  Ep.set('A4','Épargne totale',XS.b);Ep.set('B4',P.total,XS.eurB,`=${PR(5)}+SUM(C8:C${7+NV})-SUM(G8:G${7+NR})`);
+  Ep.set('E4','Affectée aux objectifs',XS.b);Ep.set('F4',P.affecte,XS.eurB,'=SUM(K8:K200)');
+  Ep.set('I4','Épargne libre',XS.b);Ep.set('J4',P.libre,XS.eurB,'=B4-F4');
+  Ep.set('A5',P.libre<-0.004?`⚠ Plus d’argent affecté aux objectifs que d’épargne : manque ${fx2(-P.libre)} €.`:'',XS.b,'=IF(J4<-0.004,"⚠ Plus d’argent affecté aux objectifs que d’épargne : manque "&FIXED(-J4,2)&" €.","")');
+  Ep.set('A6','Versements',XS.sec);Ep.set('E6','Argent utilisé (retraits)',XS.sec);Ep.set('I6','Objectifs',XS.sec);Ep.set('Q6','Mouvements des objectifs (+ affecter / − retirer)',XS.sec);
+  Ep.header(7,['Date','Mois','Montant'],0);Ep.header(7,['Date','Motif','Montant'],4);Ep.header(7,['Objectif','Cible','Affecté','Restant','%','Date limite','État'],8);Ep.header(7,['Objectif','Montant','Note'],16);
+  [...S.depots].sort((a,b)=>a.date.localeCompare(b.date)).forEach((d,i)=>{const r=8+i;
+    Ep.set('A'+r,xserial(d.date),XS.inDate);Ep.set('B'+r,d.month,XS.note,`=IF(A${r}="","",YEAR(A${r})&"-"&TEXT(MONTH(A${r}),"00"))`);Ep.set('C'+r,d.montant,XS.inEur)});
+  [...S.retraits].sort((a,b)=>a.date.localeCompare(b.date)).forEach((d,i)=>{const r=8+i;
+    Ep.set('E'+r,xserial(d.date),XS.inDate);Ep.set('F'+r,d.nom||'Argent utilisé',XS.in);Ep.set('G'+r,d.montant,XS.inEur)});
+  const noms=new Map(),TYPES={initial:'Déjà économisé au départ',ajout:'Ajout',retrait:'Retrait',libere:'Objectif terminé : argent libéré',utilise:'Objectif terminé : argent utilisé',correction:'Ajustement'};
+  let rm=8;
+  S.goals.forEach((g,i)=>{const r=8+i;
+    let nom=g.nom,k=2;while(noms.has(nom.toLowerCase()))nom=`${g.nom} (${k++})`;noms.set(nom.toLowerCase(),1);
+    const a=alloue(g),inf=goalInfo(g,rythmeEpargne());
+    Ep.set('I'+r,nom,XS.in);Ep.set('J'+r,g.cible,XS.inEur);
+    Ep.set('K'+r,a,XS.eur,`=IF(I${r}="","",SUMIFS($R$8:$R$2000,$Q$8:$Q$2000,I${r}))`);
+    Ep.set('L'+r,xnum(Math.max(0,g.cible-a)),XS.eur,`=IF(I${r}="","",MAX(0,J${r}-K${r}))`);
+    Ep.set('M'+r,g.cible>0?Math.min(1,Math.max(0,a/g.cible)):'',XS.pct,`=IF(OR(I${r}="",N(J${r})<=0),"",MIN(1,MAX(0,K${r}/J${r})))`);
+    if(g.echeance)Ep.set('N'+r,xserial(g.echeance),XS.inDate);
+    if(g.statut==='termine')Ep.set('O'+r,'Terminé',XS.b);
+    else Ep.set('O'+r,inf.atteint?'Atteint ✓':(g.echeance&&g.echeance<isoToday?'Date dépassée':'En cours'),XS.b,`=IF(I${r}="","",IF(K${r}>=J${r},"Atteint ✓",IF(AND(N${r}<>"",N${r}<TODAY()),"Date dépassée","En cours")))`);
+    for(const mv of g.mouvements){Ep.set('Q'+rm,nom,XS.in);Ep.set('R'+rm,mv.montant,XS.inEur);Ep.set('S'+rm,`${TYPES[mv.type]||'Mouvement'} · ${dateFr(mv.date,{day:'numeric',month:'short',year:'numeric'})}`,XS.in);rm++}
+  });
+  Ep.dv.push({ref:'Q8:Q2000',f:'$I$8:$I$200'});
+
+  /* Mois */
+  const Mo=xlSheet('Mois',[11,13,9,9,12,12,13,13,12,12,13,12,13,13,13,13,13,11]);Mo.freeze=5;
+  Mo.set('A1','Mois',XS.title);Mo.set('A2','Une ligne par mois. Saisis le net reçu dès la paie : il remplace l’estimation.',XS.note);
+  Mo.header(4,['Mois','Net reçu','Jours entreprise','Jours absence','Épargne prévue','Brut estimé','Cotisations estimées','Net estimé','Net retenu','Salaire','Charges','Charges payées','Épargne versée','Épargne retenue','Dépenses','Dépenses faites','Reste à vivre','Statut']);
+  const VR=c=>`${q('Épargne')}!$${c}$8:$${c}$${7+NV}`;
+  months.forEach((m,i)=>{const r=5+i,c=calcs.get(m.id),g=f=>`=IF($A${r}="","",${f})`;
+    Mo.set('A'+r,m.id,XS.in);Mo.set('B'+r,c.recu?m.netRecu:'',XS.inEur);Mo.set('C'+r,c.jEff,XS.inNum);Mo.set('D'+r,c.absEff,XS.inNum);Mo.set('E'+r,m.epPrevue,XS.inEur);
+    Mo.set('F'+r,xnum(c.est.brut),XS.eur,g(`MAX(0,${PR(9)}+C${r}*(${PR(10)}+${PR(11)})-D${r}*${PR(14)}*${PR(13)})`));
+    Mo.set('G'+r,xnum(c.est.cotis),XS.eur,g(`MAX(0,${PR(15)}+${PR(17)}*(F${r}-${PR(16)}))`));
+    Mo.set('H'+r,c.est.net,XS.eur,g(`MAX(0,ROUND(F${r}-G${r}+C${r}*${PR(12)},2))`));
+    Mo.set('I'+r,c.net,XS.eur,g(`IF(B${r}="",H${r},B${r})`));
+    Mo.set('J'+r,c.recu?'reçu':'≈ estimé',0,g(`IF(B${r}="","≈ estimé","reçu")`));
+    Mo.set('K'+r,c.chTot,XS.eur,g(`SUMIFS(${CR('C')},${CR('A')},A${r})`));
+    Mo.set('L'+r,c.chPaye,XS.eur,g(`SUMIFS(${CR('C')},${CR('A')},A${r},${CR('E')},"Oui")`));
+    Mo.set('M'+r,c.epFaite,XS.eur,g(`SUMIFS(${VR('C')},${VR('B')},A${r})`));
+    Mo.set('N'+r,c.ep,XS.eur,g(`IF(A${r}<${NOW},M${r},MAX(E${r},M${r}))`));
+    Mo.set('O'+r,c.dep,XS.eur,g(`SUMIFS(${DR('B')},${DR('E')},A${r})`));
+    Mo.set('P'+r,c.depFait,XS.eur,g(`IF(A${r}>${NOW},0,SUMIFS(${DR('B')},${DR('E')},A${r},${DR('A')},"<="&TODAY()))`));
+    Mo.set('Q'+r,c.reste,XS.eurB,g(`I${r}-K${r}-N${r}-O${r}`));
+    Mo.set('R'+r,{passe:'terminé',encours:'en cours',futur:'à venir'}[c.st],0,g(`IF(A${r}<${NOW},"terminé",IF(A${r}=${NOW},"en cours","à venir"))`));
+  });
+
+  /* Tableau de bord */
+  const m=cur(),c=calcs.get(m.id),idx=col=>`INDEX(${MR(col)},MATCH($B$3,${MR('A')},0))`;
+  const T=xlSheet('Tableau de bord',[34,18,4,64,16,4,22,14]);
+  T.set('A1','Ma Paie',XS.title);
+  T.set('A2',`Exporté le ${dateFr(isoToday)} depuis l’application${S.example?' (données d’exemple)':''}. Choisis le mois en B3 : tout se recalcule.`,XS.note);
+  T.set('A3','Mois affiché',XS.b);T.set('B3',m.id,XS.sel);T.dv.push({ref:'B3',f:`${q('Mois')}!$A$5:$A$${4+months.length}`});
+  T.set('A5',(c.reste<0?'DÉPASSEMENT':'RESTE À VIVRE')+(c.recu?'':'  (théorique : salaire estimé)'),XS.b,`=IF(A6<0,"DÉPASSEMENT","RESTE À VIVRE")&IF(${idx('B')}="","  (théorique : salaire estimé)","")`);
+  T.set('A6',c.reste,XS.big,`=IFERROR(${idx('Q')},0)`);T.merges.push('A6:B6');T.heights[6]=36;
+  T.set('A7',c.recu?`✓ Salaire reçu : ${fx2(c.net)} €`:`≈ Salaire estimé : ${fx2(c.est.net)} € · pas encore reçu`,XS.b,
+    `=IFERROR(IF(${idx('B')}="","≈ Salaire estimé : "&FIXED(${idx('H')},2)&" € · pas encore reçu","✓ Salaire reçu : "&FIXED(${idx('B')},2)&" €"),"")`);
+  T.set('A8','Comment le reste à vivre est calculé',XS.sec);
+  [['Salaire du mois',c.net,idx('I')],['− Charges fixes',-c.chTot,'-'+idx('K')],['     dont encore à payer',c.chVenir,idx('K')+'-'+idx('L'),1],
+   ['− Épargne du mois',-c.ep,'-'+idx('N')],['     dont déjà versée',c.epFaite,idx('M'),1],['→ Budget pour vivre',c.vivre,`${idx('I')}-${idx('K')}-${idx('N')}`,2],
+   ['− Dépenses déjà faites',-c.depFait,'-'+idx('P')],['− Dépenses prévues',-c.depVenir,`-(${idx('O')}-${idx('P')})`],['→ Reste à vivre',c.reste,idx('Q'),2]]
+    .forEach(([l,v,f,k],i)=>{const r=9+i;T.set('A'+r,l,k===1?XS.note:k===2?XS.b:0);T.set('B'+r,xnum(v),k===2?XS.eurB:XS.eur,`=IFERROR(${f},0)`)});
+  const pj=parJour(c);
+  T.set('A19','Par jour conseillé',XS.b);
+  T.set('B19',c.st==='encours'&&c.reste>0?pj:'—',XS.eurB,`=IFERROR(IF(AND($B$3=${NOW},B17>0),ROUNDDOWN(B17/(DAY(EOMONTH(TODAY(),0))-DAY(TODAY())+1),2),"—"),"—")`);
+  T.set('A20','Uniquement pour le mois en cours, aujourd’hui compris.',XS.note);
+  T.set('D5','Alertes',XS.sec);
+  const al=[[c.reste<0,`🔴 Budget dépassé de ${fx2(-c.reste)} € : limite-toi à l’essentiel.`,'IF(B17<0,"🔴 Budget dépassé de "&FIXED(-B17,2)&" € : limite-toi à l’essentiel.","")'],
+    [c.vivre<0,'🔴 Charges + épargne dépassent le salaire : baisse l’épargne du mois.','IF(B14<0,"🔴 Charges + épargne dépassent le salaire : baisse l’épargne du mois.","")'],
+    [c.vivre>=0&&c.vivre<300,'🟠 Budget serré : moins de 300 € pour vivre.','IF(AND(B14>=0,B14<300),"🟠 Budget serré : moins de 300 € pour vivre.","")'],
+    [!c.recu,'🟠 Salaire non saisi : les montants sont théoriques.',`IF(${idx('B')}="","🟠 Salaire non saisi : les montants sont théoriques.","")`],
+    [c.chVenir>0,`🔵 ${fx2(c.chVenir)} € de charges encore à payer : garde l’argent sur le compte.`,'IF(B11>0,"🔵 "&FIXED(B11,2)&" € de charges encore à payer : garde l’argent sur le compte.","")'],
+    [P.libre<-0.004,'🔴 Objectifs : plus d’argent affecté que d’épargne.',`IF(${q('Épargne')}!J4<-0.004,"🔴 Objectifs : plus d’argent affecté que d’épargne.","")`]];
+  al.forEach(([on,t,f],i)=>T.set('D'+(6+i),on?t:'',XS.wrap,`=IFERROR(${f},"")`));
+  T.set('D12',al.some(a=>a[0])?'':'✓ Rien à signaler',XS.b,'=IF(COUNTBLANK(D6:D11)=6,"✓ Rien à signaler","")');
+  T.set('D14','Épargne',XS.sec);
+  [['Épargne totale',P.total,'B4'],['Affectée aux objectifs',P.affecte,'F4'],['Libre',P.libre,'J4']].forEach(([l,v,ref],i)=>{T.set('D'+(15+i),l);T.set('E'+(15+i),v,XS.link,`=${q('Épargne')}!${ref}`)});
+  T.set('G5','Dépenses du mois par catégorie',XS.sec);T.header(6,['Catégorie','Montant'],6);
+  const bc=byCat(m.depenses);
+  for(let i=0;i<16;i++){const r=7+i,k=cats[i];
+    T.set('G'+r,k?k.n:'',XS.b,`=IF(${q('Paramètres')}!A${22+i}="","",${q('Paramètres')}!A${22+i})`);
+    T.set('H'+r,k?(bc[k.id]||0):'',XS.eur,`=IF(G${r}="","",SUMIFS(${DR('B')},${DR('E')},$B$3,${DR('C')},G${r}))`)}
+
+  /* Comparer */
+  const K=xlSheet('Comparer',[30,16,16,16,12]);
+  const i0=months.findIndex(x=>x.id===m.id),mA=months[i0>0?i0-1:Math.min(1,months.length-1)],cA=calcs.get(mA.id);
+  K.set('A1','Comparer deux mois',XS.title);K.set('A2','Écart = B − A. Une baisse des dépenses n’est pas forcément une amélioration (mois incomplet, oubli de saisie…).',XS.note);
+  K.set('A4','Mois A',XS.b);K.set('B4',mA.id,XS.sel);K.set('A5','Mois B',XS.b);K.set('B5',m.id,XS.sel);
+  K.dv.push({ref:'B4:B5',f:`${q('Mois')}!$A$5:$A$${4+months.length}`});
+  const stTxt=cc=>({passe:'terminé',encours:'en cours',futur:'à venir'}[cc.st])+' · salaire '+(cc.recu?'reçu':'≈ estimé');
+  [['C4','B4',cA],['C5','B5',c]].forEach(([ref,sel,cc])=>K.set(ref,stTxt(cc),XS.note,`=IFERROR(INDEX(${MR('R')},MATCH(${sel},${MR('A')},0))&" · salaire "&INDEX(${MR('J')},MATCH(${sel},${MR('A')},0)),"")`));
+  K.header(7,['','A','B','Écart (B − A)','Variation']);
+  const kv=(a,b)=>[xnum(b-a),a>=1?(b-a)/a:'—'];
+  [['Salaire','I','net'],['Charges fixes','K','chTot'],['Dépenses','O','dep'],['Épargne versée','M','epFaite'],['Reste à vivre','Q','reste']].forEach(([l,col,k],i)=>{const r=8+i,[d,v]=kv(cA[k],c[k]);
+    K.set('A'+r,l,XS.b);K.set('B'+r,cA[k],XS.eur,`=IFERROR(INDEX(${MR(col)},MATCH($B$4,${MR('A')},0)),0)`);K.set('C'+r,c[k],XS.eur,`=IFERROR(INDEX(${MR(col)},MATCH($B$5,${MR('A')},0)),0)`);
+    K.set('D'+r,d,XS.eur,`=C${r}-B${r}`);K.set('E'+r,v,XS.pct,`=IF(B${r}>=1,(C${r}-B${r})/B${r},"—")`)});
+  K.set('A14','Dépenses par catégorie',XS.sec);
+  const oA=byCat(mA.depenses);
+  for(let i=0;i<16;i++){const r=15+i,k=cats[i],a=k?(oA[k.id]||0):0,b=k?(bc[k.id]||0):0;
+    K.set('A'+r,k?k.n:'',XS.b,`=IF(${q('Paramètres')}!A${22+i}="","",${q('Paramètres')}!A${22+i})`);
+    K.set('B'+r,k?a:'',XS.eur,`=IF($A${r}="","",SUMIFS(${DR('B')},${DR('E')},$B$4,${DR('C')},$A${r}))`);
+    K.set('C'+r,k?b:'',XS.eur,`=IF($A${r}="","",SUMIFS(${DR('B')},${DR('E')},$B$5,${DR('C')},$A${r}))`);
+    K.set('D'+r,k?xnum(b-a):'',XS.eur,`=IF($A${r}="","",C${r}-B${r})`);
+    K.set('E'+r,k?(a>=1?(b-a)/a:'—'):'',XS.pct,`=IF($A${r}="","",IF(B${r}>=1,(C${r}-B${r})/B${r},"—"))`)}
+
+  /* Mode d'emploi */
+  const G=xlSheet('Mode d’emploi',[110]);
+  G.set('A1','Mode d’emploi',XS.title);G.set('A2','Fichier exporté depuis l’application Ma Paie. Il ne sert pas de sauvegarde : pour restaurer tes données, utilise le fichier .json.',XS.note);
+  ['Texte BLEU = à saisir. Texte NOIR = calculé. Case JAUNE = sélecteur à changer.',
+   'Tableau de bord : choisis le mois en B3. Comparer : choisis deux mois en B4 et B5.',
+   'Mois : saisis le « Net reçu » dès la paie ; vide = estimation marquée « ≈ estimé ».',
+   'Dépenses : une date future = dépense prévue, déjà déduite du reste à vivre.',
+   'Épargne : l’argent affecté aux objectifs fait partie de l’épargne totale ; il n’est jamais compté deux fois.',
+   'Règles de calcul identiques à l’application : reste à vivre = salaire − charges − épargne retenue − toutes les dépenses du mois (faites et prévues).',
+   'Épargne retenue : mois terminé = épargne versée ; mois en cours ou à venir = le plus grand entre prévue et versée.',
+   'Les modifications faites dans ce fichier ne reviennent pas dans l’application.'].forEach((t,i)=>G.set('A'+(4+i),t,XS.wrap));
+
+  const sheets=[T,Mo,De,Ch,Ep,K,Pa,G];
+  const files=[
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+      +sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name:'xl/workbook.xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+      +sheets.map((s,i)=>`<sheet name="${xesc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+'</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'},
+    {name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      +sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')
+      +`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:XL_STYLES},
+    ...sheets.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:xlSheetXml(s)}))];
+  return zipStore(files);
+}
+function exportExcel(btn){
+  const name='ma-paie-'+isoToday+'.xlsx';
+  let blob;
+  try{blob=buildXlsx()}catch(e){toast('Export Excel impossible : '+(e&&e.message||'erreur inconnue'),false);return}
+  try{
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+    const k=counts(S);
+    toast(`Fichier « ${name} » créé : ${k.mois} mois, ${pl(k.dep,'dépense')}.`,false);
+    if(btn&&btn.id==='xlExport')bkMsg(`Excel exporté : ${name}. Ce n’est pas une sauvegarde : garde aussi le fichier .json.`,true);
+  }catch(e){toast('Téléchargement impossible ici. Ouvre l’appli dans Safari ou Chrome.',false)}
+}
+['xlExport','xlExport2'].forEach(id=>$(id).addEventListener('click',e=>exportExcel(e.currentTarget)));
 
 /* ---------- Versements d'épargne ---------- */
 function syncEp(){for(const m of S.months)m.epFaite=r2(sum(S.depots.filter(d=>d.month===m.id),'montant'))}
