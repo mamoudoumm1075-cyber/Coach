@@ -1086,7 +1086,7 @@ function sanitize(o,rep){
     pauses:Array.isArray(o.pauses)?[...new Set(o.pauses.map(Number).filter(x=>Number.isInteger(x)&&x>=1&&x<=12))]:[12],
     epInitial:ei==null?0:ei,
     lastBackup:isFinite(lb)&&lb>0&&lb<Date.now()+864e5?lb:0,
-    cats:[],budgets:{},chargesModele:[],months:[],depots:[],goals:[],retraits:[],masquees:[]};
+    cats:[],budgets:{},chargesModele:[],months:[],depots:[],goals:[],retraits:[],masquees:[],importedSrcs:[]};
   if(legacy&&!o.migr&&n.epStart<'2026-11')n.epStart='2026-11';
   if(Array.isArray(o.cats))for(const c of o.cats){
     if(c&&typeof c.id==='string'&&/^c_[A-Za-z0-9_-]{1,40}$/.test(c.id)&&!used.has(c.id)&&c.n){used.add(c.id);n.cats.push({id:c.id,e:Array.from(String(c.e||'🏷️')).slice(0,4).join(''),n:String(c.n).slice(0,24)})}
@@ -1190,6 +1190,7 @@ function sanitize(o,rep){
   if(o.revenusConnus&&typeof o.revenusConnus==='object')for(const k of Object.keys(o.revenusConnus).slice(-200)){if(/^[a-z0-9 &'.-]{1,40}$/.test(k)&&['salaire','revenu'].includes(o.revenusConnus[k]))n.revenusConnus[k]=o.revenusConnus[k]}
   n.joursVides=Array.isArray(o.joursVides)?[...new Set(o.joursVides.filter(validDate))].slice(-400):[];
   if(Array.isArray(o.masquees))n.masquees=[...new Set(o.masquees.filter(s=>typeof s==='string'&&/^\d{4}-\d{2}\|[A-Za-z0-9_:-]{1,60}$/.test(s)))].slice(-300);
+  n.importedSrcs=Array.isArray(o.importedSrcs)?[...new Set(o.importedSrcs.filter(s=>typeof s==='string'&&/^imp-[a-z0-9]{1,20}$/.test(s)))].slice(-20000):[];
   return n;
 }
 function sample(){
@@ -1724,7 +1725,7 @@ function goalPlan(){
   return{tot,steps};
 }
 function renderEp(){
-  const g=goalPlan(),fait=r2(sum(S.months,'epFaite')),pct=g.tot?Math.min(100,fait/g.tot*100):0,P=epargne();
+  const g=goalPlan(),planIds=new Set(g.steps.map(x=>x.id)),fait=r2(sum(S.months.filter(m=>planIds.has(m.id)),'epFaite')),pct=g.tot?Math.min(100,fait/g.tot*100):0,P=epargne();
   $('jarFill').style.height=pct+'%';
   $('jarAmt').textContent=eurR(fait);
   $('jarOf').textContent='versés sur '+eurR(g.tot);
@@ -2345,7 +2346,7 @@ function buildXlsx(){
   const q=n=>`'${n}'`,fx2=v=>v.toFixed(2).replace('.',',');
   const months=[...S.months],NM=months.length+120,cats=allCats();
   const deps=months.flatMap(m=>m.depenses).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
-  const ND=deps.length+1000,NV=S.depots.length+500,NR=S.retraits.length+200;
+  const ND=deps.length+1000,NV=S.depots.length+500,NR=S.retraits.length+200,NG=Math.max(8,7+S.goals.length),NMR=Math.max(2000,7+S.goals.reduce((a,g)=>a+g.mouvements.length,0));
   const MR=c=>`${q('Mois')}!$${c}$5:$${c}$${4+NM}`,DR=c=>`${q('Dépenses')}!$${c}$5:$${c}$${4+ND}`;
   const CHN=months.reduce((a,m)=>a+m.charges.length,0)+1000,CR=c=>`${q('Charges')}!$${c}$5:$${c}$${4+CHN}`;
   const PR=r=>`${q('Paramètres')}!$B$${r}`,NOW=PR(4);
@@ -2395,7 +2396,7 @@ function buildXlsx(){
   const Ep=xlSheet('Épargne',[13,22,14,3,13,22,14,3,22,13,13,13,10,13,16,3,22,13,34]);Ep.freeze=8;
   Ep.set('A1','Épargne',XS.title);Ep.set('A2','Totale = départ + versements − argent utilisé. Affectée = part réservée aux objectifs (pas de l’argent en plus). Libre = le reste.',XS.note);
   Ep.set('A4','Épargne totale',XS.b);Ep.set('B4',P.total,XS.eurB,`=${PR(5)}+SUM(C8:C${7+NV})-SUM(G8:G${7+NR})`);
-  Ep.set('E4','Affectée aux objectifs',XS.b);Ep.set('F4',P.affecte,XS.eurB,'=SUM(K8:K200)');
+  Ep.set('E4','Affectée aux objectifs',XS.b);Ep.set('F4',P.affecte,XS.eurB,`=SUM(K8:K${NG})`);
   Ep.set('I4','Épargne libre',XS.b);Ep.set('J4',P.libre,XS.eurB,'=B4-F4');
   Ep.set('A5',P.libre<-0.004?`⚠ Plus d’argent affecté aux objectifs que d’épargne : manque ${fx2(-P.libre)} €.`:'',XS.b,'=IF(J4<-0.004,"⚠ Plus d’argent affecté aux objectifs que d’épargne : manque "&FIXED(-J4,2)&" €.","")');
   Ep.set('A6','Versements',XS.sec);Ep.set('E6','Argent utilisé (retraits)',XS.sec);Ep.set('I6','Objectifs',XS.sec);Ep.set('Q6','Mouvements des objectifs (+ affecter / − retirer)',XS.sec);
@@ -2410,7 +2411,7 @@ function buildXlsx(){
     let nom=g.nom,k=2;while(noms.has(nom.toLowerCase()))nom=`${g.nom} (${k++})`;noms.set(nom.toLowerCase(),1);
     const a=alloue(g),inf=goalInfo(g,rythmeEpargne());
     Ep.set('I'+r,nom,XS.in);Ep.set('J'+r,g.cible,XS.inEur);
-    Ep.set('K'+r,a,XS.eur,`=IF(I${r}="","",SUMIFS($R$8:$R$2000,$Q$8:$Q$2000,I${r}))`);
+    Ep.set('K'+r,a,XS.eur,`=IF(I${r}="","",SUMIFS($R$8:$R$${NMR},$Q$8:$Q$${NMR},I${r}))`);
     Ep.set('L'+r,xnum(Math.max(0,g.cible-a)),XS.eur,`=IF(I${r}="","",MAX(0,J${r}-K${r}))`);
     Ep.set('M'+r,g.cible>0?Math.min(1,Math.max(0,a/g.cible)):'',XS.pct,`=IF(OR(I${r}="",N(J${r})<=0),"",MIN(1,MAX(0,K${r}/J${r})))`);
     if(g.echeance)Ep.set('N'+r,xserial(g.echeance),XS.inDate);
@@ -2418,7 +2419,7 @@ function buildXlsx(){
     else Ep.set('O'+r,inf.atteint?'Atteint ✓':(g.echeance&&g.echeance<isoToday?'Date dépassée':'En cours'),XS.b,`=IF(I${r}="","",IF(K${r}>=J${r},"Atteint ✓",IF(AND(N${r}<>"",N${r}<TODAY()),"Date dépassée","En cours")))`);
     for(const mv of g.mouvements){Ep.set('Q'+rm,nom,XS.in);Ep.set('R'+rm,mv.montant,XS.inEur);Ep.set('S'+rm,`${TYPES[mv.type]||'Mouvement'} · ${dateFr(mv.date,{day:'numeric',month:'short',year:'numeric'})}`,XS.in);rm++}
   });
-  Ep.dv.push({ref:'Q8:Q2000',f:'$I$8:$I$200'});
+  Ep.dv.push({ref:`Q8:Q${NMR}`,f:`$I$8:$I$${NG}`});
 
   /* Mois */
   const Mo=xlSheet('Mois',[11,13,9,9,12,12,13,13,12,12,13,12,13,13,13,13,13,11,13,13]);Mo.freeze=5;
@@ -3029,10 +3030,11 @@ function impChoixColonnes(rows,nom){
   $('mapGo').onclick=()=>{const c=trouveColonnes([]);for(const k in c)c[k]=-1;c.date=+$('mapD').value;c.lib=+$('mapL').value;c.amt=+$('mapM').value;$('impMap').hidden=true;impPrepare(rows,nom,c,0)};
 }
 function impClasser(){
-  const {ops,noms}=IMP,first=S.months[0].id,srcs=new Set(),chargesPrises=new Set(),dupPris=new Set();
+  const {ops,noms}=IMP,first=S.months[0].id,srcs=new Set(S.importedSrcs||[]),chargesPrises=new Set(),dupPris=new Set();
   for(const m of S.months)for(const d of m.depenses)if(d.src)srcs.add(d.src);
   for(const o of ops){
     const t=nk(o.full+' '+o.nom),mid=o.date.slice(0,7),m=monthOf(mid);o.note='';o.act='ignore';
+    if(srcs.has(o.src)){o.note='Déjà importée';continue}
     if(/revert|declin|fail|annul|rejet|refus/.test(o.state)){o.note='Opération annulée';continue}
     if(o.devise&&o.devise!=='EUR'){o.note='Autre devise que l’euro';continue}
     if(RE_POCKET.test(t)||/pocket|depot|deposit|savings|epargne/.test(o.prod)){o.note='Mouvement entre tes Pockets / arrondis';continue}
@@ -3049,13 +3051,12 @@ function impClasser(){
       continue;
     }
     if(estMoi(o.raw,noms)||(IMP.banque!=='Revolut'&&RE_REVOLUT.test(t))){o.note='Virement entre tes comptes';continue}
-    if(RE_EPARGNE.test(t)){o.act='epargne';o.note='Versement d’épargne';continue}
-    if(srcs.has(o.src)){o.note='Déjà importée';continue}
+    if(RE_EPARGNE.test(t)){const deja=S.depots.some(d=>d.month===mid&&Math.abs(d.montant+o.montant)<0.006&&d.date===o.date);if(deja){o.note='Versement d’épargne déjà enregistré';continue}o.act='epargne';o.note='Versement d’épargne';continue}
     if(S.marchands[cleKey(o.nom)]==='__ignore'){o.note='Tu l’ignores d’habitude';continue}
     const amt=-o.montant;
     if(m){
-      const ch=m.charges.find(c=>!c.paye&&!chargesPrises.has(c.id)&&(Math.abs(c.montant-amt)<0.006||(nk(c.nom).length>=4&&t.includes(nk(c.nom)))));
-      if(ch){chargesPrises.add(ch.id);o.act='charge:'+ch.id;o.note='Charge fixe « '+ch.nom+' »';continue}
+      const ch=m.charges.find(c=>!chargesPrises.has(c.id)&&(Math.abs(c.montant-amt)<0.006||(nk(c.nom).length>=4&&t.includes(nk(c.nom)))));
+      if(ch){chargesPrises.add(ch.id);o.act='charge:'+ch.id;o.note=ch.paye?'Charge fixe déjà payée « '+ch.nom+' »':'Charge fixe « '+ch.nom+' »';continue}
       /* Doublon d'une saisie à la main : même montant à 3 jours près, chaque saisie ne sert qu'une fois (même nom d'abord) */
       const cands=m.depenses.filter(d=>!d.src&&!dupPris.has(d.id)&&Math.abs(d.montant-amt)<0.006&&Math.abs(xserial(d.date)-xserial(o.date))<=3);
       const dup=cands.find(d=>{const a=cleKey(d.detail),b=cleKey(o.nom);return a&&b&&(a.includes(b.split(' ')[0])||b.includes(a.split(' ')[0]))})||cands.find(d=>d.date===o.date);
@@ -3136,15 +3137,16 @@ function impAppliquer(){
   if(nom&&!S.mesNoms.some(n=>nk(n)===nk(nom)))S.mesNoms=[nom,...S.mesNoms].slice(0,4);
   const mois=id=>{let m=monthOf(id);if(!m){m=newMonth(id);S.months.push(m);S.months.sort((a,b)=>a.id.localeCompare(b.id))}return m};
   const salaires={};let nDep=0,nCh=0,nEp=0,nRev=0,tDep=0;
+  const rememberImport=o=>{if(o.src&&!S.importedSrcs.includes(o.src)){S.importedSrcs.push(o.src);if(S.importedSrcs.length>20000)S.importedSrcs.splice(0,S.importedSrcs.length-20000)}};
   for(const o of act){
     const amt=Math.abs(o.montant);if(amt>MAX_MONTANT)continue;
-    if(o.act==='salaire'){salaires[o.mois]=r2((salaires[o.mois]||0)+amt);if(o.choisi||/Salaire/.test(o.note))S.revenusConnus[cleKey(o.nom)]='salaire';continue}
+    if(o.act==='salaire'){salaires[o.mois]=r2((salaires[o.mois]||0)+amt);if(o.choisi||/Salaire/.test(o.note))S.revenusConnus[cleKey(o.nom)]='salaire';rememberImport(o);continue}
     if(o.act==='ignore'){if(o.choisi&&o.montant<0)apprendMarchand(cleKey(o.nom),'__ignore');continue}
     const m=mois(o.date.slice(0,7));
-    if(o.act==='revenu'){if(!Array.isArray(m.revenus))m.revenus=[];if(!m.revenus.some(r=>r.nom===o.nom&&Math.abs(r.montant-amt)<0.006)&&m.revenus.length<20){m.revenus.push({id:uid(),nom:o.nom.slice(0,40),montant:amt});nRev++}S.revenusConnus[cleKey(o.nom)]='revenu';continue}
-    if(o.act.startsWith('charge:')){const ch=m.charges.find(c=>c.id===o.act.slice(7));if(ch){ch.paye=true;nCh++}continue}
-    if(o.act==='epargne'){S.depots.push({id:uid(),month:m.id,montant:amt,date:o.date});nEp++;continue}
-    if(o.act.startsWith('cat:')){const cat=o.act.slice(4);m.depenses.push({id:uid(),montant:amt,cat:catOf(cat).id,detail:o.nom.slice(0,80),date:o.date,src:o.src});if(o.choisi)apprendMarchand(cleKey(o.nom),cat);nDep++;tDep+=amt}
+    if(o.act==='revenu'){if(!Array.isArray(m.revenus))m.revenus=[];if(!m.revenus.some(r=>r.nom===o.nom&&Math.abs(r.montant-amt)<0.006)&&m.revenus.length<20){m.revenus.push({id:uid(),nom:o.nom.slice(0,40),montant:amt});nRev++;rememberImport(o)}else if(m.revenus.some(r=>r.nom===o.nom&&Math.abs(r.montant-amt)<0.006))rememberImport(o);S.revenusConnus[cleKey(o.nom)]='revenu';continue}
+    if(o.act.startsWith('charge:')){const ch=m.charges.find(c=>c.id===o.act.slice(7));if(ch){ch.paye=true;nCh++;rememberImport(o)}continue}
+    if(o.act==='epargne'){S.depots.push({id:uid(),month:m.id,montant:amt,date:o.date});nEp++;rememberImport(o);continue}
+    if(o.act.startsWith('cat:')){const cat=o.act.slice(4);m.depenses.push({id:uid(),montant:amt,cat:catOf(cat).id,detail:o.nom.slice(0,80),date:o.date,src:o.src});if(o.choisi)apprendMarchand(cleKey(o.nom),cat);nDep++;tDep+=amt;rememberImport(o)}
   }
   const ns=Object.keys(salaires);for(const id of ns)mois(id).netRecu=salaires[id];
   syncEp();closeAll();IMP=null;save();render();
