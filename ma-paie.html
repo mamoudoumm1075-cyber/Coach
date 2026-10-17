@@ -350,6 +350,30 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 .donerow:first-child{border-top:0}
 .donerow .row{flex-wrap:nowrap;gap:6px}
 @media (max-width:380px){.gbtns{grid-template-columns:1fr 1fr}}
+/* Factures à prévoir, abonnements, évolution */
+.charge.fact input.n{box-shadow:inset 4px 0 0 var(--accent)}
+.factrow{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;border:1px solid var(--line);border-radius:16px;padding:12px 14px;background:none;color:inherit;font:inherit;cursor:pointer}
+.factrow .fh{display:flex;justify-content:space-between;gap:8px;font-weight:800}
+.factrow .fh b{overflow-wrap:anywhere;min-width:0}
+.factrow small{color:var(--muted);font-size:.8rem;line-height:1.35}
+.factrow .track{height:8px}
+.factrow.due{border-color:var(--accent);background:var(--accent-soft)}
+.abo{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.abo:first-child{border-top:0}
+.abo span{min-width:0;display:flex;flex-direction:column;gap:2px}
+.abo b{overflow-wrap:anywhere}
+.abo small{color:var(--muted);font-size:.8rem}
+.abo .m{text-align:right;white-space:nowrap}
+.evo{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;align-items:end;height:150px;padding-top:6px}
+.evo div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%;min-width:0}
+.evo i{display:block;width:70%;max-width:36px;border-radius:8px 8px 3px 3px;background:var(--blue);min-height:3px}
+.evo .now i{background:var(--accent)}
+.evo small{font-size:.72rem;color:var(--muted);font-weight:700;white-space:nowrap}
+.evo b{font-size:.74rem;white-space:nowrap}
+.evo b.neg{color:var(--bad)}
+.evomsg{margin:0;border-radius:12px;padding:10px 12px;font-size:.9rem;font-weight:600;background:var(--surface-2)}
+.evomsg.bad{background:var(--bad-soft);color:var(--bad)}
+.evomsg.good{background:var(--good-soft);color:var(--good)}
 @media (max-width:340px){.pot{grid-template-columns:1fr;gap:6px}.pot div{flex-direction:row;justify-content:space-between;align-items:baseline;padding:8px 12px}}
 
 /* Accueil : reste à vivre en premier */
@@ -505,6 +529,7 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
         <div class="fl" id="hExtraRow" hidden><span>+ Autres revenus<small id="hExtraSub"></small></span><b id="hExtra">0 €</b></div>
         <div class="fl"><span>− Charges fixes<small id="hChSub"></small></span><b id="hCh">0 €</b></div>
         <div class="fl"><span>− Épargne du mois<small id="hEpSub"></small></span><b id="hEp">0 €</b></div>
+        <div class="fl" id="hFactRow" hidden><span>− Factures à prévoir<small id="hFactSub"></small></span><b id="hFact">0 €</b></div>
         <div class="fl sub"><span>= Budget pour vivre</span><b id="hVivre">0 €</b></div>
         <div class="fl"><span>− Dépenses déjà faites</span><b id="hDepFait">0 €</b></div>
         <div class="fl" id="hDepVenirRow"><span>− Dépenses prévues<small>datées plus tard ce mois-ci</small></span><b id="hDepVenir">0 €</b></div>
@@ -576,6 +601,12 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
   <!-- ===== Stats ===== -->
   <div class="view" id="v-stats" hidden>
     <section class="card" id="bilanStats" hidden></section>
+    <section class="card" id="evoCard">
+      <h2>Mon évolution</h2>
+      <div id="evoMsg" class="vstack"></div>
+      <div class="evo" id="evo" aria-hidden="true"></div>
+      <p class="hint">Barres : dépenses de chaque mois (hors charges fixes). En dessous : ce qu’il restait (ou le dépassement) en fin de mois.</p>
+    </section>
     <section class="card">
       <h2>Je dépense dans quoi ?</h2>
       <div class="seg" role="group" aria-label="Période">
@@ -588,6 +619,12 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
       </div>
     </section>
     <div class="legend" id="legend"></div>
+
+    <section class="card" id="aboCard">
+      <h2>Mes abonnements</h2>
+      <p class="hint">Repérés dans tes dépenses des 6 derniers mois : ce qui revient chaque mois au même prix, et les abonnements connus (Netflix, Spotify, forfait, salle de sport…).</p>
+      <div id="abo"></div>
+    </section>
 
     <section class="card" id="cmpCard">
       <h2>Comparer mes mois</h2>
@@ -635,6 +672,13 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
       <div class="row" style="justify-content:space-between"><h2>Mes objectifs</h2><button class="btn small" id="goalNew">+ Nouvel objectif</button></div>
       <div class="goals" id="goals"></div>
       <details id="goalsDoneBox" hidden><summary style="font-size:1rem" id="goalsDoneSum">Objectifs terminés</summary><div id="goalsDone" style="padding-top:6px"></div></details>
+    </section>
+
+    <section class="card" id="factCard">
+      <div class="row" style="justify-content:space-between"><h2>Factures à prévoir</h2><button class="btn small" id="factNew">+ Ajouter</button></div>
+      <p class="hint">Assurance auto, impôts, contrôle technique… L’appli met de côté un peu chaque mois. Le mois où la facture tombe, l’argent est déjà là : ton budget de ce mois-là ne bouge pas.</p>
+      <div class="pot" id="factSum" hidden></div>
+      <div id="factList" class="vstack"></div>
     </section>
 
     <section class="card">
@@ -872,6 +916,29 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
   </div>
 </div>
 
+<div class="sheet" id="factSheet" hidden>
+  <button class="shade" data-sclose aria-label="Fermer"></button>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="factTitle">
+    <div class="head"><h2 id="factTitle">Nouvelle facture</h2><button class="x" data-sclose aria-label="Fermer">✕</button></div>
+    <div class="chips" id="factChips"></div>
+    <div class="field"><label for="fNom">Nom</label><input id="fNom" class="txt" maxlength="40" placeholder="Ex. Assurance auto" autocomplete="off"></div>
+    <div class="fields">
+      <div class="field"><label for="fMt">Montant (€)</label><input id="fMt" inputmode="decimal" placeholder="480"></div>
+      <div class="field"><label for="fPer">Elle revient</label><select id="fPer" class="txt"><option value="12">Chaque année</option><option value="6">Tous les 6 mois</option><option value="3">Tous les 3 mois</option></select></div>
+    </div>
+    <div class="fields">
+      <div class="field"><label for="fEch">Prochaine fois</label><input id="fEch" type="month" class="txt" placeholder="2027-03"></div>
+      <div class="field"><label for="fDeja">Déjà de côté (€)</label><input id="fDeja" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <p class="hint" id="fHint"></p>
+    <p class="err" id="fErr" hidden></p>
+    <div class="row">
+      <button class="btn primary grow" id="fSave">Enregistrer</button>
+      <button class="btn danger" id="fDel" hidden>Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="mvSheet" hidden>
   <button class="shade" data-sclose aria-label="Fermer"></button>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="mvSheetTitle">
@@ -1068,7 +1135,7 @@ function cleanCharge(c,fixId){
   c=c&&typeof c==='object'?c:{};
   const m=montantOk(c.montant);
   return{id:fixId?fixId(c.id):(typeof c.id==='string'&&ID_RE.test(c.id)?c.id:uid()),nom:String(c.nom||'Charge').slice(0,40),montant:m==null?0:m,
-    jour:Math.min(31,Math.max(1,Math.round(num(c.jour))||1)),paye:c.paye===true};
+    jour:Math.min(31,Math.max(1,Math.round(num(c.jour))||1)),paye:c.paye===true,...(typeof c.fact==='string'&&ID_RE.test(c.fact)?{fact:c.fact}:{})};
 }
 /* Vérifie et nettoie une sauvegarde (ou les données enregistrées). Lève une erreur si la structure est inutilisable.
    rep reçoit la liste des corrections faites, pour les montrer avant toute restauration. */
@@ -1086,7 +1153,7 @@ function sanitize(o,rep){
     pauses:Array.isArray(o.pauses)?[...new Set(o.pauses.map(Number).filter(x=>Number.isInteger(x)&&x>=1&&x<=12))]:[12],
     epInitial:ei==null?0:ei,
     lastBackup:isFinite(lb)&&lb>0&&lb<Date.now()+864e5?lb:0,
-    cats:[],budgets:{},chargesModele:[],months:[],depots:[],goals:[],retraits:[],masquees:[],importedSrcs:[]};
+    cats:[],budgets:{},chargesModele:[],months:[],depots:[],goals:[],retraits:[],masquees:[],importedSrcs:[],factures:[],aboIgnore:[]};
   if(legacy&&!o.migr&&n.epStart<'2026-11')n.epStart='2026-11';
   if(Array.isArray(o.cats))for(const c of o.cats){
     if(c&&typeof c.id==='string'&&/^c_[A-Za-z0-9_-]{1,40}$/.test(c.id)&&!used.has(c.id)&&c.n){used.add(c.id);n.cats.push({id:c.id,e:Array.from(String(c.e||'🏷️')).slice(0,4).join(''),n:String(c.n).slice(0,24)})}
@@ -1150,7 +1217,7 @@ function sanitize(o,rep){
     if(m.epFaite>t+0.001)n.depots.push({id:fixId(),month:m.id,montant:r2(m.epFaite-t),date:m.id+'-01'});
     m.epFaite=r2(sum(n.depots.filter(d=>d.month===m.id),'montant'))}
   const model=Array.isArray(o.chargesModele)&&o.chargesModele.length?o.chargesModele:n.months[n.months.length-1].charges;
-  n.chargesModele=model.filter(c=>c&&typeof c==='object').map(c=>Object.assign(cleanCharge(c,fixId),{paye:false}));
+  n.chargesModele=model.filter(c=>c&&typeof c==='object'&&!c.fact).map(c=>Object.assign(cleanCharge(c,fixId),{paye:false}));
   /* Objectifs d'épargne : chaque objectif est une part de l'épargne totale (mouvements d'affectation) */
   if(Array.isArray(o.goals))for(const g of o.goals){
     if(!g||typeof g!=='object')continue;
@@ -1191,6 +1258,16 @@ function sanitize(o,rep){
   n.joursVides=Array.isArray(o.joursVides)?[...new Set(o.joursVides.filter(validDate))].slice(-400):[];
   if(Array.isArray(o.masquees))n.masquees=[...new Set(o.masquees.filter(s=>typeof s==='string'&&/^\d{4}-\d{2}\|[A-Za-z0-9_:-]{1,60}$/.test(s)))].slice(-300);
   n.importedSrcs=Array.isArray(o.importedSrcs)?[...new Set(o.importedSrcs.filter(s=>typeof s==='string'&&/^imp-[a-z0-9]{1,20}$/.test(s)))].slice(-20000):[];
+  /* Factures à prévoir (annuelles, semestrielles…) : ech = première échéance, depuis = premier mois de mise de côté, fin = mois d'arrêt */
+  const MOIS_RE=/^\d{4}-(0[1-9]|1[0-2])$/;
+  n.factures=Array.isArray(o.factures)?o.factures.filter(f=>f&&typeof f==='object').slice(-60).map(f=>{
+    const mt=montantOk(f.montant),dj=montantOk(f.deja);
+    if(mt==null||mt<=0||!MOIS_RE.test(f.ech))return null;
+    const depuis=MOIS_RE.test(f.depuis)&&f.depuis<=f.ech?f.depuis:f.ech;
+    return{id:typeof f.id==='string'&&ID_RE.test(f.id)?f.id:uid(),nom:String(f.nom||'Facture').slice(0,40),montant:mt,per:[3,6,12].includes(+f.per)?+f.per:12,
+      ech:f.ech,depuis,fin:MOIS_RE.test(f.fin)&&f.fin>=depuis?f.fin:'',deja:dj==null?0:Math.min(dj,mt),jour:Math.min(31,Math.max(1,Math.round(num(f.jour))||5))};
+  }).filter(Boolean):[];
+  n.aboIgnore=Array.isArray(o.aboIgnore)?[...new Set(o.aboIgnore.filter(s=>typeof s==='string'&&s&&s.length<=40))].slice(-100):[];
   return n;
 }
 function sample(){
@@ -1278,7 +1355,40 @@ function catsByUse(){
 const epDefaut=id=>(id<S.epStart||S.pauses.includes(+id.slice(5)))?0:S.objMensuel;
 function newMonth(id){
   return{id,jours:15,abs:0,netRecu:'',epPrevue:epDefaut(id),epFaite:0,
-    charges:S.chargesModele.map(c=>Object.assign({},c,{id:uid(),paye:false})),depenses:[],revenus:[]};
+    charges:S.chargesModele.map(c=>Object.assign({},c,{id:uid(),paye:false})).concat(factCharges(id)),depenses:[],revenus:[]};
+}
+
+/* ---------- Factures à prévoir (enveloppe) ----------
+   Chaque mois, une part de chaque grosse facture (assurance, impôts…) est mise de côté et retirée du budget pour vivre.
+   Le mois où elle tombe, elle apparaît dans les charges fixes, payée par l'enveloppe : elle ne casse pas le budget de ce mois-là.
+   1er cycle : (montant − déjà de côté) ÷ nombre de mois jusqu'à l'échéance (incluse). Ensuite : montant ÷ période. */
+const addM=(id,k)=>{let[y,m]=id.split('-').map(Number);m+=k;y+=Math.floor((m-1)/12);m=((m-1)%12+12)%12+1;return y+'-'+pad(m)};
+const factActive=(f,id)=>id>=f.depuis&&(!f.fin||id<=f.fin);
+const factEch=(f,id)=>id<=f.ech?f.ech:addM(f.ech,Math.ceil(moisEntre(f.ech,id)/f.per)*f.per);
+const factDue=(f,id)=>factActive(f,id)&&id>=f.ech&&moisEntre(f.ech,id)%f.per===0;
+function factMens(f,id){
+  if(!factActive(f,id))return 0;
+  if(factEch(f,id)===f.ech)return r2(Math.max(0,f.montant-f.deja)/(moisEntre(f.depuis,f.ech)+1));
+  return r2(f.montant/f.per);
+}
+/* Argent déjà dans l'enveloppe pour la prochaine échéance, mois id compris */
+function factCote(f,id){
+  if(!factActive(f,id))return 0;
+  const d=factEch(f,id);if(d===id)return f.montant;
+  if(d===f.ech)return r2(Math.min(f.montant,f.deja+factMens(f,id)*(moisEntre(f.depuis,id)+1)));
+  return r2(f.montant/f.per*(f.per-moisEntre(id,d)));
+}
+/* Ce qui est dans l'enveloppe au début du mois id (avant sa propre mise de côté) */
+function factCoteAvant(f,id){const p=prevId(id);if(p<f.depuis)return f.deja;if(!factActive(f,p)||factDue(f,p))return 0;return factCote(f,p)}
+const factCharges=id=>(S&&Array.isArray(S.factures)?S.factures:[]).filter(f=>factDue(f,id)).map(f=>({id:uid(),nom:f.nom,montant:f.montant,jour:f.jour,paye:false,fact:f.id}));
+/* Met à jour les charges « facture » des mois en cours et à venir (les mois passés ne bougent jamais) */
+function syncFactures(){
+  for(const m of S.months){if(m.id<ymNow)continue;
+    m.charges=m.charges.filter(c=>{if(!c.fact||c.paye)return true;const f=S.factures.find(x=>x.id===c.fact);return f&&factDue(f,m.id)});
+    for(const f of S.factures){if(!factDue(f,m.id))continue;const c=m.charges.find(x=>x.fact===f.id);
+      if(!c)m.charges.push({id:uid(),nom:f.nom,montant:f.montant,jour:f.jour,paye:false,fact:f.id});
+      else if(!c.paye)Object.assign(c,{nom:f.nom,montant:f.montant,jour:f.jour})}
+  }
 }
 /* Applique un changement de réglage d'épargne aux mois en cours et à venir dont l'objectif n'a pas été personnalisé
    (objectif égal à l'ancienne valeur par défaut). Mois passés et versements ne sont jamais modifiés. Renvoie le nombre de mois changés. */
@@ -1294,7 +1404,7 @@ function ajouteMois(id){if(monthOf(id))return false;pushHist('Ajout du mois '+mL
 /* ---------- Calculs financiers (seul endroit où ils sont faits) ----------
    net      : net reçu s'il est saisi, sinon estimation (signalée « ≈ »)
    ep       : épargne réservée dans le budget = max(prévue, faite) ; pour un mois terminé = épargne réellement faite
-   vivre    : net − charges fixes − épargne réservée
+   vivre    : net − charges fixes − épargne réservée − factures à prévoir (mise de côté du mois − factures payées par l'enveloppe)
    reste    : vivre − toutes les dépenses du mois (y compris celles datées plus tard)
    compte   : solde théorique = net reçu − charges cochées − épargne virée − dépenses déjà passées (null si net non reçu) */
 function calc(m){
@@ -1312,12 +1422,16 @@ function calc(m){
   const depVenir=r2(dep-depFait);
   /* Autres revenus (prime, remboursement…) : ajoutés au salaire */
   const extra=r2(sum(Array.isArray(m.revenus)?m.revenus:[],'montant')),revenu=r2(net+extra);
-  const vivre=r2(revenu-chTot-ep),reste=r2(vivre-dep);
+  /* Factures à prévoir : part mise de côté ce mois (prov), moins les factures du mois payées par l'enveloppe (couvert) */
+  const prov=r2(S.factures.reduce((a,f)=>a+factMens(f,m.id),0));
+  const couvert=r2(m.charges.reduce((a,c)=>{const f=c.fact&&S.factures.find(x=>x.id===c.fact);return a+(f&&factActive(f,m.id)?Math.min(c.montant,factCote(f,m.id)):0)},0));
+  const fact=r2(prov-couvert);
+  const vivre=r2(revenu-chTot-ep-fact),reste=r2(vivre-dep);
   const compte=recu?r2(revenu-chPaye-epFaite-depFait):null;
   let jours=0;
   if(st==='encours')jours=daysIn(m.id)-today.getDate()+1;
   else if(st==='futur')jours=daysIn(m.id);
-  return{st,wd,jEff,absEff,joursKo,est,recu,net,extra,revenu,chTot,chPaye,chVenir,epPrevue,epFaite,ep,epVenir,dep,depFait,depVenir,vivre,reste,compte,jours};
+  return{st,wd,jEff,absEff,joursKo,est,recu,net,extra,revenu,chTot,chPaye,chVenir,epPrevue,epFaite,ep,epVenir,dep,depFait,depVenir,prov,couvert,fact,vivre,reste,compte,jours};
 }
 /* Budget par jour : seulement pour le mois en cours (un mois terminé ou à venir n'a pas de « par jour » pertinent) */
 const parJour=c=>c.st==='encours'&&c.jours>0&&c.reste>0?Math.floor(c.reste/c.jours*100)/100:0;
@@ -1373,7 +1487,7 @@ function render(){
   $('mPrev').disabled=idx<=0;
   $('mNext').setAttribute('aria-label',idx===S.months.length-1?'Créer '+mLabel(nextId(m.id)):'Mois suivant');
   renderBanners();renderHero(m,c);renderFavs();renderList(m,c);renderCal();renderSearch();renderSim();renderMonth(m,c);renderBilanStats(m);renderRevenus(m);
-  renderAlerts(m,c);renderStats();renderCmp();renderEp();renderGoals();renderTable();renderSettings();renderBackup();renderSave();
+  renderAlerts(m,c);renderEvo();renderStats();renderAbo();renderCmp();renderEp();renderGoals();renderFact();renderTable();renderSettings();renderBackup();renderSave();
 }
 
 function renderHero(m,c){
@@ -1406,6 +1520,9 @@ function renderHero(m,c){
   $('hChSub').textContent=c.chTot>0?(c.chVenir>0?`dont ${eur(c.chVenir)} encore à payer`:'tout est payé'):'';
   $('hEp').textContent='−'+eur(c.ep);
   $('hEpSub').textContent=`${eur(c.epFaite)} versée`+(c.epVenir>0?` · ${eur(c.epVenir)} prévue, pas encore versée`:'');
+  $('hFactRow').hidden=!(c.prov>0||c.couvert>0);
+  $('hFact').textContent=c.fact>=0?'−'+eur(c.fact):'+'+eur(-c.fact);
+  $('hFactSub').textContent=[c.prov>0?`${eur(c.prov)} mis de côté ce mois`:'',c.couvert>0?`${eur(c.couvert)} de factures payées par l’enveloppe`:''].filter(Boolean).join(' · ');
   $('hVivre').textContent=signe(c.vivre);
   $('hDepFait').textContent='−'+eur(c.depFait);
   $('hDepVenirRow').hidden=!(c.depVenir>0);$('hDepVenir').textContent='−'+eur(c.depVenir);
@@ -1522,7 +1639,7 @@ function renderMonth(m,c){
     +'<br>Estimation indicative : elle n’est pas vérifiée par les règles de paie officielles.';
   setHTML($('hypList'),PAIE_HYP.map(t=>`<li>${esc(t)}</li>`).join(''));
   const dmax=daysIn(m.id);
-  setHTML($('charges'),[...m.charges].sort((a,b)=>a.jour-b.jour).map(ch=>`<div class="charge ${ch.paye?'paid':''}" data-id="${ch.id}">
+  setHTML($('charges'),[...m.charges].sort((a,b)=>a.jour-b.jour).map(ch=>`<div class="charge ${ch.paye?'paid':''} ${ch.fact?'fact':''}" data-id="${ch.id}" ${ch.fact?'title="Facture à prévoir : payée par ton enveloppe"':''}>
       <input type="checkbox" data-f="paye" ${ch.paye?'checked':''} aria-label="${esc(ch.nom)} : prélevé">
       <input class="n" data-f="nom" value="${esc(ch.nom)}" aria-label="Nom de la charge" maxlength="40">
       <input class="m" data-f="montant" inputmode="decimal" value="${String(ch.montant).replace('.',',')}" aria-label="Montant de ${esc(ch.nom)}">
@@ -1530,7 +1647,7 @@ function renderMonth(m,c){
       <button class="x" data-delc="${ch.id}" aria-label="Supprimer la charge ${esc(ch.nom)}">✕</button></div>`).join('')
     ||'<p class="empty">Aucune charge fixe.</p>');
   $('charges').querySelectorAll('.charge').forEach(r=>{const ch=m.charges.find(x=>x.id===r.dataset.id);if(ch)r.classList.toggle('paid',ch.paye)});
-  $('chTotal').textContent=eur(c.chTot)+(c.chTot>0?' · payé '+eur(c.chPaye)+' · à venir '+eur(c.chVenir):'');
+  $('chTotal').textContent=eur(c.chTot)+(c.chTot>0?' · payé '+eur(c.chPaye)+' · à venir '+eur(c.chVenir):'')+(c.couvert>0?` · dont ${eur(c.couvert)} de factures payées par l’enveloppe (bordure verte)`:'');
 }
 
 /* ---------- Alertes ---------- */
@@ -1956,7 +2073,7 @@ function toast(txt,undo){
 $('toastUndo').addEventListener('click',()=>{$('toast').hidden=true;undoLast()});
 
 /* ---------- Feuilles (fenêtres du bas) ---------- */
-const SHEETS=['sheet','epSheet','goalSheet','mvSheet','cfSheet','impSheet'];
+const SHEETS=['sheet','epSheet','goalSheet','mvSheet','cfSheet','impSheet','factSheet'];
 let lastFocus=null;
 function openS(id){lastFocus=document.activeElement;SHEETS.forEach(s=>{$(s).hidden=s!==id});$('toast').hidden=true}
 function closeAll(){const was=SHEETS.some(s=>!$(s).hidden);SHEETS.forEach(s=>{$(s).hidden=true});editId=null;confirmKey='';goalEdit=null;mvGoal=null;
@@ -1965,7 +2082,7 @@ function closeAll(){const was=SHEETS.some(s=>!$(s).hidden);SHEETS.forEach(s=>{$(
 function focusLater(el){if(!el)return;const box=el.closest('.sheet');setTimeout(()=>{const a=document.activeElement;if(box&&a&&a!==document.body&&box.contains(a)&&a!==el&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))return;try{el.focus()}catch(e){}},50)}
 function disarm(b,txt){b.dataset.armed='';b.classList.remove('armed');b.textContent=txt}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&SHEETS.some(s=>!$(s).hidden))closeAll()});
-['goalSheet','mvSheet','cfSheet','impSheet'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target.closest('[data-sclose]'))closeAll()}));
+['goalSheet','mvSheet','cfSheet','impSheet','factSheet'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target.closest('[data-sclose]'))closeAll()}));
 /* Confirmation avant une action importante : explique ce qui va changer, puis propose les choix */
 let cfActions=[];
 function confirmBox(titre,corps,actions){
@@ -2102,7 +2219,7 @@ $('charges').addEventListener('click',e=>{
 });
 $('addCharge').addEventListener('click',()=>{const m=cur(),ch=cleanCharge({nom:'Nouvelle charge',montant:0,jour:5});pushHist('Ajout : charge');m.charges.push(ch);save();render();
   const inp=$('charges').querySelector(`[data-id="${ch.id}"] .n`);if(inp){inp.focus();inp.select()}});
-$('saveModel').addEventListener('click',()=>{pushHist('Modèle de charges');S.chargesModele=cur().charges.map(c=>Object.assign(cleanCharge(c),{id:uid(),paye:false}));save();
+$('saveModel').addEventListener('click',()=>{pushHist('Modèle de charges');S.chargesModele=cur().charges.filter(c=>!c.fact).map(c=>{const x=Object.assign(cleanCharge(c),{id:uid(),paye:false});delete x.fact;return x});save();
   $('modelMsg').textContent='Les prochains mois reprendront ces charges ('+eur(sum(S.chargesModele,'montant'))+').';$('modelMsg').hidden=false;
   setTimeout(()=>{$('modelMsg').hidden=true},5000)});
 
@@ -2422,9 +2539,9 @@ function buildXlsx(){
   Ep.dv.push({ref:`Q8:Q${NMR}`,f:`$I$8:$I$${NG}`});
 
   /* Mois */
-  const Mo=xlSheet('Mois',[11,13,9,9,12,12,13,13,12,12,13,12,13,13,13,13,13,11,13,13]);Mo.freeze=5;
+  const Mo=xlSheet('Mois',[11,13,9,9,12,12,13,13,12,12,13,12,13,13,13,13,13,11,13,13,14]);Mo.freeze=5;
   Mo.set('A1','Mois',XS.title);Mo.set('A2','Une ligne par mois. Saisis le net reçu dès la paie : il remplace l’estimation.',XS.note);
-  Mo.header(4,['Mois','Net reçu','Jours entreprise','Jours absence','Épargne prévue','Brut estimé','Cotisations estimées','Net estimé','Net retenu','Salaire','Charges','Charges payées','Épargne versée','Épargne retenue','Dépenses','Dépenses faites','Reste à vivre','Statut','Autres revenus','Revenus']);
+  Mo.header(4,['Mois','Net reçu','Jours entreprise','Jours absence','Épargne prévue','Brut estimé','Cotisations estimées','Net estimé','Net retenu','Salaire','Charges','Charges payées','Épargne versée','Épargne retenue','Dépenses','Dépenses faites','Reste à vivre','Statut','Autres revenus','Revenus','Factures à prévoir']);
   const VR=c=>`${q('Épargne')}!$${c}$8:$${c}$${7+NV}`;
   months.forEach((m,i)=>{const r=5+i,c=calcs.get(m.id),g=f=>`=IF($A${r}="","",${f})`;
     Mo.set('A'+r,m.id,XS.in);Mo.set('B'+r,c.recu?m.netRecu:'',XS.inEur);Mo.set('C'+r,c.jEff,XS.inNum);Mo.set('D'+r,c.absEff,XS.inNum);Mo.set('E'+r,m.epPrevue,XS.inEur);
@@ -2441,7 +2558,8 @@ function buildXlsx(){
     Mo.set('P'+r,c.depFait,XS.eur,g(`IF(A${r}>${NOW},0,SUMIFS(${DR('B')},${DR('E')},A${r},${DR('A')},"<="&TODAY()))`));
     Mo.set('S'+r,c.extra||'',XS.inEur);
     Mo.set('T'+r,c.revenu,XS.eur,g(`I${r}+N(S${r})`));
-    Mo.set('Q'+r,c.reste,XS.eurB,g(`T${r}-K${r}-N${r}-O${r}`));
+    Mo.set('U'+r,c.fact||'',XS.inEur);
+    Mo.set('Q'+r,c.reste,XS.eurB,g(`T${r}-K${r}-N${r}-O${r}-N(U${r})`));
     Mo.set('R'+r,{passe:'terminé',encours:'en cours',futur:'à venir'}[c.st],0,g(`IF(A${r}<${NOW},"terminé",IF(A${r}=${NOW},"en cours","à venir"))`));
   });
 
@@ -2456,8 +2574,8 @@ function buildXlsx(){
   T.set('A7',c.recu?`✓ Salaire reçu : ${fx2(c.net)} €`:`≈ Salaire estimé : ${fx2(c.est.net)} € · pas encore reçu`,XS.b,
     `=IFERROR(IF(${idx('B')}="","≈ Salaire estimé : "&FIXED(${idx('H')},2)&" € · pas encore reçu","✓ Salaire reçu : "&FIXED(${idx('B')},2)&" €"),"")`);
   T.set('A8','Comment le reste à vivre est calculé',XS.sec);
-  [['Revenus du mois (salaire + autres)',c.revenu,idx('T')],['− Charges fixes',-c.chTot,'-'+idx('K')],['     dont encore à payer',c.chVenir,idx('K')+'-'+idx('L'),1],
-   ['− Épargne du mois',-c.ep,'-'+idx('N')],['     dont déjà versée',c.epFaite,idx('M'),1],['→ Budget pour vivre',c.vivre,`${idx('T')}-${idx('K')}-${idx('N')}`,2],
+  [['Revenus du mois (salaire + autres)',c.revenu,idx('T')],[c.fact?'− Charges fixes et factures à prévoir':'− Charges fixes',-(c.chTot+c.fact),`-(${idx('K')}+N(${idx('U')}))`],['     dont encore à payer',c.chVenir,idx('K')+'-'+idx('L'),1],
+   ['− Épargne du mois',-c.ep,'-'+idx('N')],['     dont déjà versée',c.epFaite,idx('M'),1],['→ Budget pour vivre',c.vivre,`${idx('T')}-${idx('K')}-${idx('N')}-N(${idx('U')})`,2],
    ['− Dépenses déjà faites',-c.depFait,'-'+idx('P')],['− Dépenses prévues',-c.depVenir,`-(${idx('O')}-${idx('P')})`],['→ Reste à vivre',c.reste,idx('Q'),2]]
     .forEach(([l,v,f,k],i)=>{const r=9+i;T.set('A'+r,l,k===1?XS.note:k===2?XS.b:0);T.set('B'+r,xnum(v),k===2?XS.eurB:XS.eur,`=IFERROR(${f},0)`)});
   const pj=parJour(c);
@@ -3152,6 +3270,144 @@ function impAppliquer(){
   syncEp();closeAll();IMP=null;save();render();
   const parts=[nDep?`${pl(nDep,'dépense')} (${eur(tDep)})`:'',nCh?pl(nCh,'charge')+' cochée'+(nCh>1?'s':''):'',nEp?pl(nEp,'versement')+' d’épargne':'',ns.length?'salaire de '+ns.map(id=>mLabel(id).toLowerCase()).join(', '):'',nRev?`${nRev} autre${nRev>1?'s':''} revenu${nRev>1?'s':''}`:''].filter(Boolean);
   toast('Import terminé : '+parts.join(', ')+'.');
+}
+
+/* ---------- Factures à prévoir : écran ---------- */
+const PER_TXT={12:'Chaque année',6:'Tous les 6 mois',3:'Tous les 3 mois'};
+const FACT_IDEES=['Assurance auto','Assurance habitation','Impôts','Contrôle technique','Entretien voiture','Taxe foncière'];
+const factActives=()=>S.factures.filter(f=>!f.fin||f.fin>=ymNow);
+function renderFact(){
+  const L=factActives();
+  if(!L.length){$('factSum').hidden=true;$('factList').innerHTML='<p class="empty">Aucune facture pour l’instant. Ajoute celles qui tombent une ou deux fois par an : ce sont souvent elles qui font dérailler un mois.</p>';return}
+  const prov=r2(L.reduce((a,f)=>a+factMens(f,ymNow),0)),cote=r2(L.reduce((a,f)=>a+factCote(f,ymNow),0)),an=r2(L.reduce((a,f)=>a+f.montant*12/f.per,0));
+  $('factSum').hidden=false;
+  $('factSum').innerHTML=`<div><small>Mis de côté ce mois</small><b>${eur(prov)}</b></div><div><small>Dans l’enveloppe</small><b>${eur(cote)}</b></div><div><small>Total par an</small><b>${eur(an)}</b></div>`;
+  $('factList').innerHTML=[...L].sort((a,b)=>factEch(a,ymNow).localeCompare(factEch(b,ymNow))).map(f=>{
+    const d=factEch(f,ymNow),k=moisEntre(ymNow,d),c=factCote(f,ymNow),pct=Math.min(100,c/f.montant*100);
+    const quand=k===0?'à payer ce mois-ci':k===1?'le mois prochain':`dans ${k} mois`;
+    return `<button class="factrow ${k===0?'due':''}" data-fact="${f.id}"><span class="fh"><b>${esc(f.nom)}</b><span>${eur(f.montant)}</span></span>
+      <small>${PER_TXT[f.per]} · prochaine fois : ${mLabel(d).toLowerCase()} (${quand})</small>
+      <span class="track" role="progressbar" aria-label="Enveloppe ${esc(f.nom)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(pct)}"><i style="width:${pct.toFixed(1)}%;--c:var(--accent)"></i></span>
+      <small>${k===0?`${eur(c)} prêts : la facture est payée par l’enveloppe, ton budget du mois ne bouge pas.`:`${eur(c)} de côté sur ${eur(f.montant)} · ${eur(factMens(f,ymNow))} mis de côté ce mois`}</small></button>`}).join('');
+}
+let factEdit=null;
+function fErr(t){showErr('fErr',t)}
+function factForm(){
+  const rm=lireMontant($('fMt').value,{label:'Montant'}),rd=lireMontant($('fDeja').value,{vide:true,label:'Déjà de côté'}),ech=$('fEch').value;
+  return{rm,rd,ech,per:+$('fPer').value||12,nom:$('fNom').value.trim().slice(0,40)};
+}
+function factHint(){
+  const x=factForm();
+  if(!x.rm.ok||x.rm.v<=0||!/^\d{4}-(0[1-9]|1[0-2])$/.test(x.ech)||x.ech<ymNow||!x.rd.ok){$('fHint').textContent='Indique le montant et le mois de la prochaine facture : l’appli calcule combien mettre de côté chaque mois.';return}
+  const deja=x.rd.vide?0:Math.min(x.rd.v,x.rm.v),n=moisEntre(ymNow,x.ech)+1,mens=r2((x.rm.v-deja)/n);
+  $('fHint').textContent=`≈ ${eur(mens)} mis de côté par mois jusqu’en ${mLabel(x.ech).toLowerCase()} (${pl(n,'mois')}, ce mois compris), puis ${eur(r2(x.rm.v/x.per))} par mois. C’est retiré de ton budget pour vivre.`;
+}
+function openFact(id){
+  const f=id?S.factures.find(x=>x.id===id):null;factEdit=f?f.id:null;
+  $('factTitle').textContent=f?'Modifier la facture':'Nouvelle facture';
+  $('fNom').value=f?f.nom:'';$('fMt').value=f?String(f.montant).replace('.',','):'';$('fPer').value=String(f?f.per:12);
+  $('fEch').value=f?factEch(f,ymNow):'';$('fEch').min=ymNow;
+  const dj=f?factCoteAvant(f,ymNow):0;$('fDeja').value=dj>0?String(dj).replace('.',','):'';
+  $('factChips').innerHTML=f?'':FACT_IDEES.map(t=>`<button class="chip" data-idee="${esc(t)}">${esc(t)}</button>`).join('');$('factChips').hidden=!!f;
+  $('fDel').hidden=!f;disarm($('fDel'),'Supprimer');fErr('');factHint();openS('factSheet');focusLater(f?$('fMt'):$('fNom'));
+}
+$('factNew').addEventListener('click',()=>openFact(null));
+$('factList').addEventListener('click',e=>{const b=e.target.closest('[data-fact]');if(b)openFact(b.dataset.fact)});
+$('factChips').addEventListener('click',e=>{const b=e.target.closest('[data-idee]');if(!b)return;$('fNom').value=b.dataset.idee;focusLater($('fMt'))});
+['fMt','fPer','fEch','fDeja'].forEach(id=>$(id).addEventListener('input',factHint));
+$('fSave').addEventListener('click',()=>{
+  const x=factForm();
+  if(!x.nom)return fErr('Donne un nom à la facture.');
+  if(!x.rm.ok)return fErr(x.rm.err);if(x.rm.v<=0)return fErr('Le montant doit être supérieur à 0 €.');
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(x.ech))return fErr('Choisis le mois de la prochaine facture.');
+  if(x.ech<ymNow)return fErr('Ce mois est déjà passé : indique la prochaine fois où la facture tombera.');
+  if(moisEntre(ymNow,x.ech)>=36)return fErr('Échéance trop lointaine (3 ans au plus).');
+  if(!x.rd.ok)return fErr(x.rd.err);
+  const deja=x.rd.vide?0:x.rd.v;if(deja>x.rm.v)return fErr('« Déjà de côté » dépasse le montant de la facture.');
+  const old=factEdit?S.factures.find(f=>f.id===factEdit):null;
+  if(!old&&factActives().length>=20)return fErr('20 factures au maximum.');
+  pushHist((old?'Modification':'Nouvelle')+' facture : '+x.nom);
+  const neuve={nom:x.nom,montant:x.rm.v,per:x.per,ech:x.ech,deja,jour:old?old.jour:5};
+  if(old&&old.nom!==x.nom&&old.montant===neuve.montant&&old.per===neuve.per&&factEch(old,ymNow)===x.ech&&Math.abs(factCoteAvant(old,ymNow)-deja)<0.005)old.nom=x.nom;
+  else if(old&&old.depuis>=ymNow)Object.assign(old,neuve,{depuis:ymNow});
+  else{
+    /* Les mois passés gardent leur calcul : l'ancienne version s'arrête le mois dernier, la nouvelle commence ce mois-ci */
+    if(old)old.fin=prevId(ymNow);
+    S.factures.push(Object.assign({id:uid(),depuis:ymNow,fin:''},neuve));
+    if(old)for(const m of S.months)for(const c of m.charges)if(c.fact===old.id&&m.id>=ymNow)c.fact=S.factures[S.factures.length-1].id;
+  }
+  syncFactures();closeAll();save();render();toast(old?'Facture modifiée':'Facture ajoutée : '+x.nom);
+});
+$('fDel').addEventListener('click',e=>{
+  const b=e.currentTarget,f=S.factures.find(x=>x.id===factEdit);if(!f)return;
+  if(b.dataset.armed!=='1'){b.dataset.armed='1';b.classList.add('armed');b.textContent='Confirmer';fErr('Elle ne sera plus mise de côté à partir de ce mois. Les mois passés ne changent pas.');setTimeout(()=>{if(b.dataset.armed==='1')disarm(b,'Supprimer')},4000);return}
+  pushHist('Suppression facture : '+f.nom);
+  if(f.depuis>=ymNow)S.factures=S.factures.filter(x=>x!==f);else f.fin=prevId(ymNow);
+  syncFactures();closeAll();save();render();toast('Facture supprimée : '+f.nom);
+});
+
+/* ---------- Abonnements : dépenses qui reviennent chaque mois au même prix ---------- */
+const RE_ABO=/\b(netflix|spotify|deezer|disney|canal|amazon prime|prime video|apple com|icloud|google one|youtube|chatgpt|openai|basic fit|basicfit|fitness park|keepcool|free mobile|sfr|bouygues|sosh|orange|playstation|xbox|nintendo|crunchyroll|uber one|navigo|abonnement|metal plan|premium plan|plus plan)\b/;
+function abonnements(){
+  const lim=addM(ymNow,-5),G=new Map();
+  for(const m of S.months){if(m.id<lim||m.id>ymNow)continue;
+    for(const d of m.depenses){if(d.date>isoToday||!d.detail)continue;const k=cleKey(d.detail);if(!k||S.aboIgnore.includes(k))continue;
+      let g=G.get(k);if(!g)G.set(k,g={k,nom:d.detail,ops:[]});g.ops.push(d)}}
+  const res=[];
+  for(const g of G.values()){
+    const mois=new Set(g.ops.map(d=>d.date.slice(0,7))),mts=g.ops.map(d=>d.montant).sort((a,b)=>a-b),med=mts[mts.length>>1];
+    const parMois=g.ops.length/mois.size,proche=mts[mts.length-1]-mts[0]<=Math.max(2,med*0.15),connu=RE_ABO.test(nk(g.nom));
+    if(!proche||!((mois.size>=2&&parMois<=1.5)||(connu&&parMois<=2)))continue;
+    const last=g.ops.reduce((a,d)=>d.date>a.date?d:a);
+    if(moisEntre(last.date.slice(0,7),ymNow)>1)continue;
+    const mens=r2(med*Math.max(1,Math.round(parMois)));
+    res.push({k:g.k,nom:g.nom,mens,an:r2(mens*12),last:last.date,cat:last.cat,n:mois.size});
+  }
+  return res.sort((a,b)=>b.an-a.an);
+}
+function renderAbo(){
+  const L=abonnements(),tot=r2(sum(L,'mens')),ch=r2(sum(S.chargesModele,'montant'));
+  const cache=S.aboIgnore.length?`<button class="btn small" id="aboReset" style="margin-top:8px">Réafficher ${pl(S.aboIgnore.length,'élément')} masqué${S.aboIgnore.length>1?'s':''}</button>`:'';
+  $('abo').innerHTML=(L.length?L.map(a=>{const k=catOf(a.cat);
+      return `<div class="abo"><span><b>${esc(a.nom)}</b><small>${esc(k.e)} ${esc(k.n)} · dernier le ${dateFr(a.last,{day:'numeric',month:'short'})}${a.n>1?` · vu ${a.n} mois`:''}</small></span>
+        <span class="m"><b>${eur(a.mens)}/mois</b><small>${eur(a.an)} par an</small></span>
+        <button class="x" data-abox="${esc(a.k)}" aria-label="${esc(a.nom)} n’est pas un abonnement : le masquer">✕</button></div>`}).join('')
+      +`<p class="evomsg" style="margin-top:8px"><b>${eur(tot)} par mois, soit ${eur(r2(tot*12))} par an.</b> Tu les utilises vraiment tous ? Chaque abonnement résilié, c’est son montant annuel en plus pour toi.</p>`
+    :'<p class="empty">Aucun abonnement repéré. Importe tes relevés (onglet Dépenses) ou note le nom du marchand dans le détail de tes dépenses pour qu’ils soient détectés.</p>')
+    +(ch>0?`<p class="hint" style="margin-top:8px">Pour info, tes charges fixes (loyer, crédit…) font ${eur(ch)} par mois, soit ${eur(r2(ch*12))} par an.</p>`:'')+cache;
+}
+$('abo').addEventListener('click',e=>{
+  if(e.target.id==='aboReset'){pushHist('Abonnements réaffichés');S.aboIgnore=[];save();render();return}
+  const b=e.target.closest('[data-abox]');if(!b)return;
+  pushHist('Abonnement masqué');S.aboIgnore.push(b.dataset.abox);save();render();toast('Masqué : ce n’est pas un abonnement.',true);
+});
+
+/* ---------- Évolution : ce mois comparé à tes habitudes ---------- */
+function renderEvo(){
+  const ms=S.months.filter(m=>m.id<=ymNow).slice(-6);
+  if(!ms.length){$('evoCard').hidden=true;return}
+  $('evoCard').hidden=false;
+  const cs=ms.map(m=>({m,c:calc(m)})),mx=Math.max(1,...cs.map(x=>x.c.dep));
+  $('evo').innerHTML=cs.map(({m,c})=>`<div class="${m.id===ymNow?'now':''}"><small>${eur(Math.round(c.dep))}</small><i style="height:${Math.max(2,c.dep/mx*100*0.62).toFixed(1)}%"></i><small>${MCOURT[+m.id.slice(5)-1]}</small><b class="${c.reste<0?'neg':''}">${c.reste<0?'−':''}${eur(Math.abs(Math.round(c.reste)))}</b></div>`).join('');
+  const msg=[],now=monthOf(ymNow),past=S.months.filter(m=>m.id<ymNow&&m.depenses.length).slice(-3);
+  if(now&&past.length){
+    const d0=today.getDate(),aDate=(m,d)=>+d.date.slice(8)<=Math.min(d0,daysIn(m.id));
+    const cur0=calc(now).depFait,moy=r2(past.reduce((a,m)=>a+sum(m.depenses.filter(d=>aDate(m,d)),'montant'),0)/past.length),diff=r2(cur0-moy);
+    const qui=past.length>1?`en moyenne à la même date (le ${d0}) les ${past.length} mois précédents`:`au ${d0} ${MOIS[+past[0].id.slice(5)-1].toLowerCase()}`;
+    let cls='',t;
+    if(moy>=1&&diff>Math.max(30,moy*0.1)){cls='bad';t=`Tu dépenses plus que d’habitude : ${eur(cur0)} depuis le début du mois, contre ${eur(moy)} ${qui} (+${eur(diff)}).`}
+    else if(moy>=1&&-diff>Math.max(30,moy*0.1)){cls='good';t=`Bien joué : ${eur(cur0)} dépensés depuis le début du mois, contre ${eur(moy)} ${qui} (−${eur(-diff)}).`}
+    else t=`Tu es dans tes habitudes : ${eur(cur0)} dépensés depuis le début du mois, contre ${eur(moy)} ${qui}.`;
+    const oc=byCat(now.depenses.filter(d=>d.date<=isoToday)),op={};
+    for(const m of past)for(const d of m.depenses)if(aDate(m,d))op[d.cat]=(op[d.cat]||0)+d.montant/past.length;
+    const ds=allCats().map(k=>({k,d:r2((oc[k.id]||0)-(op[k.id]||0))})).sort((a,b)=>b.d-a.d);
+    if(ds[0]&&ds[0].d>=30)t+=` Surtout en ${ds[0].k.e} ${ds[0].k.n} : +${eur(ds[0].d)}.`;
+    msg.push(`<p class="evomsg ${cls}">${esc(t)}</p>`);
+  }
+  const fin=S.months.filter(m=>m.id<ymNow).map(m=>({m,c:calc(m)})).filter(x=>x.c.recu).slice(-3);
+  if(fin.length){const r=r2(fin.reduce((a,x)=>a+x.c.reste,0)/fin.length),qd=fin.length>1?`Sur les ${fin.length} derniers mois terminés`:`En ${MOIS[+fin[0].m.id.slice(5)-1].toLowerCase()}`,moy=fin.length>1?' en moyenne':'';
+    msg.push(`<p class="hint" style="margin:0">${r>=0?`${qd}, il t’est resté${moy} ${eur(r)} en fin de mois.`:`${qd}, tu as fini${moy} à −${eur(-r)} : c’est ce trou qu’il faut combler.`}</p>`)}
+  $('evoMsg').innerHTML=msg.join('');
 }
 
 /* ---------- Changement de jour pendant que l'appli est ouverte ---------- */
