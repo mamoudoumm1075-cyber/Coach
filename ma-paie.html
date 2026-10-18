@@ -164,6 +164,12 @@ button:disabled{opacity:.5;cursor:default}
 .ring .bg{stroke:var(--surface-2)}
 .ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dasharray .5s}
 .hero.over .ring .fg{stroke:var(--bad)}
+/* Repère « où tu devrais en être aujourd'hui » : orange si en avance sur le calendrier, rouge si très en avance */
+.ring .mark{fill:var(--surface);stroke:var(--fg);stroke-width:3}
+.hero.ahead .ring .fg{stroke:var(--warn)}
+.hero.ahead2 .ring .fg{stroke:var(--bad)}
+.hero.ahead .ring-center span{color:var(--warn)}
+.hero.ahead2 .ring-center span{color:var(--bad)}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:20%}
 .ring-center small{color:var(--muted);font-weight:600;font-size:.82rem}
 .ring-center b{font-size:2.1rem;font-weight:800;line-height:1.05;letter-spacing:-.03em}
@@ -516,7 +522,7 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
     <section class="card hero" id="hero" aria-live="polite">
       <p class="hstate" id="hState"></p>
       <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="52"></circle><circle class="fg" id="ringFg" cx="60" cy="60" r="52" stroke-dasharray="0 400"></circle></svg>
+        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="52"></circle><circle class="fg" id="ringFg" cx="60" cy="60" r="52" stroke-dasharray="0 400"></circle><circle class="mark" id="ringMark" cx="112" cy="60" r="5" style="display:none"></circle></svg>
         <div class="ring-center"><small id="hLabel">Reste à vivre</small><b id="hReste">0 €</b><span id="hPct">0 % du budget utilisé</span></div>
       </div>
       <p class="daymsg" id="hDay"></p>
@@ -1495,6 +1501,12 @@ function renderHero(m,c){
   const signe=v=>v<0?'−'+eur(-v):eur(v);
   $('hero').classList.toggle('over',over);
   $('ringFg').setAttribute('stroke-dasharray',(used*C).toFixed(1)+' '+C.toFixed(1));
+  /* Rythme : part du budget déjà dépensée comparée à la part du mois écoulée (aujourd'hui compris) */
+  const pace=c.st==='encours'&&c.vivre>0&&!over,tm=today.getDate()/daysIn(m.id),sp=c.vivre>0?c.depFait/c.vivre:0;
+  const ahead=pace&&sp>tm+0.05,ahead2=pace&&sp>tm+0.2;
+  $('hero').classList.toggle('ahead',ahead&&!ahead2);$('hero').classList.toggle('ahead2',ahead2);
+  const mk=$('ringMark');mk.style.display=pace?'':'none';
+  if(pace){mk.setAttribute('cx',(60+52*Math.cos(2*Math.PI*tm)).toFixed(2));mk.setAttribute('cy',(60+52*Math.sin(2*Math.PI*tm)).toFixed(2))}
   const st=$('hState');st.className='hstate '+(c.recu?'ok':'est');
   st.textContent=c.recu?`✓ Salaire reçu : ${eur(c.net)}`:`≈ Salaire estimé : ${eur(c.net)} · pas encore reçu`;
   $('hLabel').textContent=(over?'Dépassement':'Reste à vivre')+(c.st==='futur'?' prévu':theo?' (théorique)':'');
@@ -1507,7 +1519,9 @@ function renderHero(m,c){
   let day;
   if(c.vivre<=0)day='Charges + épargne dépassent ton salaire. Regarde les alertes.';
   else if(over)day=c.st==='passe'?'Mois terminé en dépassement.':'Plus rien à dépenser ce mois-ci.';
-  else if(c.st==='encours')day=pl(c.jours,'jour')+' restant'+(c.jours>1?'s':'')+' en '+mois+', aujourd’hui compris.';
+  else if(c.st==='encours'){day=pl(c.jours,'jour')+' restant'+(c.jours>1?'s':'')+' en '+mois+', aujourd’hui compris.';
+    if(pace)day+=ahead?` Attention : ${Math.round(sp*100)} % du budget déjà dépensé pour ${Math.round(tm*100)} % du mois passé (le rond sur l’anneau). Ralentis.`
+      :` Tu es dans les temps : ${Math.round(sp*100)} % dépensé pour ${Math.round(tm*100)} % du mois passé.`}
   else if(c.st==='futur')day='Mois à venir : budget prévisionnel.';
   else day='Mois terminé.';
   if(theo&&c.st!=='futur')day+=' Résultat théorique tant que le salaire n’est pas saisi.';
