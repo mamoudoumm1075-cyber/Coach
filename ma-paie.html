@@ -2823,16 +2823,38 @@ function bilanHTML(m,titre){
   if(top)rows.push(['Plus gros poste',`${esc(top.e)} ${esc(top.n)} · ${eur(o[top.id])}`]);
   if(Object.keys(S.budgets).length)rows.push(['Budgets',over.length?`${pl(over.length,'budget')} dépassé${over.length>1?'s':''} : ${over.map(k=>esc(k.n)).join(', ')}`:'tous respectés ✓']);
   /* Phrase d'accroche bienveillante + leçon du mois (catégorie qui a le plus bougé par rapport au mois d'avant) */
+  /* Encouragements variés : plusieurs formulations par situation, avec de vrais chiffres (épargne cumulée, série de mois, % du salaire…).
+     Le choix dépend du mois : il reste le même pour un mois donné et change d'un mois à l'autre. */
+  const [ya,mo]=m.id.split('-').map(Number),pick=L=>{L=L.filter(Boolean);return L[(ya*12+mo)%L.length]};
+  const finMois=m.id+'-31',cumul=r2(S.epInitial+sum(S.depots.filter(d=>d.month<=m.id),'montant')-sum(S.retraits.filter(r=>r.date<=finMois),'montant'));
+  let serie=0;for(let id=m.id,x=monthOf(id);x&&x.epFaite>0;id=prevId(id),x=monthOf(id))serie++;
+  const pctSal=c.revenu>0?Math.round(c.epFaite/c.revenu*100):0,ep=eur(c.epFaite),rs=eur(Math.abs(c.reste));
   let mot;
-  if(c.epFaite>0&&c.reste>=0)mot=`👏 Bravo : ${eur(c.epFaite)} mis de côté${c.chTot>0?` malgré ${eur(c.chTot)} de charges`:''}, et ${eur(c.reste)} d’avance en fin de mois.`;
-  else if(c.epFaite>0)mot=`💪 Tu as quand même épargné ${eur(c.epFaite)}. Le mois a dépassé de ${eur(-c.reste)} : on ajuste le prochain.`;
-  else if(c.reste>=0)mot=`✅ Mois tenu : ${eur(c.reste)} restant en fin de mois.`;
-  else mot=`Mois difficile : ${eur(-c.reste)} de dépassement. Pas grave : regarde le plus gros poste ci-dessous pour comprendre ce qui s’est passé.`;
+  if(c.epFaite>0&&c.reste>=0)mot=pick([
+    `👏 Bravo : ${ep} mis de côté${c.chTot>0?` malgré ${eur(c.chTot)} de charges`:''}, et ${rs} d’avance en fin de mois.`,
+    pctSal>=5&&`🎯 Mission réussie : ${ep} épargnés, soit ${pctSal} % de ce que tu as gagné ce mois-ci.`,
+    cumul>c.epFaite&&`🐷 Ton épargne atteint ${eur(cumul)} à la fin du mois. Chaque mois tenu la fait grossir.`,
+    serie>=2&&`🔥 ${serie} mois d’affilée avec de l’épargne. C’est comme ça qu’on construit un vrai matelas.`,
+    `🏁 Budget tenu jusqu’au bout : ${rs} de marge en fin de mois, et ${ep} à l’abri.`,
+    `📈 À ce rythme, ça fait ${eur(c.epFaite*12)} de côté en un an. Continue comme ça.`]);
+  else if(c.epFaite>0)mot=pick([
+    `💪 Tu as quand même épargné ${ep}. Le mois a dépassé de ${rs} : on ajuste le prochain.`,
+    `🧱 L’épargne est faite (${ep}), c’est le plus important. Il manque ${rs} sur le budget : on corrige le mois prochain.`,
+    cumul>0&&`🐷 Dépassement de ${rs}, mais ton épargne continue de grandir : ${eur(cumul)} au total.`,
+    `🔧 ${ep} épargnés, ${rs} de trop dépensés. Regarde la leçon ci-dessous : c’est souvent un seul poste qui dérape.`]);
+  else if(c.reste>=0)mot=pick([
+    `✅ Mois tenu : ${rs} restant en fin de mois.`,
+    `👍 Pas de dépassement ce mois-ci : ${rs} d’avance. Le mois prochain, essaie d’en mettre une partie de côté.`,
+    `🙌 Budget respecté, avec ${rs} de marge. C’est la base de tout le reste.`]);
+  else mot=pick([
+    `Mois difficile : ${rs} de dépassement. Pas grave : regarde le plus gros poste ci-dessous pour comprendre ce qui s’est passé.`,
+    `🌱 Ce mois a été compliqué (−${rs}). Un mois raté ne définit pas l’année : on repart sur de bonnes bases.`,
+    `🧭 −${rs} ce mois-ci. Le plus important, c’est de comprendre pourquoi : la leçon ci-dessous t’aide à viser juste.`]);
   let lecon='';
   if(p){const op=byCat(p.depenses),ds=allCats().map(k=>({k,d:r2((o[k.id]||0)-(op[k.id]||0))})).filter(x=>Math.abs(x.d)>=30).sort((a,b)=>b.d-a.d);
     const pire=ds[0]&&ds[0].d>0?ds[0]:null,mieux=ds.length&&ds[ds.length-1].d<0?ds[ds.length-1]:null,mp=MOIS[+p.id.slice(5)-1].toLowerCase();
-    if(pire)lecon+=`À surveiller le mois prochain : ${esc(pire.k.e)} ${esc(pire.k.n)}, +${eur(pire.d)} par rapport à ${mp}.`;
-    if(mieux)lecon+=`${lecon?' ':''}Bien joué : ${esc(mieux.k.e)} ${esc(mieux.k.n)}, −${eur(-mieux.d)} par rapport à ${mp}.`}
+    if(pire)lecon+=`${pick(['À surveiller le mois prochain','À garder à l’œil','Point d’attention'])} : ${esc(pire.k.e)} ${esc(pire.k.n)}, +${eur(pire.d)} par rapport à ${mp}.`;
+    if(mieux)lecon+=`${lecon?' ':''}${pick(['Bien joué','Beau progrès','Bonne nouvelle'])} : ${esc(mieux.k.e)} ${esc(mieux.k.n)}, −${eur(-mieux.d)} par rapport à ${mp}.`}
   return `<div class="bilan"><h2>${titre||'Bilan de '+mLabel(m.id).toLowerCase()}</h2><p class="evomsg ${c.reste<0?'':'good'}">${esc(mot)}</p><div class="flow">${rows.map(([l,v])=>`<div class="fl"><span>${l}</span><b style="white-space:normal;text-align:right">${v}</b></div>`).join('')}</div>`
     +(lecon?`<p class="hint" style="margin:0"><b>Leçon du mois :</b> ${lecon}</p>`:'')
     +(c.recu?'':'<p class="hint">Salaire non saisi pour ce mois : le reste est une estimation.</p>')+'</div>';
