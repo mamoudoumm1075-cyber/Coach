@@ -1633,6 +1633,7 @@ function renderSim(){
   const c=calc(cur()),left=r2(c.reste-r.v);el.classList.toggle('neg',left<0);
   el.textContent=(left<0?`Tu dépasserais de ${eur(-left)}. Pas raisonnable ce mois-ci.`
     :`Il te resterait ${eur(left)}`+(c.st==='encours'&&c.jours>0?`, soit ${eur(Math.floor(left/c.jours*100)/100)} par jour au lieu de ${eur(parJour(c))}.`:'.'))
+    +(c.st==='encours'&&parJour(c)>0&&left>=0?(()=>{const j=r.v/parJour(c);return ` Cet achat = ${j<1?'moins d’une journée':j<1.05?'1 journée':'≈ '+fr(Math.round(j*10)/10,1)+' jours'} de ton budget quotidien.`})():'')
     +(c.recu?'':' (calcul basé sur un salaire estimé)');
 }
 
@@ -2821,7 +2822,19 @@ function bilanHTML(m,titre){
     ['Reste en fin de mois',sg(c.reste)+(c.recu?'':' <small>(théorique)</small>')]];
   if(top)rows.push(['Plus gros poste',`${esc(top.e)} ${esc(top.n)} · ${eur(o[top.id])}`]);
   if(Object.keys(S.budgets).length)rows.push(['Budgets',over.length?`${pl(over.length,'budget')} dépassé${over.length>1?'s':''} : ${over.map(k=>esc(k.n)).join(', ')}`:'tous respectés ✓']);
-  return `<div class="bilan"><h2>${titre||'Bilan de '+mLabel(m.id).toLowerCase()}</h2><div class="flow">${rows.map(([l,v])=>`<div class="fl"><span>${l}</span><b style="white-space:normal;text-align:right">${v}</b></div>`).join('')}</div>`
+  /* Phrase d'accroche bienveillante + leçon du mois (catégorie qui a le plus bougé par rapport au mois d'avant) */
+  let mot;
+  if(c.epFaite>0&&c.reste>=0)mot=`👏 Bravo : ${eur(c.epFaite)} mis de côté${c.chTot>0?` malgré ${eur(c.chTot)} de charges`:''}, et ${eur(c.reste)} d’avance en fin de mois.`;
+  else if(c.epFaite>0)mot=`💪 Tu as quand même épargné ${eur(c.epFaite)}. Le mois a dépassé de ${eur(-c.reste)} : on ajuste le prochain.`;
+  else if(c.reste>=0)mot=`✅ Mois tenu : ${eur(c.reste)} restant en fin de mois.`;
+  else mot=`Mois difficile : ${eur(-c.reste)} de dépassement. Pas grave : regarde le plus gros poste ci-dessous pour comprendre ce qui s’est passé.`;
+  let lecon='';
+  if(p){const op=byCat(p.depenses),ds=allCats().map(k=>({k,d:r2((o[k.id]||0)-(op[k.id]||0))})).filter(x=>Math.abs(x.d)>=30).sort((a,b)=>b.d-a.d);
+    const pire=ds[0]&&ds[0].d>0?ds[0]:null,mieux=ds.length&&ds[ds.length-1].d<0?ds[ds.length-1]:null,mp=MOIS[+p.id.slice(5)-1].toLowerCase();
+    if(pire)lecon+=`À surveiller le mois prochain : ${esc(pire.k.e)} ${esc(pire.k.n)}, +${eur(pire.d)} par rapport à ${mp}.`;
+    if(mieux)lecon+=`${lecon?' ':''}Bien joué : ${esc(mieux.k.e)} ${esc(mieux.k.n)}, −${eur(-mieux.d)} par rapport à ${mp}.`}
+  return `<div class="bilan"><h2>${titre||'Bilan de '+mLabel(m.id).toLowerCase()}</h2><p class="evomsg ${c.reste<0?'':'good'}">${esc(mot)}</p><div class="flow">${rows.map(([l,v])=>`<div class="fl"><span>${l}</span><b style="white-space:normal;text-align:right">${v}</b></div>`).join('')}</div>`
+    +(lecon?`<p class="hint" style="margin:0"><b>Leçon du mois :</b> ${lecon}</p>`:'')
     +(c.recu?'':'<p class="hint">Salaire non saisi pour ce mois : le reste est une estimation.</p>')+'</div>';
 }
 function renderBilanStats(m){
