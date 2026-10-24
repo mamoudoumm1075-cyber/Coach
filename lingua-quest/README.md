@@ -40,6 +40,7 @@ python3 -m http.server 8765 &              # puis, avec Playwright installé :
 node tests/e2e.cjs                         # parcours complet en taille téléphone, captures dans .captures/
 node tests/audit.cjs                       # sauvegarde abîmée, campagne des 6 chapitres, interruptions, export/import
 node tests/horsligne.cjs                   # service worker : fichiers en cache, appli jouable sans réseau
+node tests/son.cjs [fichier-unique.html]   # bruitages, voix, dialogues, son bloqué
 ```
 
 Fichier unique : `python3 outils/fichier_unique.py` (après chaque modification) fabrique `lingua-quest-complet.html` et refuse de l’écrire s’il manque une image.
@@ -57,6 +58,7 @@ Limites honnêtes de cette version :
 - Pas de compte ni de synchronisation en ligne.
 - Apparence du héros : choix parmi 5 illustrations (une par classe, plus « toi »), pas d’éditeur de visage. Les tenues cosmétiques n’ont pas encore d’illustration.
 - Les skins évolutifs sont des effets visuels (aura, lumière, glyphes, rayons) appliqués à l’illustration du héros, pas de nouvelles illustrations.
+- Sur iPhone, le mode silencieux coupe le son des pages web avant iOS 17 : il faut le désactiver. À partir d’iOS 17, l’appli demande à jouer le son malgré lui.
 - Testé dans Chromium seulement (téléphone, tablette, ordinateur émulés) : Safari sur iPhone et Firefox n’ont pas pu être testés ici.
 - Les jauges sont des indicateurs calculés sur tes résultats dans l’appli : ni score TOEIC, ni certification de niveau, ni évaluation de l’accent.
 - Le contenu est une base (184 mots dont 54 de ton métier, 50 verbes irréguliers, 90 questions TOEIC sur les 7 parties, 9 temps, une fiche prépositions) : il doit encore grossir pour tenir sur la durée.

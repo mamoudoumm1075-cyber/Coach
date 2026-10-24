@@ -69,6 +69,13 @@ export function gauge(pct, big, small, tone = 'violet') {
   return `<div class="gauge ${tone}" role="img" aria-label="${esc(big)} ${esc(small)}"><svg viewBox="0 0 120 68" aria-hidden="true"><path class="g-bg" d="M8 62 A52 52 0 0 1 112 62"/><path class="g-fg" d="M8 62 A52 52 0 0 1 112 62" style="stroke-dasharray:${len};stroke-dashoffset:${(len * (1 - v / 100)).toFixed(1)}"/></svg><b>${esc(big)}</b><small>${esc(small)}</small></div>`;
 }
 
+/* Lecture lancée par un toucher : si le son est bloqué, on le dit (au plus une fois toutes les 20 s) */
+let soundWarned = 0;
+export function watchSound(p, help) {
+  Promise.resolve(p).then(ok => { if (ok === false && Date.now() - soundWarned > 20000) { soundWarned = Date.now(); toast(help); } }).catch(() => {});
+  return p;
+}
+
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }

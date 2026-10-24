@@ -1,7 +1,7 @@
 /* Codex anglais : rendu des fiches (mots, phrases décodées, temps…) en page ou en panneau par-dessus un exercice. */
 import { ctx } from './ctx.js';
-import { esc, icon, toast } from './ui.js';
-import { speak } from './audio.js';
+import { esc, icon, toast, watchSound } from './ui.js';
+import { speak, SOUND_HELP } from './audio.js';
 import { srsAdd, tenseStatus, carnetAdd, carnetFind, carnetGoal } from './logic.js';
 import { VOCAB, VOCAB_BY_ID, CATEGORIES, REGISTRES, MARKERS, AUX, IRREGULAR, DECODE, DECODE_BY_ID, ROLE_LABEL, PREPOSITIONS, lookupWord } from '../data/codex.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
@@ -175,7 +175,7 @@ export function handleCodexAct(act, b, inSheet) {
       if (box) box.outerHTML = carnetBlockHTML(c.en, '');
       return true;
     }
-    case 'say': speak(b.dataset.t, { rate: ctx.S ? ctx.S.settings.rate : 0.9 }); return true;
+    case 'say': watchSound(speak(b.dataset.t, { rate: ctx.S ? ctx.S.settings.rate : 0.9 }), SOUND_HELP); return true;
     case 'addSrs':
       srsAdd(ctx.S, id); ctx.save(); toast('Ajouté à tes révisions');
       b.outerHTML = `<p class="ok-t">${icon('check', 16)} Dans ta liste de révision</p>`; return true;

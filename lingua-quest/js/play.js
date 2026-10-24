@@ -1,8 +1,8 @@
 /* Moteur de jeu : fait jouer une suite de cartes (quête, session, boss, évaluation…) puis affiche le bilan. */
 import { ctx } from './ctx.js';
-import { esc, icon, portrait, bar, toast, pl } from './ui.js';
+import { esc, icon, portrait, bar, toast, pl, watchSound } from './ui.js';
 import { recordAnswer, recordToeic, checkTyped, wordMatch, normalize, shuffle, levelInfo, srsReview, SKILL_LABEL, today } from './logic.js';
-import { speak, speakLines, stopSpeaking, ttsAvailable, sttAvailable, listen, stopListening, micByServer, STT_ERRORS, sfx } from './audio.js';
+import { speak, speakLines, stopSpeaking, ttsAvailable, sttAvailable, listen, stopListening, micByServer, STT_ERRORS, sfx, SOUND_HELP } from './audio.js';
 import { VOCAB_BY_ID, DECODE_BY_ID } from '../data/codex.js';
 import { DIALOGUES, CHARACTERS, DIALOGUE_ART } from '../data/world.js';
 import { TENSE_BY_ID } from '../data/tenses.js';
@@ -290,7 +290,12 @@ function bindCard(card) {
     /* lecture automatique, seulement si la question est toujours affichée et sans réponse */
     setTimeout(() => { if (R && R.cur === cur && !cur.answered) playItem(card.item); }, 350);
   }
-  if (card.kind === 'dialogue') document.getElementById('runFoot').innerHTML = dialogueFoot(card);
+  if (card.kind === 'dialogue') {
+    document.getElementById('runFoot').innerHTML = dialogueFoot(card);
+    /* la première réplique est lue elle aussi (les suivantes le sont à chaque « Suite ») */
+    const first = (DIALOGUES[card.id] || [])[0], cur = R.cur;
+    if (Array.isArray(first) && R.opts.autoplay !== false) setTimeout(() => { if (R && R.cur === cur && R.dl === 0) speakLines([[first[0], first[1]]], ctx.S.settings.rate); }, 350);
+  }
 }
 
 function handle(act, b, card) {
@@ -305,9 +310,9 @@ function handle(act, b, card) {
     case 'tense': return openTenseSheet(b.dataset.id);
     case 'decode': return openDecodeSheet(b.dataset.id);
     case 'next': R.i++; return render();
-    case 'play': return playItem(it);
-    case 'sayText': return speak(b.dataset.t, { rate: ctx.S.settings.rate });
-    case 'sayLine': { const ln = DIALOGUES[card.id][+b.dataset.k]; return speakLines([[ln[0], ln[1]]], ctx.S.settings.rate); }
+    case 'play': return watchSound(playItem(it), SOUND_HELP);
+    case 'sayText': return watchSound(speak(b.dataset.t, { rate: ctx.S.settings.rate }), SOUND_HELP);
+    case 'sayLine': { const ln = DIALOGUES[card.id][+b.dataset.k]; return watchSound(speakLines([[ln[0], ln[1]]], ctx.S.settings.rate), SOUND_HELP); }
     case 'dlgNext': R.dl++; return rerenderDialogue(card);
     case 'dlgChoice': {
       const k = +b.dataset.k, j = +b.dataset.j, ln = DIALOGUES[card.id][k];

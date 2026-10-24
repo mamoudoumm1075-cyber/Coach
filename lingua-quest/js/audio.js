@@ -38,17 +38,38 @@ export const SERVER_ERRORS = {
   serveur: 'Le serveur a rencontré une erreur. Réessaie plus tard.'
 };
 
-/* Lecture des MP3 : Web Audio, débloqué au premier geste (obligatoire sur iPhone) */
-let actx = null;
+/* ---------- Déblocage du son (indispensable sur iPhone) ----------
+   - mode silencieux : Safari 17+ laisse sortir le son d’une appli qui le demande (audioSession « playback »)
+   - Web Audio et la voix du navigateur doivent être lancés une première fois pendant un toucher
+   - après une mise en veille, le son est suspendu : on le relance au retour et au toucher suivant */
+let actx = null, unlocked = false;
 function audioCtx() {
-  if (!actx) { const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext); if (AC) actx = new AC(); }
+  if (!actx) { const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext); if (AC) try { actx = new AC(); } catch (e) { actx = null; } }
   return actx;
 }
-if (typeof window !== 'undefined') {
-  const unlock = () => { if (!server) return; const c = audioCtx(); if (c && c.state === 'suspended') c.resume().catch(() => {}); };
-  window.addEventListener('pointerdown', unlock, true);
-  window.addEventListener('keydown', unlock, true);
+function setPlayback() {
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { /* non pris en charge */ }
 }
+export function unlockAudio() {
+  setPlayback();
+  const c = audioCtx();
+  if (c && c.state !== 'running') c.resume().catch(() => {});
+  if (unlocked) return;
+  unlocked = true;
+  if (c) {
+    try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, 22050); s.connect(c.destination); s.start(0); } catch (e) { /* rien */ }
+    loadSfx();
+  }
+  /* la voix du navigateur se « réveille » avec une première phrase muette pendant le toucher */
+  if (browserTTS()) try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; window.speechSynthesis.speak(u); } catch (e) { /* rien */ }
+}
+if (typeof window !== 'undefined') {
+  setPlayback();
+  for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, unlockAudio, true);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running') actx.resume().catch(() => {}); });
+}
+/* Message honnête quand le son ne sort pas */
+export const SOUND_HELP = 'Pas de son ? Sur iPhone, coupe le mode silencieux (bouton sur le côté) et monte le volume, puis touche à nouveau « Écouter ».';
 
 /* Cache : en mémoire pour la séance, et dans le téléphone pour ne jamais payer deux fois la même phrase */
 const mem = new Map();
@@ -81,13 +102,13 @@ async function playBuffer(buf, g) {
   if (!c) throw new Error('audio');
   if (c.state !== 'running') await Promise.race([c.resume(), new Promise(r => setTimeout(r, 600))]);
   if (c.state !== 'running') throw new Error('audio');
-  const data = await c.decodeAudioData(buf.slice(0));
-  if (g !== gen) return false;
+  const data = await new Promise((ok, ko) => c.decodeAudioData(buf.slice(0), ok, ko));
+  if (g !== gen) return null;
   return new Promise(res => {
     const s = c.createBufferSource();
     s.buffer = data;
     s.connect(c.destination);
-    s.onended = () => { if (src === s) src = null; res(g === gen); };
+    s.onended = () => { if (src === s) src = null; res(g === gen ? true : null); };
     src = s;
     s.start();
   });
@@ -118,24 +139,37 @@ function pickVoice(slot) {
   return pool[0];
 }
 
+let cancelAt = 0;
 export function stopSpeaking() {
   gen++;
   try { if (src) { src.stop(); src = null; } } catch (e) { /* rien */ }
-  try { window.speechSynthesis.cancel(); } catch (e) { /* rien */ }
+  try { const sy = window.speechSynthesis; if (sy.speaking || sy.pending) { sy.cancel(); cancelAt = Date.now(); } } catch (e) { /* rien */ }
 }
 
-function browserSpeak(text, slot, rate) {
+/* Résultat d’une lecture : true (lue), false (échec : son bloqué ou indisponible), null (interrompue par l’appli) */
+async function browserSpeak(text, slot, rate, g) {
+  if (!browserTTS()) return false;
+  /* Safari perd une phrase lancée juste après une annulation : on laisse passer un instant */
+  const wait = 120 - (Date.now() - cancelAt);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  if (g !== gen) return null;
   return new Promise(resolve => {
-    if (!browserTTS()) return resolve(false);
     try {
+      const sy = window.speechSynthesis;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = slot % 2 === 0 ? 'en-US' : 'en-GB';
       const v = pickVoice(slot);
       if (v) u.voice = v;
       u.rate = rate;
-      u.onend = () => resolve(true);
-      u.onerror = () => resolve(false);
-      window.speechSynthesis.speak(u);
+      let done = false;
+      const end = ok => { if (done) return; done = true; clearTimeout(guard); resolve(g !== gen ? null : ok); };
+      u.onend = () => end(true);
+      u.onerror = e => end(e && (e.error === 'interrupted' || e.error === 'canceled') ? null : false);
+      /* filet de sécurité : certains navigateurs n’annoncent jamais la fin d’une phrase */
+      /* (certains lisent la phrase sans aucun événement : on considère qu’elle est passée) */
+      const guard = setTimeout(() => end(true), 2500 + (text.length * 110) / rate);
+      if (sy.paused) sy.resume();
+      sy.speak(u);
     } catch (e) { ttsBroken = true; resolve(false); }
   });
 }
@@ -144,9 +178,9 @@ export async function speak(text, { slot = 0, rate = 0.9 } = {}) {
   const g = gen;
   if (serverOn()) {
     try { return await playBuffer(await voiceBuffer(text, slot, rate), g); }
-    catch (e) { if (g !== gen) return false; if (SERVER_ERRORS[e.message]) serverFailed(e.message); }
+    catch (e) { if (g !== gen) return null; if (SERVER_ERRORS[e.message]) serverFailed(e.message); }
   }
-  return browserSpeak(text, slot, rate);
+  return browserSpeak(text, slot, rate, g);
 }
 
 /* Lit une suite de répliques [locuteur, texte] en alternant les voix */
@@ -160,7 +194,8 @@ export async function speakLines(lines, rate) {
   if (serverOn()) for (const [who, text] of lines) voiceBuffer(text, slots[who], rate).catch(() => {});
   for (const [who, text] of lines) {
     const ok = await speak(text, { slot: slots[who], rate });
-    if (!ok || g !== gen) return false;
+    if (g !== gen) return null;
+    if (ok !== true) return ok;
     await new Promise(r => setTimeout(r, 250));
   }
   return true;
@@ -194,7 +229,7 @@ function browserListen(lang, maxMs) {
     rec.maxAlternatives = 1;
     rec.continuous = false;
     let text = '', done = false;
-    const finish = (err) => { if (done) return; done = true; clearTimeout(timer); current = null; err ? reject(err) : resolve(text.trim()); };
+    const finish = (err) => { if (done) return; done = true; clearTimeout(timer); current = null; setPlayback(); err ? reject(err) : resolve(text.trim()); };
     rec.onresult = e => { for (const r of e.results) text += ' ' + r[0].transcript; };
     rec.onerror = e => finish(new Error(e.error || 'error'));
     rec.onend = () => finish(text.trim() ? null : new Error('no-speech'));
@@ -244,6 +279,8 @@ async function record({ maxMs, onPhase }) {
   clearInterval(timer);
   current = null;
   stream.getTracks().forEach(tr => tr.stop());
+  /* iPhone : après le micro, le son repasserait par l’écouteur du haut ; on revient en mode lecture */
+  setPlayback();
   try { if (node) node.disconnect(); } catch (e) { /* rien */ }
   /* arrêt manuel : on envoie quand même, la transcription dira s’il y avait des mots */
   if (an && !heard && !manual) throw new Error('no-speech');
@@ -269,11 +306,35 @@ export const STT_ERRORS = {
 
 /* ---------- Bruitages (générés avec ElevenLabs) ---------- */
 const SFX = { ok: 'son-juste', ko: 'son-faux', combo: 'son-combo', win: 'son-victoire', time: 'son-temps', mic: 'son-micro' };
-const cache = {};
+const cache = {}, sfxBuf = {};
+let sfxLoading = null;
+const sfxUrl = file => (typeof window !== 'undefined' && window.__LQ_SONS && window.__LQ_SONS[file]) || 'sons/' + file + '.mp3';
+/* Bruitages décodés une fois dans Web Audio : fiables sur iPhone une fois le son débloqué */
+function loadSfx() {
+  const c = audioCtx();
+  if (!c || sfxLoading) return sfxLoading;
+  sfxLoading = Promise.all(Object.entries(SFX).map(async ([k, f]) => {
+    try { const ab = await (await fetch(sfxUrl(f))).arrayBuffer(); sfxBuf[k] = await new Promise((ok, ko) => c.decodeAudioData(ab, ok, ko)); } catch (e) { /* secours : élément audio */ }
+  }));
+  return sfxLoading;
+}
 export let soundOn = true;
 export function setSound(v) { soundOn = !!v; }
 export function sfx(name) {
-  if (!soundOn || typeof Audio === 'undefined') return;
+  if (!soundOn) return;
+  const c = actx;
+  if (c && sfxBuf[name]) {
+    try {
+      if (c.state !== 'running') c.resume().catch(() => {});
+      const s = c.createBufferSource(), gain = c.createGain();
+      s.buffer = sfxBuf[name];
+      gain.gain.value = 0.6;
+      s.connect(gain); gain.connect(c.destination);
+      s.start();
+      return;
+    } catch (e) { /* secours ci-dessous */ }
+  }
+  if (typeof Audio === 'undefined') return;
   try {
     /* version fichier unique : les sons sont intégrés au HTML (window.__LQ_SONS) */
     const embedded = typeof window !== 'undefined' && window.__LQ_SONS && window.__LQ_SONS[SFX[name]];

@@ -1,11 +1,11 @@
 /* Lingua Quest : état, sauvegarde, navigation et écrans. */
 import { ctx } from './ctx.js';
 import * as L from './logic.js';
-import { esc, icon, heroMedal, heroPortrait, bar, toast, pl, gauge } from './ui.js';
+import { esc, icon, heroMedal, heroPortrait, bar, toast, pl, gauge, watchSound } from './ui.js';
 import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
-import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
+import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS, SOUND_HELP, sfx } from './audio.js';
 import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES, SKINS, SKIN_BY_ID, ARENA, ARENA_QUESTIONS } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
@@ -925,7 +925,8 @@ V.oral = () => {
       <div class="row"><span>Écoute des phrases</span><b class="${tts ? 'ok-t' : 'ko-t'}">${tts ? (voiceMode() === 'elevenlabs' ? 'Voix ElevenLabs' : 'Voix du navigateur' + (voiceCount() ? ' · ' + pl(voiceCount(), 'voix anglaise', 'voix anglaises') : '')) : 'Indisponible'}</b></div>
       <div class="row"><span>Micro (reconnaissance vocale)</span><b class="${stt ? 'ok-t' : 'ko-t'}">${stt ? (voiceMode() === 'elevenlabs' ? 'ElevenLabs' : 'Navigateur') : 'Indisponible : mode texte'}</b></div>
       <p class="hint">La reconnaissance vocale vérifie les mots compris. Elle n’analyse pas ton accent : Lingua Quest ne prétend pas le noter. ${stt ? '' : 'Sur iPhone, elle peut ne pas marcher dans l’appli installée : essaie dans Safari.'}</p>
-      ${tts ? `<button class="btn ghost" data-act="testVoice">${icon('speaker', 18)} Tester la voix</button>` : ''}</section>
+      ${tts ? `<button class="btn ghost" data-act="testVoice">${icon('speaker', 18)} Tester le son</button>` : ''}
+      <p class="hint">${esc(SOUND_HELP)}</p></section>
     <article class="card"><h3>Séance orale</h3><p>6 exercices : écouter, répéter, construire une phrase, répondre librement.</p><button class="btn primary" data-act="oralRun">${icon('mic', 18)} Commencer</button></article>
     <h2>Missions orales des temps</h2><div class="list">${TENSES.map(t => `<button class="list-item" data-act="tenseOral" data-id="${t.id}"><span class="en">${esc(t.name)}</span><small>${esc(t.oral.prompt)}</small></button>`).join('')}</div></section>`;
 };
@@ -949,7 +950,8 @@ V.profile = () => {
       <p class="label">Aide en français</p>${seg('fr', [['beaucoup', 'Beaucoup'], ['moyen', 'Sur demande'], ['peu', 'Peu']])}
       <p class="hint">« Beaucoup » affiche la traduction des dialogues. Réduis-la quand tu te sens prêt : plus d’anglais, plus de progrès.</p></section>
     <section class="card"><h3>Son</h3><p class="label">Vitesse de la voix</p>${seg('rate', [['0.75', 'Lente'], ['0.9', 'Normale'], ['1', 'Rapide']])}
-      <p class="label">Bruitages</p>${seg('sound', [['true', 'Activés'], ['false', 'Coupés']])}</section>
+      <p class="label">Bruitages</p>${seg('sound', [['true', 'Activés'], ['false', 'Coupés']])}
+      <button class="btn ghost" data-act="testVoice">${icon('speaker', 18)} Tester le son</button><p class="hint">${esc(SOUND_HELP)}</p></section>
     <section class="card" id="voix"><h3>Voix ElevenLabs</h3>
       <p>Avec ton serveur Cloudflare, l’écoute et le micro passent par ElevenLabs : vraies voix américaine et britannique, et micro qui marche aussi dans l’appli installée sur iPhone. Sans serveur, l’appli utilise la voix du navigateur.</p>
       <label class="field"><span>Adresse du serveur</span><input id="voiceUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://lingua-quest-voix.….workers.dev" value="${esc(st.voiceUrl)}"></label>
@@ -1043,7 +1045,7 @@ function onAction(act, b) {
     }
     case 'replayDialogue': return startRun([{ kind: 'dialogue', id: b.dataset.id }], { mode: 'replay', title: 'Dialogue', onDone: () => ({ title: 'Scène rejouée', next: { label: 'Autres dialogues', route: 'dialogues' } }) });
     case 'oralRun': return simpleRun(C.oralItems(s, 6).map(item => ({ kind: 'item', item })), 'Séance orale', 'oral');
-    case 'testVoice': return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate });
+    case 'testVoice': sfx('ok'); return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate }).then(ok => toast(ok === true ? 'Son : OK, la voix a bien été lue.' : SOUND_HELP));
     case 'toeicPart': { const p = +b.dataset.p; return simpleRun(C.toeicItems(s, [p], 5).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic'); }
     case 'toeicTest': return runToeicTest(b.dataset.k || 'mini');
     case 'drill': return drillPart(+b.dataset.p);
@@ -1110,7 +1112,7 @@ function onAction(act, b) {
         if (m) m.textContent = 'Connecté. Aujourd’hui : ' + p.chars + ' / ' + p.charsMax + ' caractères de voix, ' + p.stt + ' / ' + p.sttMax + ' transcriptions.' + (p.plafond ? '' : ' Attention : plafond quotidien inactif (espace KV « LQ_KV » non lié).');
       }).catch(e => { msg.textContent = SERVER_ERRORS[e.message] || 'Échec du test : ' + e.message; });
     }
-    case 'voiceTry': return speak('Welcome to Halden City. Your first mission starts now.', { rate: s.settings.rate });
+    case 'voiceTry': return watchSound(speak('Welcome to Halden City. Your first mission starts now.', { rate: s.settings.rate }), SOUND_HELP);
     case 'voiceForget': s.settings.voiceUrl = ''; s.settings.voiceCode = ''; save(); applyTheme(); toast('Serveur voix retiré'); return render();
     case 'export': return download('lingua-quest-' + L.today() + '.json', JSON.stringify({ ...s, settings: { ...s.settings, voiceCode: '' } }, null, 1));
     case 'exportBad': return download('lingua-quest-illisible-' + L.today() + '.json', lsGet(KEY_BAD) || '');
