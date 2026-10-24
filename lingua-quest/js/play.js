@@ -215,7 +215,7 @@ function itemHTML(it) {
   if (it.part) h += `<span class="chip blue">${esc(PARTS[it.part].name)}</span>`;
   if (it.tense && TENSE_BY_ID[it.tense] && !R.opts.noHelp) h += ` <button class="chip violet as-btn" data-act="tense" data-id="${it.tense}">${esc(TENSE_BY_ID[it.tense].name)}</button>`;
   h += `<p class="prompt">${esc(it.prompt)}</p>`;
-  if (it.img) h += `<figure class="toeic-photo"><img src="${esc(it.img)}" alt="${esc(it.alt || 'Photo')}"></figure>`;
+  if (it.img) h += `<figure class="toeic-photo"><img decoding="async" src="${esc(it.img)}" alt="${esc(it.alt || 'Photo')}"></figure>`;
   if (listening) {
     if (textMode) h += `<div class="notice">L’audio n’est pas disponible sur cet appareil : l’exercice passe en mode texte. Il compte alors comme de la lecture, pas de l’écoute.</div><pre class="passage">${esc(it.transcript)}</pre>`;
     else h += `<button class="btn listen" data-act="play">${icon('speaker')} Écouter</button>`;

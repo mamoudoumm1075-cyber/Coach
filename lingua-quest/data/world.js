@@ -292,12 +292,12 @@ export const CHAPTER_ART = {
   3: { img: 'img/explorateur.webp', pos: '70% 40%', x: 46, y: 41 },
   4: { img: 'img/technicien.webp', pos: '60% 30%', x: 76, y: 27 },
   5: { img: 'img/stratege.webp', pos: '50% 30%', x: 51, y: 16 },
-  6: { img: 'img/boss.webp', pos: '50% 20%', x: 53, y: 5 }
+  6: { img: 'img/boss-6.webp', pos: '50% 20%', x: 53, y: 5 }
 };
 /* Décor des dialogues */
 export const DIALOGUE_ART = {
   'd1-intro': 'img/titre.webp', 'd1-day': 'img/titre.webp', 'd2-cafe': 'img/cafe.webp', 'd3-archives': 'img/explorateur.webp',
-  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss.webp'
+  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss-6.webp'
 };
 /* Les boss partagent l’illustration de l’Ombre ; chacun a sa teinte */
 export const BOSS_HUE = { 1: 0, 2: 40, 3: 200, 4: 120, 5: 280, 6: 330 };

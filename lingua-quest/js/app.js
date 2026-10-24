@@ -155,7 +155,7 @@ function runBoss(ch) {
   const c = s.chapters[ch.n] || (s.chapters[ch.n] = { bossBeaten: false, bossTries: 0 });
   c.bossTries++;
   startRun(cards, {
-    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: BOSS_ART[ch.n] || 'img/boss.webp', hue: BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
+    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: BOSS_ART[ch.n] || BOSS_ART[6], hue: BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
     onDone(sum) {
       const win = sum.pct >= b.pass && sum.reason !== 'quit';
       const rewards = [];
@@ -518,7 +518,7 @@ V.world = () => {
   return `<section class="screen world-screen">
     <header class="world-head"><span class="kicker">Carte</span><h1 class="display sm">Halden City</h1><p class="lead">Un quartier s’ouvre quand tu bats le boss du précédent : ce sont tes compétences qui comptent, pas le temps passé.</p></header>
     <div class="city-map">
-      <img src="img/carte.webp" alt="Vue aérienne de Halden City la nuit, de Maple District en bas jusqu’à la forteresse des Ombres au sommet">
+      <img src="img/carte.webp" decoding="async" alt="Vue aérienne de Halden City la nuit, de Maple District en bas jusqu’à la forteresse des Ombres au sommet">
       ${CHAPTERS.map(ch => { const st = chapterState(s, ch), a = CHAPTER_ART[ch.n]; return `<button class="marker ${st.beaten ? 'beaten' : st.current ? 'current' : st.open ? '' : 'locked'}" style="left:${a.x}%;top:${a.y}%;--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'} aria-label="${esc(ch.region)} : ${st.beaten ? 'terminé' : st.open ? 'ouvert' : 'verrouillé'}"><span class="pin">${st.beaten ? icon('check', 16) : st.open ? ch.n : icon('lock', 14)}</span><span class="lbl">${esc(ch.region)}</span></button>`; }).join('')}
     </div>
   </section>
@@ -527,7 +527,7 @@ V.world = () => {
       const st = chapterState(s, ch), a = CHAPTER_ART[ch.n];
       const doneQ = ch.quests.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
       return `<button class="node district ${st.open ? '' : 'locked'} ${st.beaten ? 'beaten' : ''}" style="--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'}>
-        <img src="${a.img}" alt="" style="object-position:${a.pos}">
+        <img src="${a.img}" alt="" loading="lazy" decoding="async" style="object-position:${a.pos}">
         <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(ch.title)}</b><small>${st.open ? `${doneQ}/${ch.quests.length} quêtes${st.beaten ? ' · boss vaincu' : ''}` : 'Bats le boss précédent'}</small></span>
         <span class="state">${st.beaten ? icon('check', 18) : st.open ? icon('chevron', 18) : icon('lock', 16)}</span></button>`;
     }).join('')}</div>
@@ -553,7 +553,7 @@ V.chapter = n => {
     ${cq ? `<h2>Quête de ta classe</h2>${questCardHTML(cq, !st.open)}` : ''}
     <h2>Boss</h2>
     <article class="boss-card ${c.bossBeaten ? 'beaten' : ''}">
-      <div class="boss-art" style="--hue:${BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n]}deg"><img src="${BOSS_ART[ch.n] || 'img/boss.webp'}" alt=""></div>
+      <div class="boss-art" style="--hue:${BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n]}deg"><img src="${BOSS_ART[ch.n] || BOSS_ART[6]}" alt="" decoding="async"></div>
       <div class="boss-info">
         <h3>${esc(ch.boss.name)}</h3><p>${esc(ch.boss.desc)}</p>
         <p class="crit">${icon('target', 14)} Victoire : ${Math.round(ch.boss.pass * 100)} % de bonnes réponses${ch.boss.toeicTest ? ` en ${ch.boss.toeicTest.seconds / 60} min` : ''}. En cas d’échec : corrections, quête de renforcement, et tu retentes quand tu veux.</p>
@@ -570,7 +570,7 @@ V.dialogues = () => {
     <div class="districts">${CHAPTERS.flatMap(ch => ch.quests.flatMap(q => q.steps.filter(x => x.dialogue).map(x => ({ ch, q, id: x.dialogue })))).map(({ ch, q, id }) => {
       const open = L.chapterUnlocked(s, ch.n);
       return `<button class="node district ${open ? '' : 'locked'}" data-act="replayDialogue" data-id="${id}" ${open ? '' : 'aria-disabled="true"'} style="--cc:${ch.color}">
-        <img src="${DIALOGUE_ART[id] || CHAPTER_ART[ch.n].img}" alt="" style="object-position:50% 20%">
+        <img src="${DIALOGUE_ART[id] || CHAPTER_ART[ch.n].img}" loading="lazy" decoding="async" alt="" style="object-position:50% 20%">
         <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(q.title)}</b><small>${open ? pl(DIALOGUES[id].length, 'réplique') : 'Verrouillé'}</small></span>
         <span class="state">${open ? icon('play', 16) : icon('lock', 16)}</span></button>`;
     }).join('')}</div></section>`;

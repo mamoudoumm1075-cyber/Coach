@@ -35,14 +35,18 @@ Mise à jour des fichiers : changer `VERSION` dans `sw.js`, et ajouter tout nouv
 
 ```
 cd lingua-quest
-npm test                                   # règles du jeu et cohérence du contenu
+npm test                                   # règles du jeu, contenu, serveur voix (36 tests)
 python3 -m http.server 8765 &              # puis, avec Playwright installé :
 node tests/e2e.cjs                         # parcours complet en taille téléphone, captures dans .captures/
+node tests/audit.cjs                       # sauvegarde abîmée, campagne des 6 chapitres, interruptions, export/import
+node tests/horsligne.cjs                   # service worker : fichiers en cache, appli jouable sans réseau
 ```
+
+Fichier unique : `python3 outils/fichier_unique.py` (après chaque modification) fabrique `lingua-quest-complet.html` et refuse de l’écrire s’il manque une image.
 
 ## Ce qui fonctionne et ce qui reste à faire
 
-Fonctionne : jauges « Prêt pour le TOEIC » (réussite pondérée comme le vrai test, comparée à ton objectif) et « Niveau de discussion » (repère A1 à C1), vocabulaire de ton métier (CVC, VMC, BTP, data center), carnet de vocabulaire (chaque mot inconnu noté puis révisé), méthode TOEIC en 5 étapes avec sprint de 4 semaines avant la date d’examen, tests blancs avec analyse de la partie la plus ratée, évaluation initiale, 6 chapitres et leurs boss, quêtes (principales, quotidienne, secondaires, révision, maîtrise, TOEIC, orales, quête de classe), session de 20 minutes, Codex (dictionnaire, décodeur, temps, marqueurs, auxiliaires, verbes irréguliers), révision espacée, XP, niveaux, badges, objets cosmétiques, arbre de compétences, statistiques, progression TOEIC par partie, simulation chronométrée, thèmes sombre et clair, sauvegarde locale, export et import, hors ligne.
+Fonctionne : suivi par notion avec page « Mes progrès » (progression réelle séparée de l’XP, forces, difficultés), entraînement ciblé, révision espacée des exercices ratés, skins évolutifs du héros (menu Apparence, déblocage lié au jeu et à la vraie progression en anglais), jauges « Prêt pour le TOEIC » (réussite pondérée comme le vrai test, comparée à ton objectif) et « Niveau de discussion » (repère A1 à C1), vocabulaire de ton métier (CVC, VMC, BTP, data center), carnet de vocabulaire (chaque mot inconnu noté puis révisé), méthode TOEIC en 5 étapes avec sprint de 4 semaines avant la date d’examen, tests blancs avec analyse de la partie la plus ratée, évaluation initiale, 6 chapitres et leurs boss, quêtes (principales, quotidienne, secondaires, révision, maîtrise, TOEIC, orales, quête de classe), session de 20 minutes, Codex (dictionnaire, décodeur, temps, marqueurs, auxiliaires, verbes irréguliers), révision espacée, XP, niveaux, badges, objets cosmétiques, arbre de compétences, statistiques, progression TOEIC par partie, simulation chronométrée, thèmes sombre et clair, sauvegarde locale, export et import, hors ligne.
 
 Limites honnêtes de cette version :
 - Voix ElevenLabs : seulement après avoir installé ton serveur Cloudflare (voir `serveur/GUIDE.md`). Sans lui, l’écoute utilise la voix de synthèse du navigateur ; sans voix du tout, les exercices d’écoute passent en mode texte et comptent comme de la lecture.
@@ -52,5 +56,7 @@ Limites honnêtes de cette version :
 - Pas de score TOEIC estimé : seulement la réussite réelle par partie. Les tests blancs font 30 questions (un vrai TOEIC en fait 200 en 2 h). La partie 1 n’a encore que 3 photos (6 questions).
 - Pas de compte ni de synchronisation en ligne.
 - Apparence du héros : choix parmi 5 illustrations (une par classe, plus « toi »), pas d’éditeur de visage. Les tenues cosmétiques n’ont pas encore d’illustration.
+- Les skins évolutifs sont des effets visuels (aura, lumière, glyphes, rayons) appliqués à l’illustration du héros, pas de nouvelles illustrations.
+- Testé dans Chromium seulement (téléphone, tablette, ordinateur émulés) : Safari sur iPhone et Firefox n’ont pas pu être testés ici.
 - Les jauges sont des indicateurs calculés sur tes résultats dans l’appli : ni score TOEIC, ni certification de niveau, ni évaluation de l’accent.
 - Le contenu est une base (184 mots dont 54 de ton métier, 50 verbes irréguliers, 70 questions TOEIC sur les 7 parties, 9 temps, une fiche prépositions) : il doit encore grossir pour tenir sur la durée.
