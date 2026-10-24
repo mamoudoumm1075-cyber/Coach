@@ -6,10 +6,10 @@ import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
 import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
-import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, DIALOGUES } from '../data/world.js';
+import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
-import { PARTS, PART_IDS } from '../data/toeic.js';
-import { VOCAB_BY_ID } from '../data/codex.js';
+import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
+import { VOCAB_BY_ID, PREP_ITEMS } from '../data/codex.js';
 
 /* ---------- Sauvegarde (jamais d’écrasement d’une donnée illisible) ---------- */
 const KEY = 'lingua-quest-v1', KEY_BAD = 'lingua-quest-illisible';
@@ -64,6 +64,7 @@ function checkUnlocks() {
   if (s.streak.best >= 7) badge('streak-7');
   if (s.streak.best >= 30) badge('streak-30');
   if (L.srsRetained(s) >= 25) badge('words-25');
+  for (const n of L.CARNET_GOALS) if (s.carnet.length >= n) badge('carnet-' + n);
   if (Object.values(s.tenses).some(t => t.mastered)) badge('tense-master');
   L.adaptDifficulty(s);
 }
@@ -114,7 +115,7 @@ function runBoss(ch) {
   const c = s.chapters[ch.n] || (s.chapters[ch.n] = { bossBeaten: false, bossTries: 0 });
   c.bossTries++;
   startRun(cards, {
-    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: 'img/boss.webp', hue: BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
+    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: BOSS_ART[ch.n] || 'img/boss.webp', hue: BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
     onDone(sum) {
       const win = sum.pct >= b.pass && sum.reason !== 'quit';
       const rewards = [];
@@ -145,10 +146,10 @@ function runBoss(ch) {
     }
   });
 }
-function testRecord(sum) {
+function testRecord(sum, kind = 'boss') {
   const parts = {};
   for (const r of sum.results) if (r.part) { parts[r.part] = parts[r.part] || [0, 0]; parts[r.part][1]++; if (r.ok) parts[r.part][0]++; }
-  return { d: L.today(), ok: sum.okN, total: sum.total, seconds: sum.seconds, parts };
+  return { d: L.today(), kind, ok: sum.okN, total: sum.total, seconds: sum.seconds, parts };
 }
 
 function runDaily() {
@@ -213,11 +214,35 @@ function simpleRun(cards, title, mode, extra = {}) {
   if (!cards.length) return toast('Rien à faire ici pour l’instant.');
   startRun(cards, { mode, title, ...extra, onDone: sum => ({ title: title + ' terminé', win: sum.pct >= 0.6, next: nextMission() }) });
 }
-function runToeicTest() {
-  startRun(C.toeicItems(S(), PART_IDS, 12).map(item => ({ kind: 'item', item })), {
-    mode: 'toeic-test', title: 'Simulation chronométrée', seconds: 600,
-    onDone(sum) { S().toeic.tests.push(testRecord(sum)); return { title: 'Simulation terminée', text: 'Regarde tes résultats par partie : c’est là que se trouvent tes prochains progrès.', next: { label: 'Progression TOEIC', route: 'toeic' } }; }
+const TESTS = {
+  mini: { title: 'Mini-test', count: 12, seconds: 600, info: '12 questions, 10 minutes' },
+  blanc: { title: 'Test blanc', count: 30, seconds: 1500, info: '30 questions des 7 parties, 25 minutes' }
+};
+function runToeicTest(kind = 'mini') {
+  const t = TESTS[kind] || TESTS.mini;
+  startRun(C.toeicItems(S(), PART_IDS, t.count).map(item => ({ kind: 'item', item })), {
+    mode: 'toeic-test', title: t.title + ' chronométré', seconds: t.seconds,
+    onDone(sum) {
+      const rec = testRecord(sum, kind);
+      S().toeic.tests.push(rec);
+      if (sum.reason === 'quit') return { title: t.title + ' interrompu', text: 'Tes réponses sont gardées dans tes statistiques.' };
+      /* Analyse : la partie où tu as perdu le plus de points, puis on enchaîne ce type de questions */
+      const lost = L.mostLostPart(rec.parts);
+      if (!lost) return { title: t.title + ' terminé', text: 'Aucune erreur : passe au test suivant ou augmente la difficulté.', win: true, next: { label: 'Progression TOEIC', route: 'toeic' } };
+      const name = PARTS[lost.part].name;
+      return {
+        title: t.title + ' terminé',
+        text: `Analyse : tu as perdu le plus de points en ${name} (${lost.lost} erreur${lost.lost > 1 ? 's' : ''} sur ${lost.n}). Enchaîne maintenant des questions de ce type, c’est là que tu gagnes le plus.`,
+        reinforce: () => drillPart(lost.part), reinforceLabel: 'Enchaîner : ' + name.split(' · ')[0],
+        next: { label: 'Progression TOEIC', route: 'toeic' }
+      };
+    }
   });
+}
+function drillPart(p) {
+  S().toeic.drills = (S().toeic.drills || 0) + 1;
+  save();
+  return simpleRun(C.toeicItems(S(), [p], 8).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic');
 }
 
 /* ---------- Composants ---------- */
@@ -417,7 +442,7 @@ V.chapter = n => {
     ${cq ? `<h2>Quête de ta classe</h2>${questCardHTML(cq, !st.open)}` : ''}
     <h2>Boss</h2>
     <article class="boss-card ${c.bossBeaten ? 'beaten' : ''}">
-      <div class="boss-art" style="--hue:${BOSS_HUE[ch.n]}deg"><img src="img/boss.webp" alt=""></div>
+      <div class="boss-art" style="--hue:${BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n]}deg"><img src="${BOSS_ART[ch.n] || 'img/boss.webp'}" alt=""></div>
       <div class="boss-info">
         <h3>${esc(ch.boss.name)}</h3><p>${esc(ch.boss.desc)}</p>
         <p class="crit">${icon('target', 14)} Victoire : ${Math.round(ch.boss.pass * 100)} % de bonnes réponses${ch.boss.toeicTest ? ` en ${ch.boss.toeicTest.seconds / 60} min` : ''}. En cas d’échec : corrections, quête de renforcement, et tu retentes quand tu veux.</p>
@@ -463,7 +488,8 @@ V.learn = () => {
     ${tile('academy', 'learn', 'Académie des temps', '9 fiches complètes')}
     ${tile('review', 'repeat', 'Révisions', pl(due, 'élément dû', 'éléments dus'))}
     ${tile('oral', 'mic', 'Entraînement oral', 'Écouter, répéter, répondre')}
-    ${tile('toeic', 'target', 'Progression TOEIC', 'Parties 2 à 7')}
+    ${tile('toeic', 'target', 'Progression TOEIC', 'Méthode, tests blancs, 7 parties')}
+    ${tile('carnet', 'codex', 'Mon carnet', pl(S().carnet.length, 'mot noté', 'mots notés'))}
     ${tile('skills', 'tree', 'Arbre de compétences', '5 branches')}
     ${tile('stats', 'chart', 'Résultats et statistiques', 'Ton suivi')}
     ${tile('quests', 'map', 'Journal des quêtes', 'Toutes tes missions')}
@@ -548,14 +574,69 @@ V.stats = () => {
   </section>`;
 };
 
+/* Méthode en 4 semaines : cours → carnet → entraînement + test blanc → points faibles → tests blancs réguliers */
+const SPRINT = {
+  1: ['Semaine 1 · Le cours', 'Toutes les fiches : temps, verbes, prépositions, règles de grammaire. 1 à 2 h par jour si tu peux. Note chaque mot inconnu dans ton carnet.'],
+  2: ['Semaine 2 · Entraînement quotidien', 'Écoute et lecture tous les jours. En fin de semaine : un test blanc.'],
+  3: ['Semaine 3 · Tes points faibles', 'Analyse ton test blanc et enchaîne les questions des parties où tu as perdu le plus de points. En fin de semaine : un mini-test.'],
+  4: ['Semaine 4 · Tests blancs', '3 à 4 tests blancs, puis un par jour les derniers jours. Analyse chaque erreur.']
+};
+function planHTML(s) {
+  const mastered = TENSES.filter(t => s.tenses[t.id] && s.tenses[t.id].mastered).length;
+  const n = s.carnet.length, goal = L.carnetGoal(n);
+  const blancs = s.toeic.tests.filter(t => t.kind === 'blanc').length;
+  const week = s.toeic.tests.filter(t => t.d >= L.addDays(L.today(), -6)).length;
+  const last = s.toeic.tests[s.toeic.tests.length - 1];
+  const lost = last ? L.mostLostPart(last.parts) : null;
+  const step = (done, title, text, actions) => `<div class="plan-step ${done ? 'done' : ''}"><span class="plan-dot">${done ? icon('check', 14) : ''}</span><div><b>${title}</b><p>${text}</p>${actions ? `<div class="plan-actions">${actions}</div>` : ''}</div></div>`;
+  return `<section class="card plan"><h3>Ta méthode en 5 étapes</h3>
+    ${step(mastered >= 5, '1 · Le cours', `Temps, verbes, prépositions, grammaire. ${mastered}/${TENSES.length} temps maîtrisés.`, `<a class="btn ghost sm" href="#/academy">Académie des temps</a><button class="btn ghost sm" data-act="openPrep">Fiche prépositions</button><button class="btn ghost sm" data-act="prepRun">S’entraîner aux prépositions</button>`)}
+    ${step(n >= 100, '2 · Ton carnet de vocabulaire', `Chaque mot inconnu, noté sans exception. ${n}/${goal} mots.`, `<a class="btn ghost sm" href="#/carnet">Ouvrir mon carnet</a>`)}
+    ${step(blancs >= 1, '3 · Entraînement + test blanc', `Écoute et lecture chaque jour, puis un test blanc. ${pl(blancs, 'test blanc fait', 'tests blancs faits')}.`, `<button class="btn ghost sm" data-act="toeicTest" data-k="blanc">Lancer un test blanc</button>`)}
+    ${step((s.toeic.drills || 0) >= 3, '4 · Cibler tes points faibles', lost ? `Dernier test : tu as perdu le plus de points en ${esc(PARTS[lost.part].name)}.` : 'Après un test, l’analyse te dit quelle partie travailler.', lost ? `<button class="btn ghost sm" data-act="drill" data-p="${lost.part}">Enchaîner ces questions</button>` : '')}
+    ${step(week >= 3, '5 · Tests blancs réguliers', `${pl(week, 'test', 'tests')} ces 7 derniers jours. Objectif avant l’examen : 3 à 4 par semaine, puis un par jour.`, '')}
+  </section>`;
+}
+function examHTML(s) {
+  const p = L.examPlan(s.settings.examDate);
+  let body = '';
+  if (!p) body = `<p>Indique la date de ton TOEIC : l’appli te proposera un sprint de 4 semaines avant l’examen.</p>`;
+  else if (p.phase === 'passe') body = `<p>La date indiquée est passée. Mets à jour ta prochaine date d’examen.</p>`;
+  else if (p.phase === 'long') body = `<p><b>J-${p.days}</b>. Pour l’instant : session du jour, carnet et une partie TOEIC par jour. Ton sprint de 4 semaines commencera le <b>${esc(p.sprintStart.split('-').reverse().join('/'))}</b>.</p>`;
+  else { const [t, d] = SPRINT[p.week]; body = `<p><b>J-${p.days} · ${esc(t)}</b></p><p>${esc(d)}</p>`; }
+  return `<section class="card exam"><h3>${icon('clock', 18)} Ton examen</h3>${body}
+    <div class="exam-row"><label class="field"><span>Date du TOEIC</span><input id="examDate" type="date" value="${esc(s.settings.examDate || '')}"></label><button class="btn ghost sm" data-act="examSave">Enregistrer</button></div></section>`;
+}
 V.toeic = () => {
   const s = S(), w = L.weakestPart(s, PART_IDS);
   return `<section class="page"><h1 class="display sm">Progression TOEIC</h1>
-    <div class="notice">Les questions sont des entraînements originaux au format du TOEIC Listening & Reading, pas des questions officielles. Lingua Quest ne calcule pas de score TOEIC : seul le test officiel en donne un. Tu vois ici ta réussite réelle par partie. La partie 1 (photographies) arrive dans une prochaine version.</div>
+    <div class="notice">Les questions sont des entraînements originaux au format du TOEIC Listening & Reading, pas des questions officielles. Lingua Quest ne calcule pas de score TOEIC : seul le test officiel en donne un. Tu vois ici ta réussite réelle par partie.</div>
+    ${examHTML(s)}
+    ${planHTML(s)}
     <section class="card">${PART_IDS.map(p => { const st = s.toeic.parts[p]; return `<div class="part-row"><div><b>${esc(PARTS[p].name)}</b><small>${st ? st.correct + '/' + st.attempts + ' · récent ' + L.accuracy(st.recent) + ' %' : 'Pas encore travaillée'}</small>${bar(st ? L.accuracy(st.recent) : 0, PARTS[p].skill === 'listening' ? 'blue' : 'violet')}</div><button class="btn ghost sm" data-act="toeicPart" data-p="${p}">S’entraîner</button></div>`; }).join('')}</section>
     <p>Partie à travailler en priorité : <b>${esc(PARTS[w].name)}</b></p>
-    <article class="card"><h3>Simulation chronométrée</h3><p>12 questions, écoute et lecture mélangées, 10 minutes. Bilan par partie à la fin.</p><button class="btn primary" data-act="toeicTest">${icon('clock', 18)} Lancer la simulation</button></article>
-    <section class="card"><h3>Historique des tests</h3>${s.toeic.tests.slice(-8).reverse().map(t => `<div class="row"><span>${esc(t.d)}</span><b>${t.ok}/${t.total}</b><small>${Math.floor(t.seconds / 60)} min ${t.seconds % 60} s</small></div>`).join('') || '<p class="muted">Aucun test pour l’instant.</p>'}</section>
+    <article class="card"><h3>Tests chronométrés</h3><p>Après chaque test : analyse de la partie où tu as perdu le plus de points, et un bouton pour enchaîner ces questions.</p>
+      <button class="btn primary" data-act="toeicTest" data-k="blanc">${icon('clock', 18)} Test blanc · ${TESTS.blanc.info}</button>
+      <button class="btn ghost" data-act="toeicTest" data-k="mini">Mini-test · ${TESTS.mini.info}</button>
+      <p class="hint">Un vrai TOEIC fait 200 questions en 2 heures. Les tests d’ici sont plus courts : pour la dernière semaine, ajoute un test officiel d’entraînement.</p></article>
+    <section class="card"><h3>Historique des tests</h3>${s.toeic.tests.slice(-8).reverse().map(t => { const lp = L.mostLostPart(t.parts); return `<div class="row"><span>${esc(t.d)} · ${t.kind === 'blanc' ? 'Test blanc' : t.kind === 'mini' ? 'Mini-test' : 'Boss'}</span><b>${t.ok}/${t.total}</b><small>${lp ? 'à travailler : partie ' + lp.part : Math.floor(t.seconds / 60) + ' min'}</small></div>`; }).join('') || '<p class="muted">Aucun test pour l’instant.</p>'}</section>
+  </section>`;
+};
+
+V.carnet = () => {
+  const s = S(), n = s.carnet.length, goal = L.carnetGoal(n);
+  const due = L.srsDue(s).filter(id => id.startsWith('c:')).length;
+  const list = s.carnet.slice().reverse();
+  return `<section class="page"><h1 class="display sm">Mon carnet</h1>
+    <p class="lead">Chaque mot que tu ne connais pas, tu le notes. Sans exception : ne te dis jamais « je le retiendrai ». Touche un mot dans n’importe quelle phrase du jeu, ou ajoute-le ici.</p>
+    <section class="card"><div class="row"><span>Mots notés</span><b>${n} / ${goal}</b></div>${bar(Math.round((n / goal) * 100), 'violet')}
+      <p class="hint">Objectifs : 100, puis 200, puis 300 mots. Un badge à chaque palier.</p>
+      <button class="btn primary" data-act="carnetRun" ${n ? '' : 'disabled'}>${icon('repeat', 18)} Réviser mon carnet${due ? ' · ' + pl(due, 'mot dû', 'mots dus') : ''}</button></section>
+    <section class="card"><h3>Ajouter un mot</h3>
+      <label class="field"><span>Mot ou expression en anglais</span><input id="cEn" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="field"><span>Traduction</span><input id="cFr" autocomplete="off"></label>
+      <button class="btn ghost" data-act="carnetForm">${icon('plus', 18)} Noter</button></section>
+    <section class="card"><h3>${pl(n, 'mot', 'mots')}</h3>${list.map(c => `<div class="carnet-row"><button class="mini" data-act="say" data-t="${esc(c.en)}" aria-label="Écouter">${icon('speaker', 14)}</button><div><b class="en">${esc(c.en)}</b><small>${esc(c.fr || 'traduction à compléter')}</small></div><button class="mini" data-act="carnetDel" data-id="${esc(c.id)}" aria-label="Retirer ${esc(c.en)}">${icon('x', 14)}</button></div>`).join('') || '<p class="muted">Ton carnet est vide. Touche un mot inconnu dans une phrase pour le noter.</p>'}</section>
   </section>`;
 };
 
@@ -625,7 +706,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -694,7 +775,32 @@ function onAction(act, b) {
     case 'oralRun': return simpleRun(C.oralItems(s, 6).map(item => ({ kind: 'item', item })), 'Séance orale', 'oral');
     case 'testVoice': return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate });
     case 'toeicPart': { const p = +b.dataset.p; return simpleRun(C.toeicItems(s, [p], 5).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic'); }
-    case 'toeicTest': return runToeicTest();
+    case 'toeicTest': return runToeicTest(b.dataset.k || 'mini');
+    case 'drill': return drillPart(+b.dataset.p);
+    case 'prepRun': return simpleRun(L.shuffle(PREP_ITEMS.map(id => TOEIC_BY_ID[id]).filter(Boolean)).slice(0, 8).map(item => ({ kind: 'item', item })), 'Prépositions', 'toeic');
+    case 'openPrep': codexState = { tab: 'prep', q: '', cat: '' }; return ctx.go('codex');
+    case 'examSave': {
+      const v = (document.getElementById('examDate') || {}).value || '';
+      s.settings.examDate = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+      save(); toast(s.settings.examDate ? 'Date d’examen enregistrée' : 'Date retirée'); return render();
+    }
+    case 'carnetForm': {
+      const en = document.getElementById('cEn').value, fr = document.getElementById('cFr').value;
+      const c = L.carnetAdd(s, en, fr);
+      if (!c) return toast('Écris d’abord le mot en anglais.');
+      save(); checkUnlocks(); toast('Noté : ' + c.en); return render();
+    }
+    case 'carnetDel': {
+      const c = s.carnet.find(x => x.id === b.dataset.id);
+      if (!c || !confirm('Retirer « ' + c.en + ' » de ton carnet ?')) return;
+      L.carnetRemove(s, c.id); save(); return render();
+    }
+    case 'carnetRun': {
+      const due = new Set(L.srsDue(s).filter(id => id.startsWith('c:')));
+      const rest = L.shuffle(s.carnet.map(c => 'c:' + c.id).filter(id => !due.has(id)));
+      const ids = [...due, ...rest].slice(0, 15);
+      return simpleRun(ids.map(id => ({ kind: 'recall', id })), 'Révision du carnet', 'review');
+    }
     case 'equip': {
       const k = b.dataset.kind, id = b.dataset.id, eq = s.inventory.equipped;
       if (eq[k] === id) { if (k !== 'outfit') delete eq[k]; } else eq[k] = id;

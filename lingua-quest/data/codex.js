@@ -107,7 +107,40 @@ const V = [
   ['learn', 'learn', [['apprendre (pour soi)', 'faux ami partiel : « apprendre à quelqu’un » = teach']], 'leurn', 'I am learning English.', 'J’apprends l’anglais.', 'study', 'courant', 'quotidien', ['learned', 'learnt', 'learning', 'learns']],
   ['talk', 'talk', [['parler, discuter', '']], 'tok', 'Can we talk later?', 'On peut en parler plus tard ?', 'speak, chat', 'courant', 'conversation', ['talked', 'talking', 'talks']],
   ['ready', 'ready', [['prêt', '']], 'RÈ-di', 'Are you ready?', 'Tu es prêt ?', 'prepared', 'courant', 'conversation', []],
-  ['today', 'today', [['aujourd’hui', '']], 'teu-DÉÏ', 'She is working today.', 'Elle travaille aujourd’hui.', '', 'courant', 'quotidien', []]
+  ['today', 'today', [['aujourd’hui', '']], 'teu-DÉÏ', 'She is working today.', 'Elle travaille aujourd’hui.', '', 'courant', 'quotidien', []],
+  /* --- Vocabulaire professionnel fréquent au TOEIC --- */
+  ['expense', 'expense', [['dépense, frais', '']], 'iks-PÈNS', 'Please keep receipts for all travel expenses.', 'Garde les reçus de tous tes frais de déplacement.', 'cost', 'pro', 'toeic', ['expenses']],
+  ['reimburse', 'reimburse', [['rembourser (des frais)', '']], 'ri-im-BEURS', 'The company will reimburse your taxi fare.', 'L’entreprise te remboursera ton taxi.', 'pay back, refund', 'pro', 'toeic', ['reimbursed', 'reimburses', 'reimbursement']],
+  ['budget', 'budget', [['budget', '']], 'BA-djit', 'We are over budget this quarter.', 'Nous avons dépassé le budget ce trimestre.', '', 'pro', 'toeic', ['budgets']],
+  ['quarter', 'quarter', [['trimestre', 'entreprise'], ['quart', '']], 'KOUOR-teur', 'Sales rose in the second quarter.', 'Les ventes ont augmenté au deuxième trimestre.', '', 'pro', 'toeic', ['quarterly', 'quarters']],
+  ['contract', 'contract', [['contrat', '']], 'KON-trakt', 'They signed a two-year contract.', 'Ils ont signé un contrat de deux ans.', 'agreement', 'pro', 'toeic', ['contracts']],
+  ['negotiate', 'negotiate', [['négocier', '']], 'ni-GÔ-chi-éït', 'We negotiated a better price.', 'Nous avons négocié un meilleur prix.', 'discuss, bargain', 'pro', 'toeic', ['negotiated', 'negotiation', 'negotiating']],
+  ['estimate', 'estimate', [['estimation, devis', 'nom'], ['estimer', 'verbe']], 'ÈS-ti-meut', 'Can you send me a cost estimate?', 'Peux-tu m’envoyer une estimation du coût ?', 'quote', 'pro', 'toeic', ['estimates', 'estimated']],
+  ['quote', 'quote', [['devis', 'nom'], ['citer', 'verbe']], 'kouôt', 'The supplier sent us a quote.', 'Le fournisseur nous a envoyé un devis.', 'estimate', 'pro', 'toeic', ['quotes', 'quoted']],
+  ['deliver', 'deliver', [['livrer', ''], ['faire (un discours)', 'deliver a speech']], 'di-LI-veur', 'The package will be delivered tomorrow.', 'Le colis sera livré demain.', 'ship, bring', 'pro', 'toeic', ['delivered', 'delivery', 'deliveries']],
+  ['apply', 'apply', [['postuler, candidater', 'apply for a job'], ['s’appliquer', 'apply to']], 'eu-PLAÏ', 'She applied for the manager position.', 'Elle a postulé au poste de responsable.', '', 'pro', 'toeic', ['applied', 'applies', 'application']],
+  ['candidate', 'candidate', [['candidat', '']], 'KAN-di-déït', 'We interviewed five candidates.', 'Nous avons reçu cinq candidats en entretien.', 'applicant', 'pro', 'toeic', ['candidates']],
+  ['resume', 'résumé / resume', [['CV', 'nom (US)'], ['reprendre', 'verbe : ri-ZIOUM']], 'RÈ-zou-méï (CV)', 'Please attach your résumé.', 'Merci de joindre ton CV.', 'CV (UK)', 'pro', 'toeic', ['resumes', 'résumé']],
+  ['position', 'position', [['poste (emploi)', ''], ['position', '']], 'peu-ZI-cheun', 'The position is open until May.', 'Le poste est ouvert jusqu’en mai.', 'job, role', 'pro', 'toeic', ['positions']],
+  ['promote', 'promote', [['promouvoir (un employé)', ''], ['faire la promotion de', 'un produit']], 'preu-MÔT', 'He was promoted to sales director.', 'Il a été promu directeur commercial.', '', 'pro', 'toeic', ['promoted', 'promotion']],
+  ['headquarters', 'headquarters', [['siège social', '']], 'HÈD-kouor-teurz', 'Our headquarters are in London.', 'Notre siège est à Londres.', 'head office', 'pro', 'toeic', []],
+  ['merger', 'merger', [['fusion (d’entreprises)', '']], 'MEUR-djeur', 'The merger was announced last week.', 'La fusion a été annoncée la semaine dernière.', '', 'pro', 'toeic', ['mergers', 'merge']],
+  ['survey', 'survey', [['enquête, sondage', '']], 'SEUR-véï', 'Please complete our customer survey.', 'Merci de remplir notre enquête client.', 'questionnaire', 'pro', 'toeic', ['surveys']],
+  ['feedback', 'feedback', [['retour, avis', 'indénombrable']], 'FID-bak', 'Thanks for your feedback.', 'Merci pour ton retour.', 'comments', 'pro', 'toeic', []],
+  ['reminder', 'reminder', [['rappel', '']], 'ri-MAÏN-deur', 'I sent a reminder to the client.', 'J’ai envoyé un rappel au client.', '', 'pro', 'emails', ['reminders']],
+  ['forward', 'forward', [['transférer (un e-mail)', ''], ['en avant', 'adverbe']], 'FOR-oueurd', 'Could you forward me his e-mail?', 'Tu peux me transférer son e-mail ?', 'send on', 'pro', 'emails', ['forwarded']],
+  ['appointment', 'appointment', [['rendez-vous (pro, médical)', '']], 'eu-POÏNT-meunt', 'I have a dentist appointment at four.', 'J’ai un rendez-vous chez le dentiste à 16 h.', 'meeting', 'courant', 'toeic', ['appointments']],
+  ['reschedule', 'reschedule', [['reporter, changer la date', '']], 'ri-SKÈ-djoul', 'Can we reschedule the call?', 'On peut décaler l’appel ?', 'postpone', 'pro', 'reunions', ['rescheduled']],
+  ['register', 'register', [['s’inscrire', ''], ['caisse', 'nom']], 'RÈ-dji-steur', 'Register online before Friday.', 'Inscris-toi en ligne avant vendredi.', 'sign up', 'pro', 'toeic', ['registered', 'registration']],
+  ['inventory', 'inventory', [['stock, inventaire', '']], 'IN-vèn-to-ri', 'We need to check the inventory.', 'Nous devons vérifier le stock.', 'stock', 'pro', 'toeic', []],
+  ['out-of-stock', 'out of stock', [['en rupture de stock', '']], 'aout ov STOK', 'This item is out of stock.', 'Cet article est en rupture de stock.', 'sold out', 'pro', 'achats', []],
+  ['warranty', 'warranty', [['garantie', '']], 'OUO-reun-ti', 'The laptop has a two-year warranty.', 'L’ordinateur a une garantie de deux ans.', 'guarantee', 'pro', 'achats', []],
+  ['equipment', 'equipment', [['matériel, équipement', 'indénombrable']], 'i-KOUIP-meunt', 'The new equipment arrived today.', 'Le nouveau matériel est arrivé aujourd’hui.', '', 'pro', 'toeic', []],
+  ['facility', 'facility', [['installation, site, locaux', '']], 'feu-SI-li-ti', 'The factory is a modern facility.', 'L’usine est un site moderne.', 'site, premises', 'pro', 'toeic', ['facilities']],
+  ['run-late', 'run late', [['être en retard (sur le moment)', '']], 'ran LÉÏT', 'Sorry, I’m running late.', 'Désolé, je suis en retard.', 'be late', 'courant', 'expressions', ['running late']],
+  ['handle', 'handle', [['gérer, s’occuper de', '']], 'HAN-deul', 'Who handles customer complaints?', 'Qui s’occupe des réclamations clients ?', 'deal with, manage', 'pro', 'toeic', ['handled', 'handles', 'handling']],
+  ['complaint', 'complaint', [['réclamation, plainte', '']], 'keum-PLÉÏNT', 'We received a complaint about the delivery.', 'Nous avons reçu une réclamation sur la livraison.', '', 'pro', 'toeic', ['complaints', 'complain']],
+  ['upcoming', 'upcoming', [['à venir, prochain', '']], 'AP-ka-ming', 'Don’t forget the upcoming meeting.', 'N’oublie pas la réunion à venir.', 'next, forthcoming', 'pro', 'toeic', []]
 ];
 
 export const VOCAB = V.map(([id, en, senses, pron, ex, exFr, syn, reg, cat, forms]) => ({ id, en, senses, pron, ex, exFr, syn, reg, cat, forms: forms || [] }));
@@ -244,6 +277,51 @@ export const DECODE = [
 ];
 export const DECODE_BY_ID = Object.fromEntries(DECODE.map(d => [d.id, d]));
 export const ROLE_LABEL = { sujet: 'Sujet', auxiliaire: 'Auxiliaire', verbe: 'Verbe', complement: 'Complément', temps: 'Marqueur de temps', negation: 'Négation', question: 'Structure de question' };
+
+/* ---------- Prépositions : la partie du cours la plus piégeuse au TOEIC ---------- */
+/* [anglais, explication, exemple, traduction] */
+export const PREPOSITIONS = [
+  { id: 'temps', title: 'Le temps', rows: [
+    ['at + heure', 'à une heure précise', 'The meeting starts at 9 a.m.', 'La réunion commence à 9 h.'],
+    ['on + jour / date', 'un jour, une date', 'The office is closed on Sunday.', 'Le bureau est fermé le dimanche.'],
+    ['in + mois / année / saison', 'une période plus large', 'The store opened in 2021.', 'Le magasin a ouvert en 2021.'],
+    ['for + durée', 'pendant (combien de temps)', 'I worked there for three years.', 'J’y ai travaillé pendant trois ans.'],
+    ['since + point de départ', 'depuis (quand)', 'She has lived here since 2019.', 'Elle habite ici depuis 2019.'],
+    ['by + date limite', 'au plus tard', 'Send the report by Friday.', 'Envoie le rapport vendredi au plus tard.'],
+    ['until + fin d’une action', 'jusqu’à', 'The shop is open until 8 p.m.', 'Le magasin est ouvert jusqu’à 20 h.'],
+    ['during + nom', 'pendant (un événement)', 'Phones are off during the meeting.', 'Les téléphones sont éteints pendant la réunion.'],
+    ['within + durée', 'dans un délai de', 'We reply within 24 hours.', 'Nous répondons sous 24 heures.']
+  ] },
+  { id: 'lieu', title: 'Le lieu', rows: [
+    ['at + point précis', 'à (un endroit précis)', 'I’m at the front desk.', 'Je suis à l’accueil.'],
+    ['in + espace fermé / ville', 'dans, à', 'She works in Paris, in a big office.', 'Elle travaille à Paris, dans un grand bureau.'],
+    ['on + surface / étage', 'sur, à (étage)', 'The files are on the third floor.', 'Les dossiers sont au troisième étage.'],
+    ['next to / beside', 'à côté de', 'The printer is next to the window.', 'L’imprimante est à côté de la fenêtre.'],
+    ['across from', 'en face de', 'The bank is across from the station.', 'La banque est en face de la gare.']
+  ] },
+  { id: 'verbes', title: 'Verbes + préposition (à apprendre par cœur)', rows: [
+    ['depend on', 'dépendre de', 'It depends on the price.', 'Ça dépend du prix.'],
+    ['apply for', 'postuler à', 'He applied for the job.', 'Il a postulé à ce poste.'],
+    ['wait for', 'attendre', 'We are waiting for the bus.', 'Nous attendons le bus.'],
+    ['listen to', 'écouter', 'Listen to the message.', 'Écoute le message.'],
+    ['pay for', 'payer (quelque chose)', 'Who paid for lunch?', 'Qui a payé le déjeuner ?'],
+    ['deal with', 's’occuper de', 'I’ll deal with the client.', 'Je m’occupe du client.'],
+    ['look forward to + -ing', 'avoir hâte de', 'I look forward to meeting you.', 'J’ai hâte de vous rencontrer.'],
+    ['agree with', 'être d’accord avec', 'I agree with you.', 'Je suis d’accord avec toi.'],
+    ['comply with', 'respecter (une règle)', 'All staff must comply with the rules.', 'Tout le personnel doit respecter les règles.']
+  ] },
+  { id: 'adjectifs', title: 'Adjectifs + préposition', rows: [
+    ['responsible for', 'responsable de', 'She is responsible for training.', 'Elle est responsable de la formation.'],
+    ['interested in', 'intéressé par', 'Are you interested in the offer?', 'L’offre t’intéresse ?'],
+    ['good at', 'doué en', 'He is good at sales.', 'Il est doué pour la vente.'],
+    ['similar to', 'semblable à', 'This model is similar to the old one.', 'Ce modèle ressemble à l’ancien.'],
+    ['different from', 'différent de', 'The result is different from last year.', 'Le résultat est différent de l’an dernier.'],
+    ['aware of', 'conscient de, au courant de', 'Are you aware of the changes?', 'Es-tu au courant des changements ?'],
+    ['satisfied with', 'satisfait de', 'Customers are satisfied with the service.', 'Les clients sont satisfaits du service.']
+  ] }
+];
+/* Questions TOEIC qui travaillent les prépositions */
+export const PREP_ITEMS = ['t5-2', 't5-4', 't5-7', 't5-9', 't5-11', 't5-12', 't5-13', 't5-14', 't5-15', 't5-16', 't5-17'];
 
 /* Recherche d’un mot dans le Codex (forme exacte, formes fléchies, verbes irréguliers) */
 export function lookupWord(raw) {

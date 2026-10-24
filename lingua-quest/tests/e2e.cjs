@@ -187,14 +187,73 @@ const noOverflow = async (page, label) => {
   await shot('30-decodeur');
   await page.click('#sheet .sheet-head [data-act="sheetClose"]');
 
-  /* Simulation TOEIC chronométrée */
+  /* Méthode TOEIC : date d’examen, plan, test blanc, analyse, enchaînement de la partie faible */
   await page.goto(BASE + '#/toeic');
-  await page.click('[data-act="toeicTest"]');
+  await page.waitForSelector('.plan');
+  check(await page.locator('.plan-step').count() === 5, 'plan TOEIC en étapes affiché');
+  await page.fill('#examDate', new Date(Date.now() + 10 * 864e5).toISOString().slice(0, 10));
+  await page.click('[data-act="examSave"]');
+  await page.waitForSelector('.exam');
+  check(/Semaine 3/.test(await page.textContent('.exam')), 'sprint : semaine 3 à J-10');
+  await shot('34-methode-toeic');
+  await page.click('[data-act="toeicTest"][data-k="blanc"]');
   await page.waitForSelector('#runTimer');
   await shot('31-simulation-toeic');
-  check(await playRun(page, n => n % 2 === 0), 'simulation TOEIC terminée');
+  let sawPhoto = false;
+  for (let n = 0; n < 80 && !(await page.locator('#play .bilan').count()); n++) {
+    if (!sawPhoto && await page.locator('#play .toeic-photo img').count()) {
+      sawPhoto = await page.locator('#play .toeic-photo img').evaluate(i => i.complete && i.naturalWidth > 0);
+      if (sawPhoto) await shot('35-photo-partie1');
+    }
+    await answerCard(page, n % 2 === 0);
+  }
+  check(await page.locator('#play .bilan').count() === 1, 'test blanc terminé');
   check(await page.locator('#play .bilan h3:has-text("Résultats par partie TOEIC")').count() === 1, 'bilan par partie TOEIC');
+  check(/Analyse : tu as perdu le plus de points/.test(await page.textContent('#play .bilan-top')), 'analyse de la partie la plus ratée');
+  await shot('36-analyse-test');
+  await page.click('#play [data-act="reinforce"]');
+  check(await playRun(page, true), 'enchaînement des questions de la partie faible');
   await page.click('#play [data-act="close"]');
+  const tests = await page.evaluate(() => window.__LQ.ctx.S.toeic.tests.map(t => t.kind));
+  check(tests.includes('blanc'), 'test blanc enregistré');
+
+  /* Partie 1 : chaque photo se charge */
+  for (const img of ['photo-bureau', 'photo-livraison', 'photo-restaurant']) {
+    const ok = await page.evaluate(src => new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth > 0); i.onerror = () => r(false); i.src = src; }), 'img/' + img + '.webp');
+    check(ok, 'photo partie 1 : ' + img);
+  }
+
+  /* Carnet : noter un mot touché, ajouter à la main, réviser */
+  await page.goto(BASE + '#/codex');
+  await page.click('[data-act="codexTab"][data-tab="prep"]');
+  await page.waitForSelector('.prep-row');
+  await shot('37-prepositions');
+  await page.locator('.prep-row .wt').nth(3).click();
+  await page.waitForSelector('#sheet .carnet-box');
+  await page.fill('#carnetFr', 'traduction test');
+  await page.click('#sheet [data-act="carnetAdd"]');
+  await page.waitForSelector('#sheet .carnet-box:has-text("est dans ton carnet")');
+  await shot('38-mot-note');
+  await page.click('#sheet .sheet-head [data-act="sheetClose"]');
+  await page.goto(BASE + '#/carnet');
+  await page.fill('#cEn', 'warehouse');
+  await page.fill('#cFr', 'entrepôt');
+  await page.click('[data-act="carnetForm"]');
+  await page.waitForTimeout(200);
+  check(await page.locator('.carnet-row').count() === 2, 'carnet : 2 mots notés');
+  await shot('39-carnet');
+  await page.click('[data-act="carnetRun"]');
+  check(await playRun(page, true), 'révision du carnet');
+  await page.click('#play [data-act="close"]');
+
+  /* Chaque boss a son illustration */
+  for (const n of [1, 6]) {
+    await page.goto(BASE + '#/chapter/' + n);
+    const src = await page.waitForSelector('.boss-art img').then(e => e.getAttribute('src')).catch(() => '');
+    check(src === 'img/boss-' + n + '.webp', 'illustration du boss ' + n);
+  }
+  await page.locator('.boss-art').scrollIntoViewIfNeeded().catch(() => {});
+  await shot('40-boss-6');
 
   /* Persistance et thème clair */
   const xp = await page.evaluate(() => window.__LQ.ctx.S.xp);

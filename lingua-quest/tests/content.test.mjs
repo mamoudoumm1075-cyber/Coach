@@ -1,6 +1,7 @@
 /* Cohérence du contenu pédagogique : chaque référence existe et chaque réponse attendue est valide. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { TOEIC, PART_IDS } from '../data/toeic.js';
 import { WORLD_ITEMS, CHAPTERS, CLASS_QUESTS, DIALOGUES, PLACEMENT, COSMETICS, CHARACTERS } from '../data/world.js';
@@ -26,7 +27,8 @@ test('chaque exercice est jouable', () => {
       if (it.why) assert.equal(it.why.length, it.options.length, it.id + ' : why ≠ options');
       assert.ok(it.explain, it.id + ' : explication manquante');
     }
-    if (it.type === 'listen') assert.ok(Array.isArray(it.audio) && it.audio.length && it.transcript, it.id + ' : audio');
+    if (it.type === 'listen') assert.ok(Array.isArray(it.audio) && (it.audio.length || (it.img && it.audioOptions)) && it.transcript, it.id + ' : audio');
+    if (it.img) assert.ok(existsSync(new URL('../' + it.img, import.meta.url)), it.id + ' : image manquante ' + it.img);
     if (it.type === 'type') assert.ok(Array.isArray(it.answer) && it.answer.length, it.id + ' : réponses acceptées');
     if (it.type === 'order') assert.deepEqual(normalize(it.words.join(' ')).split(' ').sort(), normalize(it.answer).split(' ').sort(), it.id + ' : mots ≠ réponse');
     if (it.type === 'speak') {
@@ -96,4 +98,16 @@ test('Codex : fiches et recherche', () => {
   assert.equal(lookupWord('is').kind, 'aux');
   assert.equal(lookupWord('Yesterday').kind, 'marker');
   assert.equal(lookupWord('xyzzy'), null);
+});
+
+test('chaque boss a son illustration', async () => {
+  const { BOSS_ART, CHAPTERS } = await import('../data/world.js');
+  for (const ch of CHAPTERS) assert.ok(BOSS_ART[ch.n] && existsSync(new URL('../' + BOSS_ART[ch.n], import.meta.url)), 'boss ' + ch.n);
+});
+
+test('prépositions : les questions d’entraînement existent', async () => {
+  const { PREP_ITEMS, PREPOSITIONS } = await import('../data/codex.js');
+  const { TOEIC_BY_ID } = await import('../data/toeic.js');
+  for (const id of PREP_ITEMS) assert.ok(TOEIC_BY_ID[id], id);
+  for (const g of PREPOSITIONS) for (const r of g.rows) assert.equal(r.length, 4, g.id + ' ' + r[0]);
 });

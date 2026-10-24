@@ -166,6 +166,16 @@ function learnHTML(card) {
 /* --- Réactivation (mot ou verbe irrégulier) --- */
 function recallHTML(card) {
   const id = card.id;
+  if (id.startsWith('c:')) {
+    const c = ctx.S.carnet.find(x => x.id === id.slice(2));
+    if (!c) return `<p>Mot retiré du carnet.</p>`;
+    return `<section class="recall"><p class="prompt">Mot de ton carnet : que veut-il dire ? Réponds dans ta tête avant de regarder.</p>
+      <h2 class="big-word">${esc(c.en)}</h2><button class="mini" data-act="sayText" data-t="${esc(c.en)}">${icon('speaker', 16)} Écouter</button>
+      <div id="reveal" hidden><div class="answer-box"><b>${esc(c.fr || 'Pas de traduction notée : ajoute-la dans ton carnet.')}</b></div>
+      <p class="prompt">Tu le savais ?</p><div class="grade">
+      <button class="btn bad" data-act="grade" data-g="ko">Non</button><button class="btn ghost" data-act="grade" data-g="hard">J’hésitais</button><button class="btn good" data-act="grade" data-g="ok">Oui</button></div></div>
+      <button class="btn primary wide" id="revealBtn" data-act="reveal">Voir la réponse</button></section>`;
+  }
   if (id.startsWith('v:')) {
     const v = VOCAB_BY_ID[id.slice(2)];
     if (!v) return `<p>Mot introuvable.</p>`;
@@ -196,6 +206,7 @@ function itemHTML(it) {
   if (it.part) h += `<span class="chip blue">${esc(PARTS[it.part].name)}</span>`;
   if (it.tense && TENSE_BY_ID[it.tense] && !R.opts.noHelp) h += ` <button class="chip violet as-btn" data-act="tense" data-id="${it.tense}">${esc(TENSE_BY_ID[it.tense].name)}</button>`;
   h += `<p class="prompt">${esc(it.prompt)}</p>`;
+  if (it.img) h += `<figure class="toeic-photo"><img src="${esc(it.img)}" alt="${esc(it.alt || 'Photo')}"></figure>`;
   if (listening) {
     if (textMode) h += `<div class="notice">L’audio n’est pas disponible sur cet appareil : l’exercice passe en mode texte. Il compte alors comme de la lecture, pas de l’écoute.</div><pre class="passage">${esc(it.transcript)}</pre>`;
     else h += `<button class="btn listen" data-act="play">${icon('speaker')} Écouter</button>`;
@@ -502,7 +513,7 @@ function bilanHTML(s, info, lvl) {
   const errors = s.results.filter(r => !r.ok);
   const bySkill = {};
   for (const r of s.results) { bySkill[r.skill] = bySkill[r.skill] || [0, 0]; bySkill[r.skill][1]++; if (r.ok) bySkill[r.skill][0]++; }
-  const words = [...s.learned.map(id => VOCAB_BY_ID[id] && VOCAB_BY_ID[id].en), ...s.reviewed.filter(x => x.g !== 'ok').map(x => x.id.startsWith('v:') ? (VOCAB_BY_ID[x.id.slice(2)] || {}).en : (IRR_BY_ID[x.id.slice(2)] || {}).inf)].filter(Boolean);
+  const words = [...s.learned.map(id => VOCAB_BY_ID[id] && VOCAB_BY_ID[id].en), ...s.reviewed.filter(x => x.g !== 'ok').map(x => x.id.startsWith('v:') ? (VOCAB_BY_ID[x.id.slice(2)] || {}).en : x.id.startsWith('c:') ? (ctx.S.carnet.find(c => c.id === x.id.slice(2)) || {}).en : (IRR_BY_ID[x.id.slice(2)] || {}).inf)].filter(Boolean);
   const parts = {};
   for (const r of s.results) if (r.part) { parts[r.part] = parts[r.part] || [0, 0]; parts[r.part][1]++; if (r.ok) parts[r.part][0]++; }
   return `<header class="run-head"><div class="run-title"><span>Bilan</span></div><button class="icon-btn" data-act="close" aria-label="Fermer">${icon('x')}</button></header>
@@ -523,7 +534,7 @@ function bilanHTML(s, info, lvl) {
     ${info.next ? `<section class="card next"><h3>Prochaine mission conseillée</h3><p>${esc(info.next.label)}</p><button class="btn primary" data-act="go" data-r="${esc(info.next.route)}">Y aller</button></section>` : ''}
   </main>
   <footer class="run-foot">
-    ${info.reinforce ? `<button class="btn ghost" data-act="reinforce">Quête de renforcement</button>` : ''}
+    ${info.reinforce ? `<button class="btn ghost" data-act="reinforce">${esc(info.reinforceLabel || 'Quête de renforcement')}</button>` : ''}
     ${info.retry ? `<button class="btn ${info.win === false ? 'primary' : 'ghost'}" data-act="retry">Retenter</button>` : ''}
     <button class="btn ${info.retry && info.win === false ? 'ghost' : 'primary'}" data-act="close">Continuer l’aventure</button>
   </footer>`;
