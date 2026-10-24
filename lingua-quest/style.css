@@ -457,3 +457,24 @@ body.playing #toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 @keyframes drift { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, -1%); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 360px) { .logo { font-size: 3.3rem; } .class-name { font-size: 2.5rem; } .grid2 { grid-template-columns: minmax(0, 1fr); } .quick span { font-size: .62rem; } }
+
+/* ---------- Méthode TOEIC, examen, carnet, prépositions, photos ---------- */
+.plan-step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+.plan-step:first-of-type { border-top: 0; }
+.plan-step p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.plan-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; margin-top: 2px; }
+.plan-step.done .plan-dot { background: var(--green, #2bb673); border-color: transparent; color: #fff; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.exam-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.exam-row .field { flex: 1 1 160px; margin: 0; }
+.carnet-box { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.carnet-box h3 { margin: 0 0 4px; font-size: 1rem; }
+.carnet-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.carnet-row:first-of-type { border-top: 0; }
+.carnet-row small { display: block; color: var(--muted); }
+.prep-group { margin-bottom: 18px; }
+.prep-group h3 { font-size: 1rem; margin: 14px 0 6px; }
+.prep-row { padding: 8px 0; border-top: 1px solid var(--line); }
+.prep-row p { margin: 4px 0 0; }
+.toeic-photo { margin: 10px 0 14px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.toeic-photo img { display: block; width: 100%; height: auto; }

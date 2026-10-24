@@ -106,3 +106,39 @@ test('sauvegarde : refuse un fichier étranger, complète un état ancien', () =
   assert.equal(s.skills.listening.attempts, 0);
   assert.ok(Array.isArray(s.errors));
 });
+
+test('carnet : ajout sans doublon, nettoyage, révision, retrait', () => {
+  const s = L.newState();
+  const c = L.carnetAdd(s, ' Warehouse, ', 'entrepôt', '2026-01-01');
+  assert.equal(c.en, 'Warehouse');
+  assert.equal(L.carnetAdd(s, 'warehouse').id, c.id);
+  assert.equal(s.carnet.length, 1);
+  assert.ok(s.srs['c:' + c.id]);
+  assert.equal(L.carnetAdd(s, '  ,, '), null);
+  L.carnetRemove(s, c.id);
+  assert.equal(s.carnet.length, 0);
+  assert.equal(s.srs['c:' + c.id], undefined);
+  assert.deepEqual([L.carnetGoal(0), L.carnetGoal(99), L.carnetGoal(100), L.carnetGoal(250), L.carnetGoal(300)], [100, 100, 200, 300, 400]);
+});
+
+test('carnet : une sauvegarde abîmée est nettoyée', () => {
+  const s = L.sanitize({ xp: 1, skills: {}, carnet: [{ id: 'c1', en: 'ok' }, null, { en: 'sans id' }, 'x'] });
+  assert.deepEqual(s.carnet.map(c => c.id), ['c1']);
+  assert.ok(Array.isArray(L.sanitize({ xp: 1, skills: {} }).carnet));
+});
+
+test('plan d’examen : sprint de 4 semaines', () => {
+  assert.equal(L.examPlan(''), null);
+  assert.equal(L.examPlan('2026-03-01', '2026-03-02').phase, 'passe');
+  const far = L.examPlan('2026-06-30', '2026-01-01');
+  assert.equal(far.phase, 'long');
+  assert.equal(far.sprintStart, '2026-06-02');
+  assert.deepEqual([28, 22, 21, 15, 14, 8, 7, 0].map(n => L.examPlan(L.addDays('2026-01-01', n), '2026-01-01').week), [1, 1, 2, 2, 3, 3, 4, 4]);
+});
+
+test('analyse d’un test : la partie où l’on perd le plus de points', () => {
+  assert.equal(L.mostLostPart({}), null);
+  assert.equal(L.mostLostPart({ 5: [4, 4] }), null);
+  assert.equal(L.mostLostPart({ 2: [1, 3], 5: [2, 6], 7: [3, 4] }).part, 5);
+  assert.equal(L.mostLostPart({ 2: [0, 2], 6: [2, 4] }).part, 2);
+});

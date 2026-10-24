@@ -54,13 +54,14 @@ export function newState() {
     skills,
     tenses: {},
     recent: [],
-    toeic: { parts: {}, tests: [] },
+    toeic: { parts: {}, tests: [], drills: 0 },
     errors: [],
     sessions: [],
     days: {},
     inventory: { owned: [], equipped: {} },
     badges: [],
-    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '' }
+    carnet: [],
+    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '' }
   };
 }
 
@@ -80,7 +81,8 @@ export function sanitize(o) {
     if (v && typeof v === 'object') s.skills[k] = { attempts: +v.attempts || 0, correct: +v.correct || 0, recent: Array.isArray(v.recent) ? v.recent.slice(-30) : [] };
   }
   for (const k of ['quests', 'srs', 'tenses', 'chapters', 'days']) if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = base[k];
-  for (const k of ['recent', 'errors', 'sessions', 'badges']) if (!Array.isArray(s[k])) s[k] = [];
+  for (const k of ['recent', 'errors', 'sessions', 'badges', 'carnet']) if (!Array.isArray(s[k])) s[k] = [];
+  s.carnet = s.carnet.filter(c => c && typeof c === 'object' && typeof c.en === 'string' && c.id);
   if (!s.chapters[1]) s.chapters[1] = { bossBeaten: false, bossTries: 0 };
   s.xp = Math.max(0, +s.xp || 0);
   s.difficulty = Math.min(3, Math.max(1, +s.difficulty || 1));
@@ -187,6 +189,47 @@ export function srsDue(S, d = today(), limit = 99) {
     .slice(0, limit)
     .map(([id]) => id);
 }
+/* ---------- Plan d’examen : sprint de 4 semaines avant la date du TOEIC ---------- */
+export function examPlan(examDate, d = today()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(examDate || '')) return null;
+  const days = Math.round((Date.parse(examDate) - Date.parse(d)) / 86400000);
+  if (isNaN(days)) return null;
+  if (days < 0) return { days, phase: 'passe' };
+  if (days > 28) return { days, phase: 'long', sprintStart: addDays(examDate, -28) };
+  return { days, phase: 'sprint', week: Math.min(4, Math.floor((28 - days) / 7) + 1) };
+}
+/* Partie d’un test où l’on a perdu le plus de points (à égalité : le plus faible taux) */
+export function mostLostPart(parts) {
+  let best = null;
+  for (const [p, [ok, n]] of Object.entries(parts || {})) {
+    const lost = n - ok;
+    if (lost <= 0) continue;
+    if (!best || lost > best.lost || (lost === best.lost && ok / n < best.ok / best.n)) best = { part: +p, lost, ok, n };
+  }
+  return best;
+}
+
+/* ---------- Carnet de vocabulaire : chaque mot inconnu est noté, puis révisé ---------- */
+export const CARNET_GOALS = [100, 200, 300];
+export function carnetGoal(n) { return CARNET_GOALS.find(g => n < g) || (Math.floor(n / 100) + 1) * 100; }
+const normWord = w => String(w || '').toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ').trim();
+export function carnetFind(S, en) { const k = normWord(en); return k ? S.carnet.find(c => normWord(c.en) === k) : null; }
+export function carnetAdd(S, en, fr = '', d = today()) {
+  en = String(en || '').trim().replace(/\s+/g, ' ').replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '').slice(0, 60);
+  fr = String(fr || '').trim().slice(0, 120);
+  if (!normWord(en)) return null;
+  const old = carnetFind(S, en);
+  if (old) { if (fr && !old.fr) old.fr = fr; return old; }
+  const c = { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), en, fr, d };
+  S.carnet.push(c);
+  srsAdd(S, 'c:' + c.id, d);
+  return c;
+}
+export function carnetRemove(S, id) {
+  S.carnet = S.carnet.filter(c => c.id !== id);
+  delete S.srs['c:' + id];
+}
+
 export function srsRetained(S) { return Object.values(S.srs).filter(e => e.box >= 3).length; }
 
 /* ---------- Série quotidienne (1 joker par semaine) ---------- */

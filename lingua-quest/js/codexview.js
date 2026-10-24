@@ -2,8 +2,8 @@
 import { ctx } from './ctx.js';
 import { esc, icon, toast } from './ui.js';
 import { speak } from './audio.js';
-import { srsAdd, tenseStatus } from './logic.js';
-import { VOCAB, VOCAB_BY_ID, CATEGORIES, REGISTRES, MARKERS, AUX, IRREGULAR, DECODE, DECODE_BY_ID, ROLE_LABEL, lookupWord } from '../data/codex.js';
+import { srsAdd, tenseStatus, carnetAdd, carnetFind, carnetGoal } from './logic.js';
+import { VOCAB, VOCAB_BY_ID, CATEGORIES, REGISTRES, MARKERS, AUX, IRREGULAR, DECODE, DECODE_BY_ID, ROLE_LABEL, PREPOSITIONS, lookupWord } from '../data/codex.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 
 const say = t => `<button class="mini" data-act="say" data-t="${esc(t)}" aria-label="Écouter « ${esc(t)} »">${icon('speaker', 16)}</button>`;
@@ -79,7 +79,7 @@ export function tenseHTML(t, { page = false } = {}) {
 }
 
 /* ---------- Page Codex (onglets) ---------- */
-export const CODEX_TABS = { dico: 'Dictionnaire', decode: 'Décodeur', temps: 'Temps', marqueurs: 'Marqueurs', aux: 'Auxiliaires', irr: 'Verbes irréguliers' };
+export const CODEX_TABS = { dico: 'Dictionnaire', decode: 'Décodeur', temps: 'Temps', marqueurs: 'Marqueurs', prep: 'Prépositions', aux: 'Auxiliaires', irr: 'Verbes irréguliers' };
 export function codexHTML(tab = 'dico', q = '', cat = '') {
   const tabs = `<nav class="tabs" role="tablist">${Object.entries(CODEX_TABS).map(([k, v]) => `<button role="tab" aria-selected="${k === tab}" class="tab ${k === tab ? 'on' : ''}" data-act="codexTab" data-tab="${k}">${v}</button>`).join('')}</nav>`;
   let body = '';
@@ -94,6 +94,8 @@ export function codexHTML(tab = 'dico', q = '', cat = '') {
     body = `<div class="list">${TENSES.map(t => { const st = ctx.S ? tenseStatus(ctx.S, t.id) : { label: '' }; return `<button class="list-item" data-act="tense" data-id="${t.id}"><span class="en">${esc(t.name)}</span><small>${esc(st.label)}</small></button>`; }).join('')}</div>`;
   } else if (tab === 'marqueurs') {
     body = `<div class="list">${MARKERS.map(m => `<button class="list-item" data-act="marker" data-id="${m.id}"><span class="en">${esc(m.en)}</span><small>${esc(m.fr)}</small></button>`).join('')}</div>`;
+  } else if (tab === 'prep') {
+    body = `<p class="hint">Les prépositions ne se traduisent pas mot à mot : apprends-les avec leur verbe ou leur adjectif. Entraînement : TOEIC → Méthode → étape 1.</p>` + PREPOSITIONS.map(g => `<section class="prep-group"><h3>${esc(g.title)}</h3>${g.rows.map(([en, fr, ex, exFr]) => `<div class="prep-row"><div><b class="en">${esc(en)}</b> <small>${esc(fr)}</small><p class="en">${clickableEn(ex)} ${say(ex)}</p><p class="muted">${esc(exFr)}</p></div></div>`).join('')}</section>`).join('');
   } else if (tab === 'aux') {
     body = `<div class="list">${AUX.map(a => `<button class="list-item" data-act="aux" data-id="${a.id}"><span class="en">${esc(a.en)}</span><small>${esc(a.role.split('.')[0])}</small></button>`).join('')}</div>`;
   } else {
@@ -133,11 +135,26 @@ function openSheet(title, html, push = true) {
 export function closeSheet() { history.length = 0; const el = sheet(); el.hidden = true; el.innerHTML = ''; }
 let sheetTab = 'dico';
 export function openCodexSheet(tab = sheetTab) { sheetTab = tab; history.length = 0; openSheet('Codex anglais', codexHTML(tab)); }
+/* Bloc « carnet » sous chaque mot touché : noter tout mot inconnu, sans exception */
+function carnetBlockHTML(word, guess) {
+  if (!ctx.S) return '';
+  const c = carnetFind(ctx.S, word);
+  if (c) return `<section class="carnet-box"><p>${icon('check', 16)} <b class="en">${esc(c.en)}</b> est dans ton carnet${c.fr ? ' : ' + esc(c.fr) : ''}. Il revient dans tes révisions.</p></section>`;
+  return `<section class="carnet-box"><h3>Tu ne le connaissais pas ? Note-le.</h3>
+    <p class="hint">Ne te dis pas « je le retiendrai » : note chaque mot inconnu. Il reviendra dans tes révisions.</p>
+    <label class="field"><span>Traduction (à toi de l’écrire)</span><input id="carnetFr" autocomplete="off" value="${esc(guess || '')}"></label>
+    <button class="btn primary" data-act="carnetAdd" data-w="${esc(word)}">${icon('plus', 18)} Noter dans mon carnet</button></section>`;
+}
 export function openWordSheet(word) {
+  word = String(word || '').replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
   const r = lookupWord(word);
-  if (!r) return openSheet('Codex', `<p>« <b class="en">${esc(word)}</b> » n’est pas encore dans le Codex.</p><p class="hint">Le Codex s’enrichit au fil des chapitres. Tu peux chercher un autre mot dans le dictionnaire.</p><button class="btn ghost" data-act="codexTab" data-tab="dico">Ouvrir le dictionnaire</button>`);
+  const w = word.toLowerCase();
+  const preps = PREPOSITIONS.flatMap(g => g.rows.filter(row => row[0].toLowerCase().split(/[^a-z]+/).includes(w)));
+  if (!r && preps.length) return openSheet('Codex', `<h2 class="en">${esc(word)}</h2><p class="hint">Préposition : son sens dépend du mot qui l’entoure.</p>${preps.map(([en, fr, ex, exFr]) => `<div class="prep-row"><b class="en">${esc(en)}</b> <small>${esc(fr)}</small><p class="en">${esc(ex)} ${say(ex)}</p><p class="muted">${esc(exFr)}</p></div>`).join('')}${carnetBlockHTML(word, '')}<button class="btn ghost" data-act="codexTab" data-tab="prep">Toutes les prépositions</button>`);
+  if (!r) return openSheet('Codex', `<p>« <b class="en">${esc(word)}</b> » n’est pas encore dans le Codex.</p>${carnetBlockHTML(word, '')}<button class="btn ghost" data-act="codexTab" data-tab="dico">Ouvrir le dictionnaire</button>`);
   const html = r.kind === 'vocab' ? wordEntryHTML(r.item) : r.kind === 'irregular' ? irregularHTML(r.item) : r.kind === 'marker' ? markerHTML(r.item) : auxHTML(r.item);
-  openSheet('Codex', html);
+  const guess = r.kind === 'vocab' ? r.item.senses[0][0] : r.kind === 'irregular' ? r.item.fr : (r.item.fr || '');
+  openSheet('Codex', html + carnetBlockHTML(word, guess));
 }
 export function openTenseSheet(id) { const t = TENSE_BY_ID[id]; if (t) openSheet('Académie des temps', tenseHTML(t)); }
 export function openDecodeSheet(id) { const d = DECODE_BY_ID[id]; if (d) openSheet('Décodeur de phrases', decodeHTML(d)); }
@@ -146,6 +163,18 @@ export function openDecodeSheet(id) { const d = DECODE_BY_ID[id]; if (d) openShe
 export function handleCodexAct(act, b, inSheet) {
   const id = b && b.dataset.id;
   switch (act) {
+    case 'carnetAdd': {
+      const fr = (document.getElementById('carnetFr') || {}).value || '';
+      const c = carnetAdd(ctx.S, b.dataset.w, fr);
+      if (!c) return true;
+      ctx.save();
+      const n = ctx.S.carnet.length;
+      toast(`Noté : ${c.en} · ${n} mot${n > 1 ? 's' : ''} dans ton carnet (objectif ${carnetGoal(n - 1)})`);
+      if (ctx.afterRun) ctx.afterRun();
+      const box = b.closest('.carnet-box');
+      if (box) box.outerHTML = carnetBlockHTML(c.en, '');
+      return true;
+    }
     case 'say': speak(b.dataset.t, { rate: ctx.S ? ctx.S.settings.rate : 0.9 }); return true;
     case 'addSrs':
       srsAdd(ctx.S, id); ctx.save(); toast('Ajouté à tes révisions');

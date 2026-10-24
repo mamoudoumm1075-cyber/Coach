@@ -270,7 +270,8 @@ export const BADGES = {
   'streak-30': '30 jours de série',
   'boss-1': 'Echo vaincu', 'boss-2': 'Marchand vaincu', 'boss-3': 'Gardien vaincu', 'boss-4': 'Passeur vaincu', 'boss-5': 'Sentinelle vaincue', 'boss-6': 'Seigneur des Ombres vaincu',
   'tense-master': 'Premier temps maîtrisé',
-  'words-25': '25 mots retenus'
+  'words-25': '25 mots retenus',
+  'carnet-100': 'Carnet : 100 mots notés', 'carnet-200': 'Carnet : 200 mots notés', 'carnet-300': 'Carnet : 300 mots notés'
 };
 
 /* ---------- Direction artistique : illustrations du jeu (dossier img/) ---------- */
@@ -300,6 +301,8 @@ export const DIALOGUE_ART = {
 };
 /* Les boss partagent l’illustration de l’Ombre ; chacun a sa teinte */
 export const BOSS_HUE = { 1: 0, 2: 40, 3: 200, 4: 120, 5: 280, 6: 330 };
+/* Une illustration par boss (la teinte BOSS_HUE ne sert plus que de secours) */
+export const BOSS_ART = { 1: 'img/boss-1.webp', 2: 'img/boss-2.webp', 3: 'img/boss-3.webp', 4: 'img/boss-4.webp', 5: 'img/boss-5.webp', 6: 'img/boss-6.webp' };
 
 /* ---------- Exercices de traduction (français → anglais), corrigés avec une règle et un exemple ---------- */
 const tr = (id, diff, fr, answers, explain, tags) => ({ id, type: 'type', skill: 'grammar', diff, tags: ['traduction', ...tags], prompt: 'Traduis en anglais.', text: '« ' + fr + ' »', answer: answers, explain });
