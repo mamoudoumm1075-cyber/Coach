@@ -1,7 +1,7 @@
 /* Lingua Quest : état, sauvegarde, navigation et écrans. */
 import { ctx } from './ctx.js';
 import * as L from './logic.js';
-import { esc, icon, heroMedal, heroPortrait, bar, toast, pl } from './ui.js';
+import { esc, icon, heroMedal, heroPortrait, bar, toast, pl, gauge } from './ui.js';
 import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
@@ -9,7 +9,7 @@ import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer
 import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
-import { VOCAB_BY_ID, PREP_ITEMS } from '../data/codex.js';
+import { VOCAB_BY_ID, PREP_ITEMS, CATEGORIES } from '../data/codex.js';
 
 /* ---------- Sauvegarde (jamais d’écrasement d’une donnée illisible) ---------- */
 const KEY = 'lingua-quest-v1', KEY_BAD = 'lingua-quest-illisible';
@@ -276,9 +276,10 @@ function tagLabel(t) {
   if (TENSE_BY_ID[t]) return TENSE_BY_ID[t].name;
   const m = t.match(/^toeic-p(\d)$/); if (m) return PARTS[m[1]].name;
   const c = t.match(/^ch(\d)$/); if (c) return 'Chapitre ' + c[1];
+  if (t === 'metier') return 'Vocabulaire de ton métier';
   return t;
 }
-function tagLink(t) { return TENSE_BY_ID[t] ? `#/tense/${t}` : /^toeic/.test(t) ? '#/toeic' : '#/review'; }
+function tagLink(t) { return TENSE_BY_ID[t] ? `#/tense/${t}` : /^toeic/.test(t) ? '#/toeic' : t === 'metier' ? '#/metier' : '#/review'; }
 
 /* ---------- Écrans ---------- */
 const V = {};
@@ -353,6 +354,35 @@ function hud(s) {
   </header>`;
 }
 
+/* ---------- Jauges : prêt pour le TOEIC, niveau de discussion ---------- */
+function gaugesCardHTML(s) {
+  const r = L.toeicReadiness(s), t = L.talkLevel(s, TENSES.length);
+  return `<section class="card gauges"><div class="card-head"><h3>Tes jauges</h3></div><div class="grid2">
+    <a class="gauge-link" href="#/toeic">${gauge(r.pct, r.pct + ' %', 'Prêt pour le TOEIC', r.ready ? 'green' : 'blue')}<span>${esc(r.label)}</span></a>
+    <a class="gauge-link" href="#/oral">${gauge(t.score, t.cefr, 'Niveau de discussion', 'violet')}<span>${esc(t.name)}</span></a></div>
+    <p class="hint">Indicateurs calculés sur tes résultats dans l’appli, pas des scores officiels.</p></section>`;
+}
+function readinessHTML(s) {
+  const r = L.toeicReadiness(s), seg = [700, 800, 850, 900];
+  return `<section class="card readiness"><h3>Prêt pour le TOEIC ?</h3>
+    <div class="gauge-big">${gauge(r.pct, r.pct + ' %', r.label, r.ready ? 'green' : 'blue')}</div>
+    <p class="label">Ton objectif</p><div class="seg">${seg.map(g => `<button class="${+s.settings.toeicGoal === g ? 'on' : ''}" data-act="set" data-k="toeicGoal" data-v="${g}">${g}</button>`).join('')}</div>
+    <p class="hint">Pour viser ${esc(String(s.settings.toeicGoal))}, l’appli te demande environ ${r.target} % de bonnes réponses dans chaque partie (repère indicatif). Ta réussite pondérée comme le vrai test : <b>${r.level} %</b>.</p>
+    ${r.ready ? `<p class="ok-t">${icon('check', 16)} Tous les feux sont au vert : tes résultats ici sont au niveau de ton objectif. Inscris-toi et garde le rythme jusqu’au jour J.</p>`
+      : `<p class="label">Ce qui te manque</p><ul class="todo">${r.todo.slice(0, 5).map(x => `<li>${x.part ? `<b>${esc(PARTS[x.part].name)}</b> : ` : ''}${esc(x.text)}</li>`).join('')}</ul>`}
+    <p class="hint">« Prêt » veut dire : ta réussite atteint ton objectif, chaque partie est au moins à ${r.target - 10} %, et tu as réussi 2 tests blancs à ${r.target} %. Ce n’est pas un score TOEIC officiel.</p></section>`;
+}
+function talkHTML(s) {
+  const t = L.talkLevel(s, TENSES.length);
+  return `<section class="card talk"><h3>Ton niveau de discussion</h3>
+    <div class="gauge-big">${gauge(t.score, t.cefr + ' · ' + t.name, t.score + ' / 100', 'violet')}</div>
+    <p>${esc(t.desc)}</p>
+    ${t.next ? `<p class="hint">Prochain palier : <b>${esc(t.next.name)}</b> à ${t.next.at} points.</p>` : ''}
+    ${t.parts.map(x => `<div class="row"><span>${esc(x.label)}</span><b>${Math.round(x.v * 100)} %</b></div>${bar(Math.round(x.v * 100), 'violet')}`).join('')}
+    <p class="label">Pour monter</p><ul class="todo">${t.tips.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <p class="hint">Repère inspiré de l’échelle européenne (A1 à C1), calculé sur ta pratique dans l’appli. Il ne remplace pas une certification et ne note pas ton accent.</p></section>`;
+}
+
 V.home = () => {
   const s = S(), ch = C.currentChapter(s), nm = nextMission(), p = heroPortrait(s.hero);
   const due = L.srsDue(s).length, done = dailyDone();
@@ -389,6 +419,7 @@ V.home = () => {
       <div class="stat"><b>${weekMins}</b><small>min cette semaine</small></div>
     </div>
     <p class="hint">La série mesure ta régularité, pas ton niveau d’anglais. 1 jour manqué par semaine est couvert par un joker.</p>
+    ${gaugesCardHTML(s)}
     <section class="card"><div class="card-head"><h3>Compétences réelles</h3><a href="#/skills">Détails</a></div>${L.SKILLS.map(skillMini).join('')}</section>
     <section class="grid2">
       <a class="card tile" href="#/toeic"><small>TOEIC · réussite</small><b>Écoute ${acc('listening')}</b><b>Lecture ${acc('reading')}</b></a>
@@ -489,6 +520,7 @@ V.learn = () => {
     ${tile('review', 'repeat', 'Révisions', pl(due, 'élément dû', 'éléments dus'))}
     ${tile('oral', 'mic', 'Entraînement oral', 'Écouter, répéter, répondre')}
     ${tile('toeic', 'target', 'Progression TOEIC', 'Méthode, tests blancs, 7 parties')}
+    ${tile('metier', 'tree', 'Mon métier en anglais', 'CVC, VMC, BTP, data center')}
     ${tile('carnet', 'codex', 'Mon carnet', pl(S().carnet.length, 'mot noté', 'mots notés'))}
     ${tile('skills', 'tree', 'Arbre de compétences', '5 branches')}
     ${tile('stats', 'chart', 'Résultats et statistiques', 'Ton suivi')}
@@ -611,6 +643,7 @@ V.toeic = () => {
   const s = S(), w = L.weakestPart(s, PART_IDS);
   return `<section class="page"><h1 class="display sm">Progression TOEIC</h1>
     <div class="notice">Les questions sont des entraînements originaux au format du TOEIC Listening & Reading, pas des questions officielles. Lingua Quest ne calcule pas de score TOEIC : seul le test officiel en donne un. Tu vois ici ta réussite réelle par partie.</div>
+    ${readinessHTML(s)}
     ${examHTML(s)}
     ${planHTML(s)}
     <section class="card">${PART_IDS.map(p => { const st = s.toeic.parts[p]; return `<div class="part-row"><div><b>${esc(PARTS[p].name)}</b><small>${st ? st.correct + '/' + st.attempts + ' · récent ' + L.accuracy(st.recent) + ' %' : 'Pas encore travaillée'}</small>${bar(st ? L.accuracy(st.recent) : 0, PARTS[p].skill === 'listening' ? 'blue' : 'violet')}</div><button class="btn ghost sm" data-act="toeicPart" data-p="${p}">S’entraîner</button></div>`; }).join('')}</section>
@@ -620,6 +653,16 @@ V.toeic = () => {
       <button class="btn ghost" data-act="toeicTest" data-k="mini">Mini-test · ${TESTS.mini.info}</button>
       <p class="hint">Un vrai TOEIC fait 200 questions en 2 heures. Les tests d’ici sont plus courts : pour la dernière semaine, ajoute un test officiel d’entraînement.</p></article>
     <section class="card"><h3>Historique des tests</h3>${s.toeic.tests.slice(-8).reverse().map(t => { const lp = L.mostLostPart(t.parts); return `<div class="row"><span>${esc(t.d)} · ${t.kind === 'blanc' ? 'Test blanc' : t.kind === 'mini' ? 'Mini-test' : 'Boss'}</span><b>${t.ok}/${t.total}</b><small>${lp ? 'à travailler : partie ' + lp.part : Math.floor(t.seconds / 60) + ' min'}</small></div>`; }).join('') || '<p class="muted">Aucun test pour l’instant.</p>'}</section>
+  </section>`;
+};
+
+V.metier = () => {
+  const s = S();
+  return `<section class="page"><h1 class="display sm">Mon métier en anglais</h1>
+    <p class="lead">Le vocabulaire de ton terrain : CVC, VMC, chantier et data center. Chaque séance t’apprend jusqu’à 6 nouveaux mots puis te teste dans les deux sens.</p>
+    ${C.METIER_CATS.map(cat => { const words = C.metierWords(cat), seen = words.filter(v => s.srs['v:' + v.id]).length; return `<section class="card"><div class="card-head"><h3>${esc(CATEGORIES[cat].replace('Métier · ', ''))}</h3><small>${seen}/${words.length} mots vus</small></div>${bar(Math.round((seen / words.length) * 100), 'violet')}
+      <button class="btn primary" data-act="metierRun" data-c="${cat}">${seen < words.length ? 'Apprendre et s’entraîner' : 'S’entraîner'}</button>
+      <details class="alt"><summary>Voir les ${words.length} mots</summary><div class="list">${words.map(v => `<button class="list-item" data-act="word" data-id="${v.id}"><span class="en">${esc(v.en)}</span><small>${esc(v.senses[0][0])}</small></button>`).join('')}</div></details></section>`; }).join('')}
   </section>`;
 };
 
@@ -650,6 +693,7 @@ function voiceStatusRows() {
 V.oral = () => {
   const tts = ttsAvailable(), stt = sttAvailable();
   return `<section class="page"><h1 class="display sm">Entraînement oral</h1>
+    ${talkHTML(S())}
     <section class="card"><h3>Sur cet appareil</h3>
       ${voiceStatusRows()}
       <div class="row"><span>Écoute des phrases</span><b class="${tts ? 'ok-t' : 'ko-t'}">${tts ? (voiceMode() === 'elevenlabs' ? 'Voix ElevenLabs' : 'Voix du navigateur' + (voiceCount() ? ' · ' + pl(voiceCount(), 'voix anglaise', 'voix anglaises') : '')) : 'Indisponible'}</b></div>
@@ -706,7 +750,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -795,6 +839,7 @@ function onAction(act, b) {
       if (!c || !confirm('Retirer « ' + c.en + ' » de ton carnet ?')) return;
       L.carnetRemove(s, c.id); save(); return render();
     }
+    case 'metierRun': return simpleRun(C.metierCards(s, b.dataset.c), 'Métier · ' + CATEGORIES[b.dataset.c].replace('Métier · ', ''), 'metier');
     case 'carnetRun': {
       const due = new Set(L.srsDue(s).filter(id => id.startsWith('c:')));
       const rest = L.shuffle(s.carnet.map(c => 'c:' + c.id).filter(id => !due.has(id)));
@@ -808,7 +853,7 @@ function onAction(act, b) {
     }
     case 'set': {
       const k = b.dataset.k; let v = b.dataset.v;
-      if (k === 'rate') v = +v; if (k === 'weeklyGoal') v = +v; if (k === 'sound') v = v === 'true';
+      if (k === 'rate') v = +v; if (k === 'weeklyGoal') v = +v; if (k === 'toeicGoal') v = +v; if (k === 'sound') v = v === 'true';
       s.settings[k] = v; save(); applyTheme(); return render();
     }
     case 'voiceSave': {

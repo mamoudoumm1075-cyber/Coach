@@ -61,7 +61,7 @@ export function newState() {
     inventory: { owned: [], equipped: {} },
     badges: [],
     carnet: [],
-    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '' }
+    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '', toeicGoal: 850 }
   };
 }
 
@@ -189,6 +189,66 @@ export function srsDue(S, d = today(), limit = 99) {
     .slice(0, limit)
     .map(([id]) => id);
 }
+/* ---------- Jauge « Prêt pour le TOEIC » ----------
+   Ce n’est PAS un score TOEIC : c’est ta réussite dans l’appli, pondérée comme le vrai test
+   (nombre de questions par partie sur 200), comparée au taux de réussite que tu vises. */
+export const PART_WEIGHT = { 1: 6, 2: 25, 3: 39, 4: 30, 5: 30, 6: 16, 7: 54 };
+export const MIN_ANSWERS = 8;
+/* Repère indicatif : viser 850 ≈ réussir environ 85 % des questions partout */
+export const goalRate = goal => Math.min(95, Math.max(50, Math.round((+goal || 850) / 10)));
+export function toeicReadiness(S) {
+  const target = goalRate(S.settings.toeicGoal);
+  const parts = Object.keys(PART_WEIGHT).map(Number).map(p => {
+    const st = S.toeic.parts[p] || {};
+    const n = st.attempts || 0, acc = accuracy(st.recent);
+    return { part: p, n, acc, enough: n >= MIN_ANSWERS && acc !== null };
+  });
+  let level = 0;
+  for (const x of parts) if (x.enough) level += x.acc * PART_WEIGHT[x.part] / 200;
+  level = Math.round(level);
+  const blancs = S.toeic.tests.filter(t => t.kind === 'blanc' && t.total).slice(-3).map(t => Math.round((t.ok / t.total) * 100));
+  const goodBlancs = blancs.filter(v => v >= target).length;
+  const ready = level >= target && goodBlancs >= 2 && parts.every(x => x.enough && x.acc >= target - 10);
+  const pct = ready ? 100 : Math.min(99, Math.round((level / target) * 100));
+  const todo = [];
+  for (const x of parts.slice().sort((a, b) => (a.enough ? a.acc : -1) - (b.enough ? b.acc : -1))) {
+    if (!x.enough) todo.push({ part: x.part, text: `pas assez travaillée (${x.n}/${MIN_ANSWERS} réponses)` });
+    else if (x.acc < target) todo.push({ part: x.part, text: `${x.acc} % de réussite, vise ${target} %` });
+  }
+  if (goodBlancs < 2) todo.push({ part: 0, text: `Réussir 2 tests blancs à ${target} % ou plus (${goodBlancs}/2 sur les 3 derniers)` });
+  const label = ready ? 'Prêt pour ton objectif' : pct >= 90 ? 'Presque prêt' : pct >= 60 ? 'En bonne route' : pct >= 25 ? 'En préparation' : 'Début de préparation';
+  return { pct, level, target, ready, parts, blancs, todo, label };
+}
+
+/* ---------- Jauge « Niveau de discussion » ----------
+   Indicateur maison (pas une certification) : réussite à l’oral, volume d’oral, temps maîtrisés,
+   mots retenus et réflexes. Les niveaux reprennent l’esprit de l’échelle européenne (A1 à C1). */
+export const TALK_LEVELS = [
+  [0, 'Débutant', 'A1', 'Tu reconnais des mots et des phrases toutes faites.'],
+  [20, 'Survie', 'A2', 'Tu te présentes, tu commandes, tu demandes ton chemin.'],
+  [40, 'Conversation simple', 'B1', 'Tu racontes ta journée, ton passé et tes projets avec des phrases simples.'],
+  [60, 'À l’aise', 'B2', 'Tu tiens une discussion sur des sujets courants et pros sans bloquer.'],
+  [80, 'Fluide', 'C1', 'Tu réagis vite, avec les bons temps et un vocabulaire riche.']
+];
+export function talkLevel(S, tenseCount = 9) {
+  const sp = S.skills.speaking || { attempts: 0, recent: [] }, rf = S.skills.reflexes || { attempts: 0, recent: [] };
+  const rate = (sk, min) => (sk.attempts >= 5 ? (accuracy(sk.recent) || 0) / 100 : 0) * Math.min(1, sk.attempts / min);
+  const parts = [
+    { id: 'oral', label: 'Réussite à l’oral', w: 30, v: rate(sp, 20), tip: 'Fais des séances orales et réponds au micro plutôt qu’à l’écrit.' },
+    { id: 'volume', label: 'Pratique de l’oral', w: 20, v: Math.min(1, sp.attempts / 150), tip: 'Parle tous les jours : chaque exercice oral compte.' },
+    { id: 'temps', label: 'Temps maîtrisés', w: 20, v: Object.values(S.tenses).filter(t => t && t.mastered).length / tenseCount, tip: 'Valide la maîtrise des temps dans l’Académie.' },
+    { id: 'mots', label: 'Mots retenus', w: 15, v: Math.min(1, srsRetained(S) / 300), tip: 'Fais tes révisions et remplis ton carnet.' },
+    { id: 'reflexes', label: 'Réflexes en anglais', w: 15, v: rate(rf, 20), tip: 'Joue les dialogues et les quêtes de construction de phrases.' }
+  ];
+  const score = Math.round(parts.reduce((a, x) => a + x.w * x.v, 0));
+  let i = 0;
+  while (i + 1 < TALK_LEVELS.length && score >= TALK_LEVELS[i + 1][0]) i++;
+  const [, name, cefr, desc] = TALK_LEVELS[i];
+  const next = TALK_LEVELS[i + 1] || null;
+  const tips = parts.slice().sort((a, b) => a.v - b.v).slice(0, 2).map(x => x.tip);
+  return { score, name, cefr, desc, next: next ? { name: next[1], at: next[0] } : null, parts, tips };
+}
+
 /* ---------- Plan d’examen : sprint de 4 semaines avant la date du TOEIC ---------- */
 export function examPlan(examDate, d = today()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(examDate || '')) return null;

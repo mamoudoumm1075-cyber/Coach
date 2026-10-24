@@ -63,6 +63,12 @@ export function portrait(ch, size = 44) {
 
 /* ---------- Messages ---------- */
 let toastTimer;
+/* Jauge en demi-cercle : pct de 0 à 100 */
+export function gauge(pct, big, small, tone = 'violet') {
+  const v = Math.max(0, Math.min(100, +pct || 0)), len = 163.4;
+  return `<div class="gauge ${tone}" role="img" aria-label="${esc(big)} ${esc(small)}"><svg viewBox="0 0 120 68" aria-hidden="true"><path class="g-bg" d="M8 62 A52 52 0 0 1 112 62"/><path class="g-fg" d="M8 62 A52 52 0 0 1 112 62" style="stroke-dasharray:${len};stroke-dashoffset:${(len * (1 - v / 100)).toFixed(1)}"/></svg><b>${esc(big)}</b><small>${esc(small)}</small></div>`;
+}
+
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }

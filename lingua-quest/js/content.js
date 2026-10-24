@@ -8,6 +8,31 @@ import { shuffle, srsDue, srsAdd, weakestPart, chapterUnlocked, today } from './
 export const ITEMS = Object.fromEntries([...TENSE_ITEMS, ...TOEIC, ...WORLD_ITEMS, ...PLACEMENT].map(i => [i.id, i]));
 export const IRR_BY_ID = Object.fromEntries(IRREGULAR.map(r => [r.id, r]));
 
+/* ---------- Vocabulaire de ton métier (CVC, VMC, BTP, data center) ---------- */
+export const METIER_CATS = ['cvc', 'btp', 'datacenter'];
+export function metierWords(cat) { return VOCAB.filter(v => (cat ? v.cat === cat : METIER_CATS.includes(v.cat))); }
+/* Quiz dans les deux sens (anglais → français, français → anglais), options tirées du même domaine */
+export function metierQuiz(words, pool, n = 6) {
+  return shuffle(words).slice(0, n).map((v, k) => {
+    const others = shuffle(pool.filter(o => o !== v && o.senses[0][0] !== v.senses[0][0])).slice(0, 3);
+    const toFr = k % 2 === 0, fr = x => x.senses[0][0];
+    return {
+      id: 'm-' + v.id + (toFr ? '-fr' : '-en'), type: 'qcm', skill: 'reading', tags: ['metier'], diff: 1,
+      prompt: toFr ? `Que veut dire « ${v.en} » ?` : `Comment dit-on « ${fr(v)} » en anglais ?`,
+      text: toFr ? v.ex : '', options: toFr ? [fr(v), ...others.map(fr)] : [v.en, ...others.map(o => o.en)], answer: 0,
+      explain: `${v.en} = ${fr(v)}. Exemple : ${v.ex} (${v.exFr})`
+    };
+  });
+}
+/* Une séance : jusqu’à 6 mots nouveaux du domaine, puis un quiz qui mélange nouveaux et anciens */
+export function metierCards(S, cat) {
+  const pool = metierWords(cat);
+  const fresh = pool.filter(v => !S.srs['v:' + v.id]).slice(0, 6);
+  const known = shuffle(pool.filter(v => S.srs['v:' + v.id]));
+  const quizWords = [...fresh, ...known].slice(0, 8);
+  return [...fresh.map(v => ({ kind: 'learn', id: v.id })), ...metierQuiz(quizWords, pool, 8).map(item => ({ kind: 'item', item }))];
+}
+
 export function allQuests(S) {
   const list = [];
   for (const ch of CHAPTERS) for (const q of ch.quests) list.push({ ...q, ch: ch.n });
