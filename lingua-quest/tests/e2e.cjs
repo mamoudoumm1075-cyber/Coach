@@ -80,17 +80,17 @@ const noOverflow = async (page, label) => {
   const shot = name => page.screenshot({ path: path.join(OUT, name + '.png') });
 
   await page.goto(BASE);
-  await page.waitForSelector('.welcome');
+  await page.waitForSelector('.title-screen');
   await shot('01-bienvenue');
   await noOverflow(page, 'bienvenue');
 
   await page.click('text=Commencer l’aventure');
-  await page.waitForSelector('.create');
+  await page.waitForSelector('.create-screen');
   await page.fill('#heroName', 'Alex');
-  await page.click('[data-act="draft"][data-k="hair"][data-v="2"]');
-  await page.click('[data-act="draft"][data-k="skin"][data-v="4"]');
-  await page.click('[data-act="draft"][data-k="cls"][data-v="stratege"]');
-  check((await page.inputValue('#heroName')) === 'Alex', 'le nom reste saisi après un choix d’apparence');
+  await page.click('[data-act="draft"][data-v="explorateur"]');
+  await page.click('[data-act="draft"][data-v="heros-toi"]');
+  check((await page.inputValue('#heroName')) === 'Alex', 'le nom reste saisi après un choix de héros');
+  check((await page.textContent('.class-name')) === 'Combattant', 'la classe suit le héros choisi');
   await shot('02-creation');
   await noOverflow(page, 'création');
   await page.click('[data-act="createDone"]');
@@ -103,16 +103,17 @@ const noOverflow = async (page, label) => {
   await page.waitForSelector('text=Tes résultats');
   await shot('03-resultats-evaluation');
   await page.click('text=C’est parti');
-  await page.waitForSelector('.home');
+  await page.waitForSelector('.home-screen');
   await shot('04-accueil');
   await noOverflow(page, 'accueil');
 
   await page.click('.nav a[href="#/world"]');
-  await page.waitForSelector('.map');
+  await page.waitForSelector('.city-map');
+  await page.waitForTimeout(300);
   await shot('05-carte');
   const locked = await page.locator('.node.locked').count();
   check(locked === 5, 'chapitres 2 à 6 verrouillés au départ (' + locked + ')');
-  await page.click('.node >> nth=0');
+  await page.click('.marker.current');
   await page.waitForSelector('.boss-card');
   await shot('06-chapitre-1');
 
@@ -173,7 +174,7 @@ const noOverflow = async (page, label) => {
   check(open2, 'chapitre 2 débloqué après le boss');
 
   /* Écrans principaux */
-  for (const [r, name, sel] of [['academy', '17-academie', '.list'], ['tense/present-perfect', '18-fiche-temps', '.tense'], ['codex', '19-codex', '.tabs'], ['skills', '20-competences', '.tree'], ['hero', '21-heros', '.big-av'], ['inventory', '22-inventaire', '.inv'], ['stats', '23-stats', '.chart'], ['toeic', '24-toeic', '.part-row'], ['oral', '25-oral', '.card'], ['review', '26-revisions', '.card'], ['quests', '27-journal', '.quest'], ['learn', '28-apprendre', '.tile'], ['profile', '29-profil', '.seg']]) {
+  for (const [r, name, sel] of [['academy', '17-academie', '.list'], ['tense/present-perfect', '18-fiche-temps', '.tense'], ['codex', '19-codex', '.tabs'], ['skills', '20-competences', '.tree'], ['hero', '21-heros', '.hero-screen'], ['inventory', '22-inventaire', '.inv'], ['dialogues', '33-dialogues', '.district'], ['stats', '23-stats', '.chart'], ['toeic', '24-toeic', '.part-row'], ['oral', '25-oral', '.card'], ['review', '26-revisions', '.card'], ['quests', '27-journal', '.quest'], ['learn', '28-apprendre', '.tile'], ['profile', '29-profil', '.seg']]) {
     await page.goto(BASE + '#/' + r);
     await page.waitForSelector(sel);
     await shot(name);
@@ -204,13 +205,13 @@ const noOverflow = async (page, label) => {
   await page.goto(BASE + '#/profile');
   await page.click('[data-act="set"][data-k="theme"][data-v="light"]');
   await page.goto(BASE + '#/home');
-  await page.waitForSelector('.home');
+  await page.waitForSelector('.home-screen');
   await shot('32-accueil-clair');
 
   /* Données illisibles : jamais écrasées */
   await page.evaluate(() => localStorage.setItem('lingua-quest-v1', '{cassé'));
   await page.reload();
-  await page.waitForSelector('.welcome');
+  await page.waitForSelector('.title-screen');
   const kept = await page.evaluate(() => [localStorage.getItem('lingua-quest-v1'), localStorage.getItem('lingua-quest-illisible')]);
   check(kept[0] === '{cassé' && kept[1] === '{cassé', 'données illisibles conservées, pas écrasées');
 
@@ -222,7 +223,7 @@ const noOverflow = async (page, label) => {
   await page.waitForTimeout(500);
   await ctxB.setOffline(true);
   await page.reload();
-  await page.waitForSelector('.welcome', { timeout: 5000 }).then(() => check(true, 'l’appli s’ouvre hors ligne')).catch(() => check(false, 'l’appli s’ouvre hors ligne'));
+  await page.waitForSelector('.title-screen', { timeout: 5000 }).then(() => check(true, 'l’appli s’ouvre hors ligne')).catch(() => check(false, 'l’appli s’ouvre hors ligne'));
   await ctxB.setOffline(false);
 
   await browser.close();

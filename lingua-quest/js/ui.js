@@ -1,5 +1,5 @@
 /* Petits outils d’interface : échappement, icônes, avatar, messages. */
-import { CLASS_INFO } from '../data/world.js';
+import { CLASS_INFO, PORTRAITS, PORTRAIT_BY_ID } from '../data/world.js';
 
 export const $ = sel => document.querySelector(sel);
 export function esc(s) {
@@ -42,58 +42,18 @@ export function icon(name, size = 22, extra = '') {
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${P[name] || ''}</svg>`;
 }
 
-/* ---------- Avatar ---------- */
-export const SKINS = ['#F6D7C3', '#E9B892', '#C98E62', '#A0663F', '#734328', '#4A2A19'];
-export const HAIR_COLORS = ['#1B1B1F', '#4B2E1E', '#8A5A2B', '#D9A55B', '#B8423A', '#9C8CF0'];
-export const HAIR_STYLES = ['Court', 'Long', 'Bouclé', 'Chignon', 'Rasé', 'Tresses'];
-export const OUTFITS = { 'outfit-start': 'Tenue de départ', 'outfit-street': 'Veste urbaine', 'outfit-agent': 'Manteau d’agent', 'outfit-traveller': 'Tenue de voyageur' };
-export const BUILDS = ['Masculin', 'Féminin', 'Neutre'];
-export const FACES = ['Doux', 'Déterminé', 'Souriant'];
-
-function hairPath(style, c) {
-  switch (style) {
-    case 0: return `<path d="M70 78c0-26 18-40 30-40s30 14 30 40c-6-12-18-18-30-18s-24 6-30 18z" fill="${c}"/>`;
-    case 1: return `<path d="M66 82c0-30 18-46 34-46s34 16 34 46v52c-6-2-10-8-10-16V86c-8-10-16-14-24-14s-16 4-24 14v32c0 8-4 14-10 16z" fill="${c}"/>`;
-    case 2: return `<g fill="${c}"><circle cx="76" cy="66" r="13"/><circle cx="92" cy="54" r="14"/><circle cx="110" cy="54" r="14"/><circle cx="125" cy="66" r="13"/><circle cx="70" cy="82" r="10"/><circle cx="130" cy="82" r="10"/></g>`;
-    case 3: return `<g fill="${c}"><circle cx="100" cy="36" r="14"/><path d="M70 80c0-24 16-38 30-38s30 14 30 38c-8-10-18-14-30-14s-22 4-30 14z"/></g>`;
-    case 4: return `<path d="M72 74c2-20 16-32 28-32s26 12 28 32c-8-6-18-9-28-9s-20 3-28 9z" fill="${c}" opacity=".55"/>`;
-    default: return `<g fill="${c}"><path d="M70 80c0-26 16-40 30-40s30 14 30 40c-8-10-18-14-30-14s-22 4-30 14z"/><rect x="62" y="80" width="8" height="54" rx="4"/><rect x="130" y="80" width="8" height="54" rx="4"/></g>`;
-  }
+/* ---------- Portrait du héros (illustrations de img/) ---------- */
+export function heroPortrait(hero, cosmeticsList = []) {
+  return PORTRAIT_BY_ID[hero && hero.portrait] || PORTRAITS.find(p => p.cls === (hero && hero.cls)) || PORTRAITS[0];
 }
-export function avatarSVG(hero, equipped = {}, size = 160, cosmeticsList = []) {
-  if (!hero) return '';
-  const cls = CLASS_INFO[hero.cls] || CLASS_INFO.combattant;
-  const skin = SKINS[hero.skin] || SKINS[2];
-  const hairC = HAIR_COLORS[hero.hairColor] || HAIR_COLORS[0];
-  const outfit = equipped.outfit || 'outfit-start';
+/* Médaillon rond : visage + aura et compagnon équipés (purement visuels) */
+export function heroMedal(hero, equipped = {}, size = 64, cosmeticsList = []) {
+  const p = heroPortrait(hero);
   const aura = cosmeticsList.find(c => c.id === equipped.aura);
   const form = equipped.form === 'form-lantern';
-  const shoulders = hero.build === 1 ? 'M54 196c4-34 22-50 46-50s42 16 46 50z' : hero.build === 0 ? 'M46 196c4-36 26-52 54-52s50 16 54 52z' : 'M50 196c4-35 24-51 50-51s46 16 50 51z';
-  const coat = { 'outfit-start': '#3A3550', 'outfit-street': cls.color, 'outfit-agent': '#1E1B2E', 'outfit-traveller': '#8A6A2B' }[outfit] || '#3A3550';
-  const trim = outfit === 'outfit-agent' ? cls.color : '#F8F4EF';
-  const brows = hero.face === 1 ? '<path d="M84 92l10 3M116 92l-10 3" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/>' : '<path d="M84 93h10M106 93h10" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/>';
-  const mouth = hero.face === 2 ? '<path d="M92 116c4 5 12 5 16 0" stroke="#1E1B2E" stroke-width="3" fill="none" stroke-linecap="round"/>' : '<path d="M94 117h12" stroke="#1E1B2E" stroke-width="3" stroke-linecap="round"/>';
-  const comp = equipped.companion === 'comp-fox'
-    ? '<g transform="translate(150 150)"><path d="M0 30 6 6l10 12 10-12 6 24c0 8-8 14-16 14S0 38 0 30z" fill="#FF6B9A" stroke="#F8F4EF" stroke-width="2"/><circle cx="11" cy="28" r="2" fill="#1E1B2E"/><circle cx="21" cy="28" r="2" fill="#1E1B2E"/></g>'
-    : equipped.companion === 'comp-drone'
-      ? '<g transform="translate(150 40)"><rect x="4" y="10" width="26" height="12" rx="6" fill="#2F80ED" stroke="#F8F4EF" stroke-width="2"/><path d="M0 8h12M22 8h12" stroke="#F8F4EF" stroke-width="2"/><circle cx="17" cy="16" r="3" fill="#FFD166"/></g>'
-      : '';
-  return `<svg class="avatar" width="${size}" height="${size}" viewBox="0 0 200 200" role="img" aria-label="Ton héros">
-    ${aura || form ? `<circle cx="100" cy="104" r="92" fill="none" stroke="${form ? '#FFD166' : aura.color}" stroke-width="5" opacity=".9"/><circle cx="100" cy="104" r="80" fill="${form ? '#FFD166' : aura.color}" opacity=".14"/>` : ''}
-    <path d="${shoulders}" fill="${coat}"/>
-    <path d="M86 150l14 22 14-22" fill="none" stroke="${trim}" stroke-width="4" stroke-linejoin="round"/>
-    <rect x="90" y="124" width="20" height="22" rx="8" fill="${skin}"/>
-    ${hero.hair === 1 || hero.hair === 5 ? hairPath(hero.hair, hairC) : ''}
-    <ellipse cx="100" cy="96" rx="30" ry="34" fill="${skin}"/>
-    ${hero.hair === 1 || hero.hair === 5 ? '' : hairPath(hero.hair, hairC)}
-    ${hero.hair === 1 ? '<path d="M70 80c6-12 18-18 30-18s24 6 30 18c-8-6-18-8-30-8s-22 2-30 8z" fill="' + hairC + '"/>' : ''}
-    ${hero.hair === 5 ? '<path d="M70 80c0-26 16-40 30-40s30 14 30 40c-8-10-18-14-30-14s-22 4-30 14z" fill="' + hairC + '"/>' : ''}
-    ${brows}
-    <circle cx="89" cy="101" r="3.6" fill="#1E1B2E"/><circle cx="111" cy="101" r="3.6" fill="#1E1B2E"/>
-    ${mouth}
-    ${form ? '<path d="M100 150v24" stroke="#FFD166" stroke-width="5" stroke-linecap="round"/><circle cx="100" cy="182" r="8" fill="#FFD166"/>' : ''}
-    ${comp}
-  </svg>`;
+  const ring = form ? 'conic-gradient(#FFD166,#FF6B9A,#A894FF,#FFD166)' : aura ? aura.color : (CLASS_INFO[hero.cls] || {}).color || '#6C4CF1';
+  const comp = equipped.companion ? `<span class="medal-comp" title="${esc((cosmeticsList.find(c => c.id === equipped.companion) || {}).name || '')}">${icon(equipped.companion === 'comp-drone' ? 'target' : 'heart', 12)}</span>` : '';
+  return `<span class="medal ${aura || form ? 'aura' : ''}" style="--ring:${ring};width:${size}px;height:${size}px"><img src="${p.img}" alt="" style="object-position:${p.face}">${comp}</span>`;
 }
 
 /* Portrait des personnages du jeu (pastille + initiales) */

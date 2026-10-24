@@ -272,3 +272,46 @@ export const BADGES = {
   'tense-master': 'Premier temps maîtrisé',
   'words-25': '25 mots retenus'
 };
+
+/* ---------- Direction artistique : illustrations du jeu (dossier img/) ---------- */
+/* Portraits jouables par classe. Une seule illustration par portrait : l’apparence se choisit parmi ces héros. */
+export const PORTRAITS = [
+  { id: 'heros-toi', cls: 'combattant', name: 'Le Combattant', img: 'img/heros-toi.webp', face: '47% 7%', full: '50% 8%' },
+  { id: 'combattant', cls: 'combattant', name: 'La Combattante', img: 'img/combattant.webp', face: '50% 12%', full: '50% 18%' },
+  { id: 'stratege', cls: 'stratege', name: 'Le Stratège', img: 'img/stratege.webp', face: '50% 14%', full: '50% 24%' },
+  { id: 'explorateur', cls: 'explorateur', name: 'L’Exploratrice', img: 'img/explorateur.webp', face: '40% 9%', full: '38% 16%' },
+  { id: 'technicien', cls: 'technicien', name: 'Le Technicien', img: 'img/technicien.webp', face: '50% 6%', full: '42% 14%' }
+];
+export const PORTRAIT_BY_ID = Object.fromEntries(PORTRAITS.map(p => [p.id, p]));
+
+/* Décor de chaque chapitre, et position de son quartier sur la carte (en % de l’illustration img/carte.webp) */
+export const CHAPTER_ART = {
+  1: { img: 'img/titre.webp', pos: '50% 70%', x: 52, y: 80 },
+  2: { img: 'img/cafe.webp', pos: '50% 20%', x: 38, y: 62 },
+  3: { img: 'img/explorateur.webp', pos: '70% 40%', x: 46, y: 41 },
+  4: { img: 'img/technicien.webp', pos: '60% 30%', x: 76, y: 27 },
+  5: { img: 'img/stratege.webp', pos: '50% 30%', x: 51, y: 16 },
+  6: { img: 'img/boss.webp', pos: '50% 20%', x: 53, y: 5 }
+};
+/* Décor des dialogues */
+export const DIALOGUE_ART = {
+  'd1-intro': 'img/titre.webp', 'd1-day': 'img/titre.webp', 'd2-cafe': 'img/cafe.webp', 'd3-archives': 'img/explorateur.webp',
+  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss.webp'
+};
+/* Les boss partagent l’illustration de l’Ombre ; chacun a sa teinte */
+export const BOSS_HUE = { 1: 0, 2: 40, 3: 200, 4: 120, 5: 280, 6: 330 };
+
+/* ---------- Exercices de traduction (français → anglais), corrigés avec une règle et un exemple ---------- */
+const tr = (id, diff, fr, answers, explain, tags) => ({ id, type: 'type', skill: 'grammar', diff, tags: ['traduction', ...tags], prompt: 'Traduis en anglais.', text: '« ' + fr + ' »', answer: answers, explain });
+WORLD_ITEMS.push(
+  tr('tr1-1', 1, 'Je travaille dans un bureau.', ['I work in an office'], 'Règle : habitude ou fait = present simple, sujet + verbe. Exemple : She works in a shop.', ['present-simple']),
+  tr('tr1-2', 1, 'Elle ne parle pas anglais.', ["She doesn't speak English", 'She does not speak English'], 'Règle : négation au present simple = doesn’t + verbe à la base (speak, pas speaks). Exemple : He doesn’t eat meat.', ['present-simple']),
+  tr('tr1-3', 1, 'Où habites-tu ?', ['Where do you live'], 'Règle : question = mot interrogatif + do + sujet + verbe. Exemple : What do you do?', ['present-simple']),
+  tr('tr1-4', 2, 'Je suis en train de lire.', ["I'm reading", 'I am reading'], 'Règle : action en cours = be + verbe en -ing. Exemple : They are waiting.', ['present-continuous']),
+  tr('tr2-1', 1, 'Je voudrais un café, s’il vous plaît.', ["I would like a coffee please", "I'd like a coffee please", 'Could I have a coffee please', 'Can I have a coffee please'], 'Règle : demande polie = I would like / Could I have… Exemple : I’d like a tea, please.', ['ch2']),
+  tr('tr2-2', 2, 'Combien coûte ce billet ?', ['How much is this ticket', 'How much does this ticket cost'], 'Règle : prix = How much is… ? Exemple : How much is this jacket?', ['ch2']),
+  tr('tr2-3', 2, 'J’ai raté le bus hier.', ['I missed the bus yesterday', 'Yesterday I missed the bus'], 'Règle : action terminée avec un moment passé = past simple (-ed). Exemple : I called him yesterday.', ['past-simple']),
+  tr('tr2-4', 3, 'J’habite ici depuis deux ans.', ["I have lived here for two years", "I've lived here for two years", "I have been living here for two years", "I've been living here for two years"], 'Règle : situation qui dure encore = present perfect + for (durée). Le français dit « j’habite », l’anglais non. Exemple : She has worked here since 2020.', ['present-perfect'])
+);
+CHAPTERS[0].quests.push({ id: 'q1-6', cat: 'secondaire', title: 'Le carnet de Nora', objective: 'Traduire tes premières phrases sans aide.', mins: 5, skill: 'grammar', diff: 1, xp: 40, steps: [{ items: ['tr1-1', 'tr1-2', 'tr1-3', 'tr1-4'] }] });
+CHAPTERS[1].quests.push({ id: 'q2-5', cat: 'secondaire', title: 'Les messages du marché', objective: 'Traduire des phrases de la vie courante.', mins: 6, skill: 'grammar', diff: 2, xp: 50, steps: [{ items: ['tr2-1', 'tr2-2', 'tr2-3', 'tr2-4'] }] });

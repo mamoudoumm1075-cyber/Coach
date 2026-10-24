@@ -10,7 +10,7 @@ const say = t => `<button class="mini" data-act="say" data-t="${esc(t)}" aria-la
 function clickableEn(en) {
   return String(en).split(/(\s+)/).map(tok => {
     const m = tok.match(/^([“"(]*)([A-Za-z’'\-]+)([^A-Za-z’'\-]*)$/);
-    return m ? esc(m[1]) + `<button class="w" data-w="${esc(m[2])}">${esc(m[2])}</button>` + esc(m[3]) : esc(tok);
+    return m ? `<span class="wt">${esc(m[1])}<button class="w" data-w="${esc(m[2])}">${esc(m[2])}</button>${esc(m[3])}</span>` : esc(tok);
   }).join('');
 }
 

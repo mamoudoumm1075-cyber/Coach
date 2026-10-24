@@ -101,7 +101,9 @@ export function setSound(v) { soundOn = !!v; }
 export function sfx(name) {
   if (!soundOn || typeof Audio === 'undefined') return;
   try {
-    const a = cache[name] || (cache[name] = new Audio('sons/' + SFX[name] + '.mp3'));
+    /* version fichier unique : les sons sont intégrés au HTML (window.__LQ_SONS) */
+    const embedded = typeof window !== 'undefined' && window.__LQ_SONS && window.__LQ_SONS[SFX[name]];
+    const a = cache[name] || (cache[name] = new Audio(embedded || 'sons/' + SFX[name] + '.mp3'));
     a.currentTime = 0;
     a.volume = 0.6;
     a.play().catch(() => {});

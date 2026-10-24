@@ -1,12 +1,12 @@
 /* Lingua Quest : état, sauvegarde, navigation et écrans. */
 import { ctx } from './ctx.js';
 import * as L from './logic.js';
-import { esc, icon, avatarSVG, bar, toast, pl, SKINS, HAIR_COLORS, HAIR_STYLES, BUILDS, FACES } from './ui.js';
+import { esc, icon, heroMedal, heroPortrait, bar, toast, pl } from './ui.js';
 import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
 import { ttsAvailable, sttAvailable, setSound, speak, voiceCount } from './audio.js';
-import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS } from '../data/world.js';
+import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, DIALOGUES } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS } from '../data/toeic.js';
 import { VOCAB_BY_ID } from '../data/codex.js';
@@ -33,6 +33,8 @@ function save() {
 }
 
 ctx.S = load();
+/* anciennes sauvegardes : héros sans portrait illustré */
+if (ctx.S.hero && !PORTRAIT_BY_ID[ctx.S.hero.portrait]) ctx.S.hero.portrait = (PORTRAITS.find(p => p.cls === ctx.S.hero.cls) || PORTRAITS[0]).id;
 ctx.save = save;
 ctx.go = route => { location.hash = '#/' + route; };
 ctx.refresh = () => render();
@@ -83,7 +85,7 @@ function nextMission() {
 function runQuest(q) {
   const s = S();
   startRun(C.questCards(s, q), {
-    mode: 'quest', title: q.title, seconds: q.timed,
+    mode: 'quest', title: q.title, seconds: q.timed, bg: (CHAPTER_ART[q.ch] || CHAPTER_ART[1]).img,
     onDone(sum) {
       const st = s.quests[q.id] || (s.quests[q.id] = { done: false, best: 0, attempts: 0 });
       st.attempts++;
@@ -111,7 +113,7 @@ function runBoss(ch) {
   const c = s.chapters[ch.n] || (s.chapters[ch.n] = { bossBeaten: false, bossTries: 0 });
   c.bossTries++;
   startRun(cards, {
-    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, seconds: b.toeicTest ? b.toeicTest.seconds : 0,
+    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: 'img/boss.webp', hue: BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
     onDone(sum) {
       const win = sum.pct >= b.pass && sum.reason !== 'quit';
       const rewards = [];
@@ -255,39 +257,43 @@ function tagLink(t) { return TENSE_BY_ID[t] ? `#/tense/${t}` : /^toeic/.test(t) 
 /* ---------- Écrans ---------- */
 const V = {};
 
-V.welcome = () => `<section class="welcome">
-  <div class="hero-art" aria-hidden="true"><svg viewBox="0 0 360 220" width="100%"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A263B"/><stop offset="1" stop-color="#1E1B2E"/></linearGradient></defs><rect width="360" height="220" fill="url(#sky)"/><circle cx="270" cy="60" r="26" fill="#FFD166" opacity=".9"/><path d="M0 220V150h30v-40h26v40h18V90h34v60h20v-30h28v30h24V70h40v80h22v-50h30v50h26v-30h30v100z" fill="#120F1D"/><g fill="#FFD166" opacity=".8"><rect x="84" y="104" width="6" height="8"/><rect x="96" y="120" width="6" height="8"/><rect x="190" y="90" width="6" height="8"/><rect x="204" y="110" width="6" height="8"/><rect x="262" y="118" width="6" height="8"/></g><path d="M40 210c60-30 120-40 280-20" stroke="#6C4CF1" stroke-width="3" fill="none" opacity=".7"/><circle cx="180" cy="196" r="6" fill="#FF6B9A"/></svg></div>
-  <p class="kicker">Halden City</p>
-  <h1 class="display">Lingua Quest</h1>
-  <p class="lead">Dans cette ville, les Ombres volent le sens des mots. Chaque mot d’anglais que tu apprends devient une lumière. Prépare le TOEIC et apprends à parler, en jouant.</p>
-  ${lockSave ? `<div class="notice">Tes données enregistrées sont illisibles. Elles ont été mises de côté sans être effacées. Va dans Profil pour les exporter avant de recommencer.</div>` : ''}
-  <button class="btn primary big" data-act="go" data-r="create">Commencer l’aventure</button>
-  <label class="btn ghost file">J’ai une sauvegarde<input type="file" accept="application/json,.json" data-act="importFile" hidden></label>
-  <p class="hint">Tes données restent dans ce téléphone. Aucun compte n’est nécessaire.</p>
+V.welcome = () => `<section class="screen title-screen">
+  <div class="scene" style="--img:url(img/titre.webp);--pos:50% 60%"></div>
+  <div class="title-top">
+    <span class="sigil" aria-hidden="true">${icon('star', 16)}</span>
+    <h1 class="logo">LINGUA<br>QUEST</h1>
+    <p class="tagline">Les Ombres volent les mots. Reprends-les.</p>
+  </div>
+  <div class="title-bottom">
+    ${lockSave ? `<div class="notice">Tes données enregistrées sont illisibles. Elles ont été mises de côté sans être effacées. Va dans Profil pour les exporter avant de recommencer.</div>` : ''}
+    <p class="lead">Halden City, de nos jours. Chaque phrase d’anglais que tu comprends rallume une lumière. Prépare le TOEIC et apprends à parler, en jouant.</p>
+    <button class="btn primary big glow" data-act="go" data-r="create">Commencer l’aventure</button>
+    <label class="btn ghost file">J’ai une sauvegarde<input type="file" accept="application/json,.json" data-act="importFile" hidden></label>
+    <p class="hint">Tes données restent dans ce téléphone. Aucun compte n’est nécessaire.</p>
+  </div>
 </section>`;
 
 let draft = null;
 V.create = () => {
   const s = S();
-  if (!draft) draft = s.hero ? { ...s.hero } : { name: '', build: 2, skin: 2, hair: 0, hairColor: 0, face: 0, cls: 'explorateur' };
-  const sw = (key, n, labels, colors) => `<div class="swatches" role="radiogroup">${Array.from({ length: n }, (_, k) => `<button role="radio" aria-checked="${draft[key] === k}" class="sw ${draft[key] === k ? 'on' : ''}" data-act="draft" data-k="${key}" data-v="${k}" ${colors ? `style="--sw:${colors[k]}" aria-label="${key === 'skin' ? 'Teint' : 'Couleur'} ${k + 1}"` : ''}>${colors ? '' : esc(labels[k])}</button>`).join('')}</div>`;
-  return `<section class="create">
-    <h1 class="display">CHOISIS TON DESTIN</h1>
-    <p class="lead">Ton aventure. Ton héros. Ta progression.</p>
-    <div class="preview" id="avatarPreview">${avatarSVG(draft, { outfit: 'outfit-start' }, 180, COSMETICS)}</div>
-    <label class="field"><span>Nom de ton héros</span><input id="heroName" maxlength="20" value="${esc(draft.name)}" placeholder="Ex. Alex" autocomplete="off"></label>
-    <h3>Apparence</h3>
-    <p class="label">Silhouette</p>${sw('build', 3, BUILDS)}
-    <p class="label">Teint</p>${sw('skin', 6, null, SKINS)}
-    <p class="label">Coiffure</p>${sw('hair', 6, HAIR_STYLES)}
-    <p class="label">Couleur des cheveux</p>${sw('hairColor', 6, null, HAIR_COLORS)}
-    <p class="label">Expression</p>${sw('face', 3, FACES)}
-    <p class="hint">L’apparence n’a aucun effet sur l’apprentissage. Tu débloqueras des tenues, des auras et des compagnons en jouant.</p>
-    <h3>Classe</h3>
-    <div class="classes">${Object.entries(CLASS_INFO).map(([k, c]) => `<button class="class-card ${draft.cls === k ? 'on' : ''}" data-act="draft" data-k="cls" data-v="${k}" style="--cc:${c.color}" aria-pressed="${draft.cls === k}">
-      <b>${esc(c.name)}</b><span>${esc(c.desc)}</span><small>Pouvoir : ${esc(c.power)} · Quête bonus : ${esc(c.side)}</small></button>`).join('')}</div>
-    <p class="hint">La classe change le style des épreuves et une quête secondaire. Elle ne donne aucun avantage sur les exercices d’anglais.</p>
-    <button class="btn primary big" data-act="createDone">${s.hero ? 'Enregistrer' : 'Entrer dans Halden City'}</button>
+  if (!draft) draft = s.hero ? { name: s.hero.name, portrait: s.hero.portrait } : { name: '', portrait: 'heros-toi' };
+  const p = PORTRAIT_BY_ID[draft.portrait] || PORTRAITS[0], c = CLASS_INFO[p.cls];
+  return `<section class="screen create-screen">
+    <div class="scene" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="create-top">
+      <span class="kicker">Création du héros</span>
+      <h1 class="logo sm">CHOISIS TON DESTIN</h1>
+      <p>Ton aventure. Ton héros. Ta progression.</p>
+    </div>
+    <div class="create-bottom">
+      <span class="power" style="--cc:${c.color}">${icon('bolt', 14)} ${esc(c.power)}</span>
+      <h2 class="class-name">${esc(c.name)}</h2>
+      <p class="muted-2">${esc(p.name)} · ${esc(c.desc)}</p>
+      <p class="hint">Quête bonus : ${esc(c.side)}. La classe change ton style et une quête secondaire, jamais tes exercices d’anglais.</p>
+      <div class="portraits" role="radiogroup" aria-label="Héros">${PORTRAITS.map(o => `<button role="radio" aria-checked="${o.id === p.id}" aria-label="${esc(o.name)}" class="thumb ${o.id === p.id ? 'on' : ''}" style="--cc:${CLASS_INFO[o.cls].color}" data-act="draft" data-v="${o.id}"><img src="${o.img}" alt="" style="object-position:${o.face}"></button>`).join('')}</div>
+      <label class="field"><span>Nom de ton héros</span><input id="heroName" maxlength="20" value="${esc(draft.name)}" placeholder="Ex. Alex" autocomplete="off"></label>
+      <button class="btn primary big glow" data-act="createDone">${s.hero ? 'Enregistrer' : 'Entrer dans Halden City'}</button>
+    </div>
   </section>`;
 };
 
@@ -309,35 +315,55 @@ V['placement-result'] = () => {
     <button class="btn primary big" data-act="go" data-r="home">C’est parti</button></section>`;
 };
 
+const TIERS = [[1, 'Initié'], [6, 'Agent'], [15, 'Lanterne']];
+function tierOf(level) { let t = TIERS[0]; for (const x of TIERS) if (level >= x[0]) t = x; return t[1]; }
+function hud(s) {
+  const lvl = L.levelInfo(s.xp);
+  return `<header class="hud">
+    <a href="#/hero" class="hud-hero" aria-label="Fiche du héros">${heroMedal(s.hero, s.inventory.equipped, 52, COSMETICS)}<span class="lvl">${lvl.level}</span></a>
+    <div class="hud-who"><b>${esc(s.hero.name)}</b><small>${esc(CLASS_INFO[s.hero.cls].name)} · ${tierOf(lvl.level)}</small>${bar(lvl.pct, 'gold thin')}<small class="xp">${lvl.into} / ${lvl.need} XP</small></div>
+    <span class="pill gold" title="Série">${icon('flame', 15)} ${L.streakNow(s)}</span>
+    <a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a>
+  </header>`;
+}
+
 V.home = () => {
-  const s = S(), h = s.hero, lvl = L.levelInfo(s.xp), ch = C.currentChapter(s), nm = nextMission();
-  const streak = L.streakNow(s), due = L.srsDue(s).length, done = dailyDone();
+  const s = S(), ch = C.currentChapter(s), nm = nextMission(), p = heroPortrait(s.hero);
+  const due = L.srsDue(s).length, done = dailyDone();
   const errs = topErrors(3);
   const weekMins = Object.entries(s.days).filter(([d]) => L.isoWeek(d) === L.isoWeek(L.today())).reduce((a, [, v]) => a + v.mins, 0);
   const tl = s.toeic.parts;
-  const acc = sk => { let a = 0, b = 0; for (const p of PART_IDS) if (PARTS[p].skill === sk && tl[p]) { a += tl[p].correct; b += tl[p].attempts; } return b ? Math.round((a / b) * 100) + ' %' : '—'; };
-  return `<section class="page home">
-    <div class="hero-row" data-act="go" data-r="hero">
-      <div class="av">${avatarSVG(h, s.inventory.equipped, 84, COSMETICS)}</div>
-      <div class="who"><b>${esc(h.name)}</b><span>${esc(CLASS_INFO[h.cls].name)} · niveau ${lvl.level}</span>${bar(lvl.pct, 'gold')}<small>${lvl.into} / ${lvl.need} XP</small></div>
+  const acc = sk => { let a = 0, b = 0; for (const q of PART_IDS) if (PARTS[q].skill === sk && tl[q]) { a += tl[q].correct; b += tl[q].attempts; } return b ? Math.round((a / b) * 100) + ' %' : '—'; };
+  const quick = [['world', 'map', 'Monde'], ['hero', 'user', 'Héros'], ['dialogues', 'heart', 'Dialogues'], ['toeic', 'target', 'TOEIC'], ['codex', 'codex', 'Codex']];
+  return `<section class="screen home-screen">
+    <div class="scene" style="--img:url(${p.img});--pos:${p.full}"></div>
+    ${hud(s)}
+    <div class="home-stage">
+      <span class="wordmark">LINGUA QUEST</span>
+      <span class="kicker">Chapitre ${ch.n} · ${esc(ch.region)}</span>
+      <h1 class="chapter-title">${esc(ch.title)}</h1>
+      <a class="quest-banner" href="#/${esc(nm.route)}">
+        <span class="qb-label">Quête en cours</span>
+        <b>${esc(nm.label)}</b>
+      </a>
+      <a class="btn primary big glow continue" href="#/${esc(nm.route)}">${icon('play', 18)} CONTINUER L’AVENTURE</a>
+      <nav class="quick" aria-label="Accès rapides">${quick.map(([r, ic, l]) => `<a href="#/${r}">${icon(ic, 22)}<span>${l}</span></a>`).join('')}</nav>
     </div>
+  </section>
+  <section class="page below">
+    <article class="daily ${done ? 'done' : ''}">
+      <span class="chip gold">${icon('clock', 14)} 20 min · briefing de Nora</span>
+      <h2>${done ? 'Opération du jour accomplie' : 'Opération du jour'}</h2>
+      <ol class="ops"><li><b>Mots qui s’effacent</b><small>Réactivation · 2 min</small></li><li><b>Donjon de la Tour</b><small>TOEIC · 7 min</small></li><li><b>Épreuve orale</b><small>Parler · 8 min</small></li><li><b>Rapport</b><small>Bilan · 3 min</small></li></ol>
+      <button class="btn ${done ? 'ghost' : 'primary'} big" data-act="daily">${done ? 'Refaire une session' : 'Lancer l’opération'}</button>
+    </article>
     <div class="stats-row">
-      <div class="stat"><span class="flame">${icon('flame', 20)}</span><b>${streak}</b><small>jours de série</small></div>
+      <div class="stat"><span class="flame">${icon('flame', 20)}</span><b>${L.streakNow(s)}</b><small>jours de série</small></div>
       <div class="stat"><b>${weekDone()}/${s.settings.weeklyGoal}</b><small>sessions cette semaine</small></div>
       <div class="stat"><b>${weekMins}</b><small>min cette semaine</small></div>
     </div>
     <p class="hint">La série mesure ta régularité, pas ton niveau d’anglais. 1 jour manqué par semaine est couvert par un joker.</p>
-    <article class="daily ${done ? 'done' : ''}">
-      <span class="chip gold">${icon('clock', 14)} 20 min</span>
-      <h2>${done ? 'Session du jour faite' : 'Session du jour'}</h2>
-      <ol class="steps"><li>Réactivation <small>2 min</small></li><li>Donjon du TOEIC <small>7 min</small></li><li>Épreuve orale <small>8 min</small></li><li>Bilan <small>3 min</small></li></ol>
-      <button class="btn ${done ? 'ghost' : 'primary'} big" data-act="daily">${done ? 'Refaire une session' : 'Commencer'}</button>
-    </article>
-    <article class="card chapter-card" style="--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}">
-      <span class="kicker">Chapitre ${ch.n} · ${esc(ch.region)}</span><h2>${esc(ch.title)}</h2>
-      <p>Prochaine étape : <b>${esc(nm.label)}</b></p>
-    </article>
-    <section class="card"><div class="card-head"><h3>Compétences</h3><a href="#/skills">Détails</a></div>${L.SKILLS.map(skillMini).join('')}</section>
+    <section class="card"><div class="card-head"><h3>Compétences réelles</h3><a href="#/skills">Détails</a></div>${L.SKILLS.map(skillMini).join('')}</section>
     <section class="grid2">
       <a class="card tile" href="#/toeic"><small>TOEIC · réussite</small><b>Écoute ${acc('listening')}</b><b>Lecture ${acc('reading')}</b></a>
       <a class="card tile" href="#/review"><small>Vocabulaire</small><b>${L.srsRetained(s)} mots retenus</b><span>${pl(due, 'révision due', 'révisions dues')}</span></a>
@@ -346,38 +372,71 @@ V.home = () => {
   </section>`;
 };
 
+function chapterState(s, ch) {
+  const open = L.chapterUnlocked(s, ch.n), beaten = !!(s.chapters[ch.n] && s.chapters[ch.n].bossBeaten);
+  return { open, beaten, current: open && !beaten };
+}
 V.world = () => {
   const s = S();
-  return `<section class="page"><h1 class="display sm">Carte du monde</h1><p class="lead">Halden City et ses régions. Une région s’ouvre quand tu bats le boss de la précédente : ce sont tes compétences qui comptent, pas le temps passé.</p>
-  <div class="map">${CHAPTERS.map(ch => {
-    const open = L.chapterUnlocked(s, ch.n), beaten = s.chapters[ch.n] && s.chapters[ch.n].bossBeaten;
-    const doneQ = ch.quests.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
-    return `<button class="node ${open ? '' : 'locked'} ${beaten ? 'beaten' : ''}" style="--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${open ? '' : 'aria-disabled="true"'}>
-      <span class="num">${beaten ? icon('check', 20) : open ? ch.n : icon('lock', 18)}</span>
-      <span class="txt"><b>${esc(ch.title)}</b><small>${esc(ch.region)} · ${open ? `${doneQ}/${ch.quests.length} quêtes${beaten ? ' · boss vaincu' : ''}` : 'Bats le boss précédent'}</small></span></button>`;
-  }).join('')}</div>
-  <p class="hint">La campagne est pensée pour environ 12 semaines à 20 minutes par jour, mais c’est une indication : tu avances à ton rythme réel.</p></section>`;
+  return `<section class="screen world-screen">
+    <header class="world-head"><span class="kicker">Carte</span><h1 class="display sm">Halden City</h1><p class="lead">Un quartier s’ouvre quand tu bats le boss du précédent : ce sont tes compétences qui comptent, pas le temps passé.</p></header>
+    <div class="city-map">
+      <img src="img/carte.webp" alt="Vue aérienne de Halden City la nuit, de Maple District en bas jusqu’à la forteresse des Ombres au sommet">
+      ${CHAPTERS.map(ch => { const st = chapterState(s, ch), a = CHAPTER_ART[ch.n]; return `<button class="marker ${st.beaten ? 'beaten' : st.current ? 'current' : st.open ? '' : 'locked'}" style="left:${a.x}%;top:${a.y}%;--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'} aria-label="${esc(ch.region)} : ${st.beaten ? 'terminé' : st.open ? 'ouvert' : 'verrouillé'}"><span class="pin">${st.beaten ? icon('check', 16) : st.open ? ch.n : icon('lock', 14)}</span><span class="lbl">${esc(ch.region)}</span></button>`; }).join('')}
+    </div>
+  </section>
+  <section class="page below">
+    <div class="districts">${CHAPTERS.map(ch => {
+      const st = chapterState(s, ch), a = CHAPTER_ART[ch.n];
+      const doneQ = ch.quests.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
+      return `<button class="node district ${st.open ? '' : 'locked'} ${st.beaten ? 'beaten' : ''}" style="--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'}>
+        <img src="${a.img}" alt="" style="object-position:${a.pos}">
+        <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(ch.title)}</b><small>${st.open ? `${doneQ}/${ch.quests.length} quêtes${st.beaten ? ' · boss vaincu' : ''}` : 'Bats le boss précédent'}</small></span>
+        <span class="state">${st.beaten ? icon('check', 18) : st.open ? icon('chevron', 18) : icon('lock', 16)}</span></button>`;
+    }).join('')}</div>
+    <p class="hint">La campagne est pensée pour environ 12 semaines à 20 minutes par jour, mais c’est une indication : tu avances à ton rythme réel.</p>
+  </section>`;
 };
 
 V.chapter = n => {
   const s = S(), ch = CHAPTERS.find(c => c.n === +n);
   if (!ch) return V.world();
-  const open = L.chapterUnlocked(s, ch.n), c = s.chapters[ch.n] || {};
+  const st = chapterState(s, ch), c = s.chapters[ch.n] || {}, a = CHAPTER_ART[ch.n];
   const cq = s.hero && C.allQuests(s).find(q => q.id && q.id.startsWith('qc-') && q.ch === ch.n);
-  return `<section class="page"><a class="back" href="#/world">${icon('back', 18)} Carte</a>
-    <span class="kicker">Chapitre ${ch.n} · ${esc(ch.region)}</span><h1 class="display sm">${esc(ch.title)}</h1>
-    <p class="lead">${esc(ch.intro)}</p><p><b>Objectifs :</b> ${esc(ch.goals)}</p>
-    ${open ? '' : '<div class="notice">Région verrouillée : bats le boss du chapitre précédent pour y entrer.</div>'}
-    <h2>Quêtes</h2>${ch.quests.map(q => questCardHTML({ ...q, ch: ch.n }, !open)).join('')}
-    ${cq ? `<h2>Quête de ta classe</h2>${questCardHTML(cq, !open)}` : ''}
+  return `<section class="screen banner-screen">
+    <div class="scene short" style="--img:url(${a.img});--pos:${a.pos}"></div>
+    <div class="banner-content"><a class="back glass" href="#/world">${icon('back', 18)} Carte</a>
+      <span class="kicker">Chapitre ${ch.n} · ${esc(ch.region)}</span><h1 class="chapter-title">${esc(ch.title)}</h1>
+      <p class="lead">${esc(ch.intro)}</p></div>
+  </section>
+  <section class="page below">
+    <p><b>Objectifs :</b> ${esc(ch.goals)}</p>
+    ${st.open ? '' : '<div class="notice">Quartier verrouillé : bats le boss du chapitre précédent pour y entrer.</div>'}
+    <h2>Quêtes</h2>${ch.quests.map(q => questCardHTML({ ...q, ch: ch.n }, !st.open)).join('')}
+    ${cq ? `<h2>Quête de ta classe</h2>${questCardHTML(cq, !st.open)}` : ''}
     <h2>Boss</h2>
     <article class="boss-card ${c.bossBeaten ? 'beaten' : ''}">
-      <h3>${esc(ch.boss.name)}</h3><p>${esc(ch.boss.desc)}</p>
-      <p class="crit">${icon('target', 14)} Victoire : ${Math.round(ch.boss.pass * 100)} % de bonnes réponses${ch.boss.toeicTest ? ` en ${ch.boss.toeicTest.seconds / 60} min` : ''}. En cas d’échec : corrections, quête de renforcement, et tu retentes quand tu veux.</p>
-      <p class="muted">Récompense : ${ch.boss.reward.xp} XP · ${esc((COSMETICS.find(x => x.id === ch.boss.reward.item) || {}).name || '')}${c.bossTries ? ' · ' + pl(c.bossTries, 'tentative') : ''}</p>
-      <p class="hint">Tu peux affronter le boss sans finir toutes les quêtes : si tu réussis, c’est que tu maîtrises déjà le chapitre.</p>
-      <button class="btn ${c.bossBeaten ? 'ghost' : 'danger'}" data-act="boss" data-n="${ch.n}" ${open ? '' : 'disabled'}>${icon('sword', 18)} ${c.bossBeaten ? 'Rejouer le combat' : 'Affronter'}</button>
+      <div class="boss-art" style="--hue:${BOSS_HUE[ch.n]}deg"><img src="img/boss.webp" alt=""></div>
+      <div class="boss-info">
+        <h3>${esc(ch.boss.name)}</h3><p>${esc(ch.boss.desc)}</p>
+        <p class="crit">${icon('target', 14)} Victoire : ${Math.round(ch.boss.pass * 100)} % de bonnes réponses${ch.boss.toeicTest ? ` en ${ch.boss.toeicTest.seconds / 60} min` : ''}. En cas d’échec : corrections, quête de renforcement, et tu retentes quand tu veux.</p>
+        <p class="muted">Récompense : ${ch.boss.reward.xp} XP · ${esc((COSMETICS.find(x => x.id === ch.boss.reward.item) || {}).name || '')}${c.bossTries ? ' · ' + pl(c.bossTries, 'tentative') : ''}</p>
+        <button class="btn ${c.bossBeaten ? 'ghost' : 'danger'} glow-red" data-act="boss" data-n="${ch.n}" ${st.open ? '' : 'disabled'}>${icon('sword', 18)} ${c.bossBeaten ? 'Rejouer le combat' : 'Affronter'}</button>
+      </div>
     </article></section>`;
+};
+
+V.dialogues = () => {
+  const s = S();
+  return `<section class="page"><h1 class="display sm">Dialogues</h1>
+    <p class="lead">Rejoue les scènes déjà ouvertes : écoute chaque réplique, touche un mot pour le Codex, refais tes choix.</p>
+    <div class="districts">${CHAPTERS.flatMap(ch => ch.quests.flatMap(q => q.steps.filter(x => x.dialogue).map(x => ({ ch, q, id: x.dialogue })))).map(({ ch, q, id }) => {
+      const open = L.chapterUnlocked(s, ch.n);
+      return `<button class="node district ${open ? '' : 'locked'}" data-act="replayDialogue" data-id="${id}" ${open ? '' : 'aria-disabled="true"'} style="--cc:${ch.color}">
+        <img src="${DIALOGUE_ART[id] || CHAPTER_ART[ch.n].img}" alt="" style="object-position:50% 20%">
+        <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(q.title)}</b><small>${open ? pl(DIALOGUES[id].length, 'réplique') : 'Verrouillé'}</small></span>
+        <span class="state">${open ? icon('play', 16) : icon('lock', 16)}</span></button>`;
+    }).join('')}</div></section>`;
 };
 
 V.quests = () => {
@@ -437,27 +496,39 @@ V.skills = () => {
 };
 
 V.hero = () => {
-  const s = S(), h = s.hero, c = CLASS_INFO[h.cls], lvl = L.levelInfo(s.xp), ch = C.currentChapter(s);
-  return `<section class="page center"><div class="big-av">${avatarSVG(h, s.inventory.equipped, 200, COSMETICS)}</div>
-    <h1 class="display sm">${esc(h.name)}</h1><p class="lead">${esc(c.name)} · Pouvoir : ${esc(c.power)}</p>
-    <div class="card"><div class="row"><span>Niveau</span><b>${lvl.level}</b></div>${bar(lvl.pct, 'gold')}<div class="row"><span>XP totale</span><b>${s.xp}</b></div>
+  const s = S(), h = s.hero, c = CLASS_INFO[h.cls], lvl = L.levelInfo(s.xp), ch = C.currentChapter(s), p = heroPortrait(h);
+  const eq = s.inventory.equipped, aura = COSMETICS.find(x => x.id === eq.aura), form = eq.form === 'form-lantern';
+  return `<section class="screen hero-screen">
+    <div class="scene tall ${aura || form ? 'aura' : ''}" style="--img:url(${p.img});--pos:${p.full};--glow:${form ? '#FFD166' : aura ? aura.color : c.color}"></div>
+    <div class="hero-head"><a class="back glass" href="#/home">${icon('back', 18)} Accueil</a><a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a></div>
+    <div class="hero-id">
+      <span class="power" style="--cc:${c.color}">${esc(c.name)} · ${tierOf(lvl.level)} · niveau ${lvl.level}</span>
+      <h1 class="logo md">${esc(h.name)}</h1>
+      <p class="muted-2">Pouvoir : ${esc(c.power)}</p>
+    </div>
+  </section>
+  <section class="page below">
+    <div class="card"><div class="row"><span>Niveau ${lvl.level}</span><b>${lvl.into} / ${lvl.need} XP</b></div>${bar(lvl.pct, 'gold')}
       <div class="row"><span>Chapitre</span><b>${ch.n} · ${esc(ch.title)}</b></div><div class="row"><span>Meilleure série</span><b>${pl(s.streak.best || 0, 'jour')}</b></div></div>
+    <h2>Évolution</h2>
+    <div class="tiers">${TIERS.map(([n, name]) => `<div class="tier ${lvl.level >= n ? 'on' : ''}">${heroMedal(h, lvl.level >= n ? eq : {}, 64, COSMETICS)}<b>${name}</b><small>Niveau ${n}+</small></div>`).join('')}</div>
     <p class="hint">Le niveau du héros récompense ta participation. Il ne mesure pas ton anglais : pour ça, regarde l’arbre de compétences.</p>
     <h2>Badges</h2><div class="badges">${Object.entries(BADGES).map(([k, v]) => `<span class="badge ${s.badges.includes(k) ? 'on' : ''}">${icon(s.badges.includes(k) ? 'star' : 'lock', 16)} ${esc(v)}</span>`).join('')}</div>
-    <div class="actions"><a class="btn primary" href="#/inventory">${icon('bag', 18)} Inventaire</a><button class="btn ghost" data-act="go" data-r="create">Modifier l’apparence</button></div></section>`;
+    <div class="actions"><a class="btn primary" href="#/inventory">${icon('bag', 18)} Inventaire</a><a class="btn ghost" href="#/skills">${icon('tree', 18)} Compétences</a><button class="btn ghost" data-act="go" data-r="create">Changer de héros</button></div>
+  </section>`;
 };
 
 V.inventory = () => {
   const s = S(), inv = s.inventory;
   const kinds = { outfit: 'Tenues', aura: 'Auras', companion: 'Compagnons', form: 'Formes évoluées' };
   return `<section class="page"><a class="back" href="#/hero">${icon('back', 18)} Héros</a><h1 class="display sm">Inventaire</h1>
-    <div class="center">${avatarSVG(s.hero, inv.equipped, 150, COSMETICS)}</div>
+    <div class="center">${heroMedal(s.hero, inv.equipped, 140, COSMETICS)}</div>
     ${Object.entries(kinds).map(([k, label]) => `<h2>${label}</h2><div class="list">${COSMETICS.filter(c => c.kind === k).map(c => {
       const has = inv.owned.includes(c.id) || c.id === 'outfit-start', on = inv.equipped[k] === c.id;
       return `<div class="list-item inv ${has ? '' : 'locked'}"><span>${esc(c.name)}</span><small>${has ? (on ? 'Équipé' : 'Disponible') : 'À débloquer : ' + esc(c.unlock)}</small>
         ${has ? `<button class="btn ${on ? 'ghost' : 'primary'} sm" data-act="equip" data-kind="${k}" data-id="${c.id}">${on ? (k === 'outfit' ? 'Porté' : 'Retirer') : 'Équiper'}</button>` : icon('lock', 18)}</div>`;
     }).join('')}</div>`).join('')}
-    <p class="hint">Ces objets sont purement visuels. Ils ne remplacent jamais une compétence.</p></section>`;
+    <p class="hint">Ces objets sont purement visuels : auras et formes changent le halo de ton portrait, les compagnons s’affichent à côté. Ils ne remplacent jamais une compétence. Les tenues n’ont pas encore d’illustration propre.</p></section>`;
 };
 
 V.stats = () => {
@@ -536,8 +607,9 @@ V.profile = () => {
 };
 
 /* ---------- Routeur ---------- */
-const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['profile', 'user', 'Profil']];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', hero: 'home', inventory: 'home' };
+const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
+const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -551,6 +623,7 @@ function render() {
   if (!V[name]) name = 'home';
   const app = document.getElementById('app');
   app.innerHTML = V[name](arg);
+  app.classList.toggle('full', FULL.includes(name));
   const showNav = s.hero && !['welcome', 'create'].includes(name);
   const nav = document.getElementById('nav');
   nav.hidden = !showNav;
@@ -569,8 +642,9 @@ function onAction(act, b) {
   switch (act) {
     case 'go': return ctx.go(b.dataset.r);
     case 'draft': {
-      const k = b.dataset.k, v = k === 'cls' ? b.dataset.v : +b.dataset.v;
-      draft[k] = v;
+      const nameIn = document.getElementById('heroName');
+      if (nameIn) draft.name = nameIn.value;
+      draft.portrait = b.dataset.v;
       return render();
     }
     case 'createDone': {
@@ -578,7 +652,7 @@ function onAction(act, b) {
       if (!nm) { toast('Donne un nom à ton héros.'); return document.getElementById('heroName').focus(); }
       draft.name = nm;
       const first = !s.hero;
-      s.hero = { ...draft };
+      s.hero = { name: nm, portrait: draft.portrait, cls: (PORTRAIT_BY_ID[draft.portrait] || PORTRAITS[0]).cls };
       draft = null;
       if (first) { s.inventory.owned = ['outfit-start']; s.inventory.equipped = { outfit: 'outfit-start' }; }
       save();
@@ -600,6 +674,7 @@ function onAction(act, b) {
       save(); toast(fresh.length ? pl(fresh.length, 'verbe ajouté', 'verbes ajoutés') : 'Tous les verbes sont déjà dans ta liste.');
       return render();
     }
+    case 'replayDialogue': return startRun([{ kind: 'dialogue', id: b.dataset.id }], { mode: 'replay', title: 'Dialogue', onDone: () => ({ title: 'Scène rejouée', next: { label: 'Autres dialogues', route: 'dialogues' } }) });
     case 'oralRun': return simpleRun(C.oralItems(s, 6).map(item => ({ kind: 'item', item })), 'Séance orale', 'oral');
     case 'testVoice': return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate });
     case 'toeicPart': { const p = +b.dataset.p; return simpleRun(C.toeicItems(s, [p], 5).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic'); }

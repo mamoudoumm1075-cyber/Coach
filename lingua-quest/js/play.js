@@ -4,7 +4,7 @@ import { esc, icon, portrait, bar, toast, pl } from './ui.js';
 import { recordAnswer, recordToeic, checkTyped, wordMatch, normalize, shuffle, levelInfo, srsReview, SKILL_LABEL, today } from './logic.js';
 import { speak, speakLines, stopSpeaking, ttsAvailable, sttAvailable, listen, stopListening, STT_ERRORS, sfx } from './audio.js';
 import { VOCAB_BY_ID, DECODE_BY_ID } from '../data/codex.js';
-import { DIALOGUES, CHARACTERS } from '../data/world.js';
+import { DIALOGUES, CHARACTERS, DIALOGUE_ART } from '../data/world.js';
 import { TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS } from '../data/toeic.js';
 import { IRR_BY_ID, learnWord } from './content.js';
@@ -51,6 +51,7 @@ function closeRun() {
   R = null;
   const el = layer();
   el.hidden = true;
+  el.className = 'play';
   el.innerHTML = '';
   document.body.classList.remove('playing');
 }
@@ -74,6 +75,14 @@ function render() {
   if (R.i >= R.cards.length) return finish('done');
   const card = R.cards[R.i];
   R.cur = { card, answered: false };
+  /* décor : illustration du dialogue, sinon celle de la mission ou du boss */
+  const bg = card.kind === 'dialogue' ? (DIALOGUE_ART[card.id] || R.opts.bg) : R.opts.bg;
+  const el = layer();
+  el.classList.toggle('scene-on', !!bg);
+  el.classList.toggle('dialogue-on', card.kind === 'dialogue');
+  el.classList.toggle('boss-on', !!R.opts.boss);
+  el.style.setProperty('--scene', bg ? `url(${bg})` : 'none');
+  el.style.setProperty('--hue', (R.opts.hue || 0) + 'deg');
   let body = '';
   if (card.kind === 'stage') body = stageHTML(card);
   else if (card.kind === 'dialogue') { R.dl = 0; body = dialogueHTML(card); }
@@ -109,7 +118,7 @@ export function clickable(en) {
     if (/^\s+$/.test(tok)) return tok;
     const m = tok.match(/^([“"(]*)([A-Za-z’'\-]+)([^A-Za-z’'\-]*)$/);
     if (!m) return esc(tok);
-    return esc(m[1]) + `<button class="w" data-w="${esc(m[2])}">${esc(m[2])}</button>` + esc(m[3]);
+    return `<span class="wt">${esc(m[1])}<button class="w" data-w="${esc(m[2])}">${esc(m[2])}</button>${esc(m[3])}</span>`;
   }).join('');
 }
 

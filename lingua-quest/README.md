@@ -8,6 +8,8 @@ RPG en urban fantasy pour apprendre l’anglais : préparer le TOEIC Listening &
 2. Ouvrir cette adresse dans Safari (iPhone) ou Chrome (Android).
 3. « Partager → Sur l’écran d’accueil » (iPhone) ou « Installer l’application » (Android).
 
+Sans installation : ouvrir directement `lingua-quest-complet.html` (un seul fichier, images, sons et code intégrés, fonctionne même hors ligne ; seules les polices viennent de Google Fonts et sont remplacées par des polices système sans internet).
+
 L’appli fonctionne ensuite hors ligne. Elle a sa propre mémoire : avant de changer d’appareil ou de navigateur, exporte une sauvegarde (Profil → Télécharger ma sauvegarde).
 
 ## Organisation
@@ -21,6 +23,8 @@ L’appli fonctionne ensuite hors ligne. Elle a sa propre mémoire : avant de ch
 | `js/codexview.js` | Codex (page et panneau ouvert par-dessus un exercice). |
 | `js/app.js` | Sauvegarde, navigation et écrans. |
 | `sons/` | Bruitages générés avec ElevenLabs. |
+| `img/` | Illustrations anime urban fantasy (écran titre, 5 héros, carte de la ville, café, boss). |
+| `lingua-quest-complet.html` | Version en un seul fichier, générée à partir des fichiers ci-dessus (à régénérer après chaque modification). |
 
 Ajouter un chapitre : un objet dans `CHAPTERS` (`data/world.js`), ses items dans `WORLD_ITEMS`, ses dialogues dans `DIALOGUES`. Les tests vérifient que chaque référence existe.
 
@@ -46,4 +50,6 @@ Limites honnêtes de cette version :
 - Le décodeur de phrases fonctionne sur les phrases du jeu annotées une par une, pas sur n’importe quelle phrase tapée.
 - Pas de score TOEIC estimé : seulement la réussite réelle par partie. La partie 1 (photographies) n’est pas encore là.
 - Pas de compte ni de synchronisation en ligne.
+- Apparence du héros : choix parmi 5 illustrations (une par classe, plus « toi »), pas d’éditeur de visage. Les tenues cosmétiques n’ont pas encore d’illustration.
+- Les 6 boss partagent une illustration, teintée différemment pour chacun.
 - Le contenu est une première base (environ 95 mots, 50 verbes irréguliers, 30 questions TOEIC, 9 temps) : il doit grossir pour tenir sur la durée.
