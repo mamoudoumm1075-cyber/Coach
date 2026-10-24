@@ -260,6 +260,18 @@ const noOverflow = async (page, label) => {
   check(await page.locator('.talk .gauge').count() === 1, 'jauge du niveau de discussion');
   await shot('43-jauge-discussion');
 
+  /* Apprentissage personnalisé : suivi par notion, entraînement ciblé, révision des exercices ratés */
+  await page.goto(BASE + '#/progres');
+  await page.waitForSelector('.targeted');
+  const notions = await page.evaluate(() => Object.keys(window.__LQ.ctx.S.notions).length);
+  check(notions >= 5, 'suivi par notion alimenté (' + notions + ' notions)');
+  const qDue = await page.evaluate(() => Object.keys(window.__LQ.ctx.S.srs).filter(k => k.startsWith('q:')).length);
+  check(qDue > 0, 'exercices ratés programmés en révision espacée (' + qDue + ')');
+  await shot('45-progres');
+  await page.click('.targeted [data-act="targeted"]');
+  check(await playRun(page, n => n % 3 !== 0), 'entraînement ciblé joué jusqu’au bilan');
+  await page.click('#play [data-act="close"]');
+
   /* Vocabulaire du métier */
   await page.goto(BASE + '#/metier');
   await page.waitForSelector('[data-act="metierRun"]');

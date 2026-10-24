@@ -204,3 +204,26 @@ test('sauvegarde abîmée : chaque rubrique est nettoyée sans perdre ce qui est
   assert.equal(s.settings.sound, false);
   assert.equal(s.settings.fr, 'peu');
 });
+
+test('suivi par notion : réponses comptées, forces et difficultés, reconstruction des anciennes sauvegardes', () => {
+  const s = L.newState();
+  for (let i = 0; i < 6; i++) L.recordAnswer(s, { skill: 'grammar', ok: i < 1, notions: ['prepositions'] });
+  for (let i = 0; i < 5; i++) L.recordAnswer(s, { skill: 'grammar', ok: true, notions: ['temps:past-simple'] });
+  L.recordAnswer(s, { skill: 'grammar', ok: false, notions: ['irreguliers'] });
+  assert.equal(s.notions.prepositions.n, 6);
+  assert.deepEqual(L.weakNotions(s).map(x => x.key), ['prepositions']);
+  assert.deepEqual(L.strongNotions(s).map(x => x.key), ['temps:past-simple']);
+  const old = L.newState();
+  old.tenses['present-simple'] = { attempts: 4, correct: 3, recent: [1, 1, 0, 1] };
+  old.toeic.parts[5] = { attempts: 2, correct: 1, recent: [1, 0] };
+  assert.ok(L.seedNotions(old));
+  assert.deepEqual(Object.keys(old.notions).sort(), ['temps:present-simple', 'toeic:5']);
+  assert.equal(L.seedNotions(old), false);
+});
+
+test('mots retenus : les exercices en révision ne comptent pas comme des mots', () => {
+  const s = L.newState();
+  s.srs['v:a'] = { box: 3, due: '2026-01-01' };
+  s.srs['q:t5-1'] = { box: 4, due: '2026-01-01' };
+  assert.equal(L.srsRetained(s), 1);
+});

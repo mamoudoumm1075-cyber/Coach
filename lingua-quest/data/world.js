@@ -253,8 +253,8 @@ export const PLACEMENT_AREAS = { vocab: 'Vocabulaire', sentences: 'Phrases simpl
 /* ---------- Objets cosmétiques (n’influencent jamais l’apprentissage) ---------- */
 export const COSMETICS = [
   { id: 'outfit-start', kind: 'outfit', name: 'Tenue de départ', unlock: 'Dès le début', level: 1 },
-  { id: 'outfit-street', kind: 'outfit', name: 'Veste urbaine', unlock: 'Niveau 4', level: 4 },
-  { id: 'outfit-agent', kind: 'outfit', name: 'Manteau d’agent', unlock: 'Niveau 8', level: 8 },
+  { id: 'outfit-street', kind: 'outfit', name: 'Veste urbaine', unlock: 'Niveau 4 et 1 temps maîtrisé', level: 4, need: { tenses: 1 } },
+  { id: 'outfit-agent', kind: 'outfit', name: 'Manteau d’agent', unlock: 'Niveau 8, 3 temps maîtrisés et 40 mots retenus', level: 8, need: { tenses: 3, words: 40 } },
   { id: 'outfit-traveller', kind: 'outfit', name: 'Tenue de voyageur', unlock: 'Boss du chapitre 4' },
   { id: 'aura-dawn', kind: 'aura', name: 'Aura de l’aube', unlock: 'Boss du chapitre 1', color: '#FFD166' },
   { id: 'aura-archive', kind: 'aura', name: 'Aura des archives', unlock: 'Boss du chapitre 3', color: '#2F80ED' },

@@ -125,3 +125,21 @@ test('vocabulaire métier : 3 domaines, quiz jouable dans les deux sens', async 
     assert.ok(it.options.length === 4 && it.answer === 0 && it.explain);
   }
 });
+
+test('apprentissage ciblé : chaque notion produit des exercices jouables', async () => {
+  const C = await import('../js/content.js');
+  const { newState } = await import('../js/logic.js');
+  const s = newState();
+  const keys = ['temps:present-perfect', 'toeic:3', 'prepositions', 'traduction', 'metier', 'irreguliers', 'dialogues', 'oral', 'ecoute', 'lecture'];
+  for (const k of keys) {
+    assert.ok(C.notionCards(s, k, 4).length >= 3, k);
+    assert.ok(C.DOMAINS[C.notionInfo(k).domain], k + ' : domaine');
+  }
+  assert.deepEqual(C.notionKeys({ id: 't5-11', part: 5, skill: 'reading', tags: ['toeic-p5'] }).sort(), ['prepositions', 'toeic:5']);
+  assert.deepEqual(C.notionKeys({ id: 'i:irr-go', skill: 'grammar' }), ['irreguliers']);
+  const t = C.targetedCards(s);
+  assert.equal(t.keys.length, 3);
+  assert.ok(t.cards.filter(c => c.kind !== 'stage').length >= 9);
+  s.srs['q:t5-1'] = { box: 1, due: '2000-01-01' };
+  assert.ok(C.reviewCards(s).some(c => c.kind === 'item' && c.item.id === 't5-1'), 'exercice raté dû en révision');
+});

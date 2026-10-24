@@ -61,6 +61,7 @@ export function newState() {
     inventory: { owned: [], equipped: {} },
     badges: [],
     carnet: [],
+    notions: {},
     settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '', toeicGoal: 850 }
   };
 }
@@ -105,6 +106,7 @@ export function sanitize(o) {
   for (const k of SKILLS) { const v = cleanStat(o.skills && o.skills[k]); if (v) s.skills[k] = { attempts: v.attempts, correct: v.correct, recent: v.recent }; }
   s.srs = cleanMap(o.srs, e => (isObj(e) && isDay(e.due) ? { ...e, box: Math.min(6, Math.max(0, num(e.box))), seen: num(e.seen), ok: num(e.ok), ko: num(e.ko) } : null));
   s.tenses = cleanMap(o.tenses, cleanStat);
+  s.notions = cleanMap(o.notions, v => (isObj(v) ? { n: num(v.n), ok: num(v.ok), recent: cleanRecent(v.recent), last: isDay(v.last) ? v.last : null } : null));
   s.quests = cleanMap(o.quests, q => (isObj(q) ? { ...q, done: !!q.done, best: num(q.best), attempts: num(q.attempts) } : null));
   s.chapters = cleanMap(o.chapters, c => (isObj(c) ? { ...c, bossBeaten: !!c.bossBeaten, bossTries: num(c.bossTries) } : null));
   s.days = cleanMap(o.days, d => (isObj(d) ? { ...d, mins: num(d.mins), xp: num(d.xp), done: !!d.done } : null));
@@ -150,6 +152,15 @@ export function recordAnswer(S, a) {
     if (a.ok) t.correct++;
     t.recent.push(a.ok ? 1 : 0);
     if (t.recent.length > 20) t.recent.shift();
+  }
+  /* suivi par notion (temps, partie TOEIC, prépositions, vocabulaire…) */
+  for (const k of a.notions || []) {
+    const n = S.notions[k] || (S.notions[k] = { n: 0, ok: 0, recent: [], last: null });
+    n.n++;
+    if (a.ok) n.ok++;
+    n.recent.push(a.ok ? 1 : 0);
+    if (n.recent.length > 20) n.recent.shift();
+    n.last = today();
   }
   if (!a.ok) {
     S.errors.push({ d: today(), id: a.itemId || '', skill: a.skill, tags: a.tags || [], q: a.prompt || '', given: a.given ?? '', expected: a.expected ?? '' });
@@ -323,7 +334,28 @@ export function carnetRemove(S, id) {
   delete S.srs['c:' + id];
 }
 
-export function srsRetained(S) { return Object.values(S.srs).filter(e => e.box >= 3).length; }
+/* mots et verbes retenus (les exercices ratés en révision « q: » ne comptent pas comme des mots) */
+export function srsRetained(S) { return Object.entries(S.srs).filter(([id, e]) => !id.startsWith('q:') && e.box >= 3).length; }
+
+/* ---------- Suivi par notion : forces, difficultés, notions à travailler ---------- */
+/* Une notion est jugée sur ses 20 dernières réponses ; il en faut au moins 4 pour conclure. */
+export const NOTION_MIN = 4;
+export function notionStats(S) {
+  return Object.entries(S.notions).map(([key, v]) => ({ key, n: v.n, ok: v.ok, acc: accuracy(v.recent), last: v.last, enough: v.recent.length >= NOTION_MIN }));
+}
+export function weakNotions(S, max = 3) {
+  return notionStats(S).filter(x => x.enough && x.acc < 75).sort((a, b) => a.acc - b.acc || b.n - a.n).slice(0, max);
+}
+export function strongNotions(S, max = 3) {
+  return notionStats(S).filter(x => x.enough && x.acc >= 80).sort((a, b) => b.acc - a.acc || b.n - a.n).slice(0, max);
+}
+/* Anciennes sauvegardes : on reconstruit le suivi à partir des temps et des parties TOEIC déjà enregistrés */
+export function seedNotions(S) {
+  if (Object.keys(S.notions).length) return false;
+  for (const [id, t] of Object.entries(S.tenses)) if (t.recent && t.recent.length) S.notions['temps:' + id] = { n: t.attempts, ok: t.correct, recent: t.recent.slice(-20), last: null };
+  for (const [p, t] of Object.entries(S.toeic.parts)) if (t.recent && t.recent.length) S.notions['toeic:' + p] = { n: t.attempts, ok: t.correct, recent: t.recent.slice(-20), last: null };
+  return true;
+}
 
 /* ---------- Série quotidienne (1 joker par semaine) ---------- */
 export function completeDay(S, d = today()) {

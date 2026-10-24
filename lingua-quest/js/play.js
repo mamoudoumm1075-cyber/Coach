@@ -7,7 +7,7 @@ import { VOCAB_BY_ID, DECODE_BY_ID } from '../data/codex.js';
 import { DIALOGUES, CHARACTERS, DIALOGUE_ART } from '../data/world.js';
 import { TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS } from '../data/toeic.js';
-import { IRR_BY_ID, learnWord } from './content.js';
+import { IRR_BY_ID, learnWord, ITEMS, notionKeys } from './content.js';
 import { openWordSheet, openTenseSheet, openDecodeSheet, openCodexSheet, wordEntryHTML } from './codexview.js';
 
 let R = null;
@@ -62,7 +62,7 @@ function header() {
   const boss = R.opts.boss;
   return `<header class="run-head">
     <button class="icon-btn" data-act="quit" aria-label="Quitter">${icon('x')}</button>
-    <div class="run-title"><span>${esc(R.opts.title)}</span>${bar(pct, 'thin')}</div>
+    <div class="run-title"><span>${esc(R.opts.title)}</span><div class="run-progress">${bar(pct, 'thin')}<small>${Math.min(R.i + 1, n)}/${n}</small></div></div>
     ${R.opts.seconds ? `<span id="runTimer" class="timer">${icon('clock', 16)} --:--</span>` : ''}
     ${R.opts.noHelp ? '' : `<button class="icon-btn" data-act="codex" aria-label="Ouvrir le Codex">${icon('codex')}</button>`}
   </header>
@@ -89,9 +89,18 @@ function render() {
   else if (card.kind === 'learn') body = learnHTML(card);
   else if (card.kind === 'recall') body = recallHTML(card);
   else body = itemHTML(card.item);
-  layer().innerHTML = header() + `<main class="run-body" id="runBody">${body}</main><footer class="run-foot" id="runFoot">${footInitial(card)}</footer>`;
+  layer().innerHTML = header() + `<main class="run-body card-in" id="runBody">${body}</main><footer class="run-foot" id="runFoot">${footInitial(card)}</footer>`;
   bindCard(card);
   if (R.opts.seconds) tick();
+  if (R.opts.boss && R.i === 0 && !R.introShown) {
+    R.introShown = true;
+    const intro = document.createElement('div');
+    intro.className = 'boss-intro';
+    intro.setAttribute('aria-hidden', 'true');
+    intro.innerHTML = `<span>Combat</span><b>${esc(R.opts.boss.name)}</b><small>${R.allowed + 1} vie${R.allowed ? 's' : ''} · ${Math.round(R.opts.boss.pass * 100)} % pour vaincre</small>`;
+    el.appendChild(intro);
+    setTimeout(() => intro.remove(), 2200);
+  }
   const h = layer().querySelector('.run-body h2, .run-body .prompt');
   if (h) h.setAttribute('tabindex', '-1');
 }
@@ -136,7 +145,7 @@ function dialogueHTML(card) {
     }
     const [who, en, fr, dec] = ln;
     const ch = CHARACTERS[who] || CHARACTERS.hero;
-    return `<div class="line ${who === 'shadow' ? 'enemy' : ''}">${portrait(ch, 40)}<div class="bubble">
+    return `<div class="line ${who === 'shadow' ? 'enemy' : ''} ${k === show.length - 1 ? 'last' : 'past'}">${portrait(ch, 48)}<div class="bubble" style="--who:${ch.color || '#FF6B9A'}">
       <span class="who">${esc(ch.name)}</span>
       <p class="en">${clickable(en)}</p>
       <details class="fr" ${frMode === 'beaucoup' ? 'open' : ''}><summary>Traduction</summary><p>${esc(fr)}</p></details>
@@ -383,13 +392,40 @@ function pick(it, k) {
 }
 
 /* Enregistre une réponse et met à jour les compteurs du jeu */
+/* Retour visuel : éclair, texte qui s’envole (+XP, combo, dégâts) */
+function fx(kind, text, where) {
+  const el = layer();
+  if (!el || el.hidden) return;
+  const f = document.createElement('div');
+  f.className = 'fx-flash ' + kind;
+  el.appendChild(f);
+  setTimeout(() => f.remove(), 650);
+  if (text) {
+    const t = document.createElement('div');
+    t.className = 'fx-float ' + kind + (where ? ' at-' + where : '');
+    t.textContent = text;
+    el.appendChild(t);
+    setTimeout(() => t.remove(), 1300);
+  }
+}
 function answer(meta, ok, given, expected) {
   const S = ctx.S;
   const skill = meta.textMode && meta.skill === 'listening' ? 'reading' : meta.skill;
-  if (R.opts.mode !== 'placement') recordAnswer(S, { skill, ok, tags: meta.tags, itemId: meta.id, prompt: meta.prompt, given, expected, tense: meta.tense });
+  let gain = 0;
+  if (R.opts.mode !== 'placement') {
+    gain = recordAnswer(S, { skill, ok, tags: meta.tags, itemId: meta.id, prompt: meta.prompt, given, expected, tense: meta.tense, notions: notionKeys({ ...meta, skill }) });
+    /* révision espacée des exercices : un exercice raté revient demain, puis de plus en plus tard */
+    if (meta.id && ITEMS[meta.id] && (!ok || S.srs['q:' + meta.id])) srsReview(S, 'q:' + meta.id, ok ? 'ok' : 'ko');
+  }
   if (meta.part && R.opts.mode !== 'placement' && !meta.textMode) recordToeic(S, meta.part, ok);
   R.results.push({ id: meta.id, ok, given, expected, skill, tags: meta.tags || [], prompt: meta.prompt, explain: meta.explain, part: meta.part, tense: meta.tense, skipped: meta.skipped });
   if (ok) { R.combo++; sfx(R.combo >= 3 ? 'combo' : 'ok'); } else { R.combo = 0; sfx('ko'); }
+  const body = document.getElementById('runBody');
+  if (body) { body.classList.remove('card-in', 'jolt'); void body.offsetWidth; if (!ok) body.classList.add('jolt'); }
+  if (R.opts.boss) {
+    const dmg = Math.round(100 / R.cards.length);
+    fx(ok ? 'boss-hit' : 'player-hit', ok ? '−' + dmg + ' %' : '−1 vie', 'boss');
+  } else fx(ok ? 'ok' : 'ko', ok ? (gain ? '+' + gain + ' XP' : 'Bien joué') + (R.combo >= 3 ? ' · combo ×' + R.combo : '') : null);
   if (R.opts.boss && !ok) {
     R.hearts--;
     const bb = layer().querySelector('.hearts');
@@ -525,7 +561,7 @@ function bilanHTML(s, info, lvl) {
   for (const r of s.results) if (r.part) { parts[r.part] = parts[r.part] || [0, 0]; parts[r.part][1]++; if (r.ok) parts[r.part][0]++; }
   return `<header class="run-head"><div class="run-title"><span>Bilan</span></div><button class="icon-btn" data-act="close" aria-label="Fermer">${icon('x')}</button></header>
   <main class="run-body bilan">
-    <section class="bilan-top ${info.win === false ? 'lose' : ''}">
+    <section class="bilan-top ${info.win === false ? 'lose' : info.win ? 'win' : ''}">${info.win ? '<div class="sparks" aria-hidden="true">' + '<i></i>'.repeat(14) + '</div>' : ''}
       <h2>${esc(info.title || 'Mission terminée')}</h2>
       ${info.text ? `<p>${esc(info.text)}</p>` : ''}
       <div class="score-row"><div><b>${s.okN}/${s.total}</b><span>réussites</span></div><div><b>+${gained}</b><span>XP</span></div><div><b>${s.mins}</b><span>min</span></div></div>

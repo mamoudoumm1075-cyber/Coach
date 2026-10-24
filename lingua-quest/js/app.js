@@ -37,6 +37,7 @@ ctx.S = load();
 if (ctx.S.hero && !PORTRAIT_BY_ID[ctx.S.hero.portrait]) ctx.S.hero.portrait = (PORTRAITS.find(p => p.cls === ctx.S.hero.cls) || PORTRAITS[0]).id;
 /* révisions d’éléments qui n’existent plus (ancienne version, mot retiré) : retirées pour que les compteurs restent justes */
 for (const id of Object.keys(ctx.S.srs)) if (!C.srsKnown(ctx.S, id)) delete ctx.S.srs[id];
+L.seedNotions(ctx.S);
 /* classe inconnue (sauvegarde abîmée) : on reprend celle du portrait */
 if (ctx.S.hero && !CLASS_INFO[ctx.S.hero.cls]) ctx.S.hero.cls = PORTRAIT_BY_ID[ctx.S.hero.portrait].cls;
 ctx.save = save;
@@ -61,7 +62,10 @@ function badge(id) { if (!S().badges.includes(id)) { S().badges.push(id); toast(
 function checkUnlocks() {
   const s = S(), lvl = L.levelInfo(s.xp).level;
   for (const c of COSMETICS) {
-    if (c.level && lvl >= c.level && own(c.id) && c.level > 1) toast('Nouvel objet : ' + c.name);
+    /* certaines récompenses demandent aussi une vraie maîtrise, pas seulement de l’XP */
+    const need = c.need || {}, tm = Object.values(s.tenses).filter(t => t.mastered).length;
+    const mastery = (!need.tenses || tm >= need.tenses) && (!need.words || L.srsRetained(s) >= need.words);
+    if (c.level && lvl >= c.level && mastery && own(c.id) && c.level > 1) toast('Nouvel objet : ' + c.name);
     if (c.streak && s.streak.best >= c.streak && own(c.id)) toast('Nouvel objet : ' + c.name);
   }
   if (!s.inventory.equipped.outfit) s.inventory.equipped.outfit = 'outfit-start';
@@ -214,6 +218,24 @@ function runTenseMastery(t) {
     }
   });
 }
+function runTargeted() {
+  const s = S(), { keys, cards } = C.targetedCards(s);
+  if (!cards.length) return toast('Rien à cibler pour l’instant : joue quelques quêtes d’abord.');
+  startRun(cards, {
+    mode: 'targeted', title: 'Entraînement ciblé',
+    onDone(sum) {
+      const lines = keys.map(k => {
+        const rs = sum.results.filter(r => C.notionKeys(r).includes(k));
+        const ok = rs.filter(r => r.ok).length;
+        return C.notionInfo(k).label + ' : ' + ok + '/' + rs.length;
+      });
+      const win = sum.pct >= 0.7;
+      const rewards = [];
+      if (win && sum.reason !== 'quit') { s.xp += 25; rewards.push('Entraînement ciblé réussi : +25 XP'); }
+      return { title: 'Entraînement ciblé terminé', text: lines.join(' · ') + '. Les exercices ratés reviendront en révision.', win, rewards, next: { label: 'Voir mes progrès', route: 'progres' } };
+    }
+  });
+}
 function simpleRun(cards, title, mode, extra = {}) {
   if (!cards.length) return toast('Rien à faire ici pour l’instant.');
   startRun(cards, { mode, title, ...extra, onDone: sum => ({ title: title + ' terminé', win: sum.pct >= 0.6, next: nextMission() }) });
@@ -358,6 +380,24 @@ function hud(s) {
   </header>`;
 }
 
+/* Avancement du chapitre en cours : quêtes principales puis boss */
+function chapterProgressHTML(s, ch) {
+  const main = ch.quests.filter(q => q.cat === 'principale');
+  const done = main.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
+  const boss = !!(s.chapters[ch.n] && s.chapters[ch.n].bossBeaten);
+  const steps = [...main.map(q => !!(s.quests[q.id] && s.quests[q.id].done)), boss];
+  return `<span class="qb-steps" aria-label="${done}/${main.length} quêtes principales${boss ? ', boss vaincu' : ''}">${steps.map((v, k) => `<i class="${v ? 'on' : ''} ${k === steps.length - 1 ? 'boss' : ''}"></i>`).join('')}<small>${done}/${main.length} quêtes · ${boss ? 'boss vaincu' : 'boss à affronter'}</small></span>`;
+}
+
+function targetCardHTML(s) {
+  const weak = L.weakNotions(s, 1)[0];
+  const k = weak ? weak.key : C.targetNotions(s, 1)[0];
+  const inf = C.notionInfo(k);
+  return `<section class="card target-card"><div class="card-head"><h3>${weak ? 'Ton point faible du moment' : 'À découvrir'}</h3><a href="#/progres">Mes progrès</a></div>
+    <p><b>${esc(inf.label)}</b>${weak ? ` · ${weak.acc} % de réussite récente` : ' · pas encore assez de réponses'}</p>
+    <button class="btn ghost" data-act="targeted">${icon('target', 18)} Entraînement ciblé</button></section>`;
+}
+
 /* ---------- Jauges : prêt pour le TOEIC, niveau de discussion ---------- */
 function gaugesCardHTML(s) {
   const r = L.toeicReadiness(s), t = L.talkLevel(s, TENSES.length);
@@ -397,6 +437,7 @@ V.home = () => {
   const quick = [['world', 'map', 'Monde'], ['hero', 'user', 'Héros'], ['dialogues', 'heart', 'Dialogues'], ['toeic', 'target', 'TOEIC'], ['codex', 'codex', 'Codex']];
   return `<section class="screen home-screen">
     <div class="scene" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="embers" aria-hidden="true">${'<i></i>'.repeat(10)}</div>
     ${hud(s)}
     <div class="home-stage">
       <span class="wordmark">LINGUA QUEST</span>
@@ -405,6 +446,7 @@ V.home = () => {
       <a class="quest-banner" href="#/${esc(nm.route)}">
         <span class="qb-label">Quête en cours</span>
         <b>${esc(nm.label)}</b>
+        ${chapterProgressHTML(s, ch)}
       </a>
       <a class="btn primary big glow continue" href="#/${esc(nm.route)}">${icon('play', 18)} CONTINUER L’AVENTURE</a>
       <nav class="quick" aria-label="Accès rapides">${quick.map(([r, ic, l]) => `<a href="#/${r}">${icon(ic, 22)}<span>${l}</span></a>`).join('')}</nav>
@@ -424,6 +466,7 @@ V.home = () => {
     </div>
     <p class="hint">La série mesure ta régularité, pas ton niveau d’anglais. 1 jour manqué par semaine est couvert par un joker.</p>
     ${gaugesCardHTML(s)}
+    ${targetCardHTML(s)}
     <section class="card"><div class="card-head"><h3>Compétences réelles</h3><a href="#/skills">Détails</a></div>${L.SKILLS.map(skillMini).join('')}</section>
     <section class="grid2">
       <a class="card tile" href="#/toeic"><small>TOEIC · réussite</small><b>Écoute ${acc('listening')}</b><b>Lecture ${acc('reading')}</b></a>
@@ -524,6 +567,7 @@ V.learn = () => {
     ${tile('review', 'repeat', 'Révisions', pl(due, 'élément dû', 'éléments dus'))}
     ${tile('oral', 'mic', 'Entraînement oral', 'Écouter, répéter, répondre')}
     ${tile('toeic', 'target', 'Progression TOEIC', 'Méthode, tests blancs, 7 parties')}
+    ${tile('progres', 'chart', 'Mes progrès', 'Forces, difficultés, travail ciblé')}
     ${tile('metier', 'tree', 'Mon métier en anglais', 'CVC, VMC, BTP, data center')}
     ${tile('carnet', 'codex', 'Mon carnet', pl(S().carnet.length, 'mot noté', 'mots notés'))}
     ${tile('skills', 'tree', 'Arbre de compétences', '5 branches')}
@@ -660,6 +704,42 @@ V.toeic = () => {
   </section>`;
 };
 
+/* ---------- Mes progrès : progression réelle, domaines, forces, difficultés ---------- */
+function notionRow(x, btn) {
+  const inf = C.notionInfo(x.key);
+  return `<div class="notion"><div><b>${esc(inf.label)}</b><small>${esc(C.DOMAINS[inf.domain])} · ${x.acc} % sur tes ${Math.min(20, x.n)} dernières réponses</small>${bar(x.acc, x.acc >= 80 ? 'green' : x.acc >= 60 ? 'gold' : 'danger')}</div>${btn ? `<button class="btn ghost sm" data-act="notionRun" data-k="${esc(x.key)}">Travailler</button>` : ''}</div>`;
+}
+V.progres = () => {
+  const s = S(), stats = L.notionStats(s);
+  const dom = {};
+  for (const x of stats) { const d = C.notionInfo(x.key).domain; dom[d] = dom[d] || [0, 0]; const r = s.notions[x.key].recent; dom[d][0] += r.reduce((a, b) => a + b, 0); dom[d][1] += r.length; }
+  const weak = L.weakNotions(s, 4), strong = L.strongNotions(s, 4);
+  const untried = C.targetNotions(s, 6).filter(k => !stats.some(x => x.key === k && x.enough));
+  const dueAll = L.srsDue(s).filter(id => C.srsKnown(s, id));
+  const dueQ = dueAll.filter(id => id.startsWith('q:')).length;
+  const tm = TENSES.filter(t => s.tenses[t.id] && s.tenses[t.id].mastered).length;
+  const r = L.toeicReadiness(s), t = L.talkLevel(s, TENSES.length);
+  const recentAcc = L.accuracy(s.recent);
+  return `<section class="page"><h1 class="display sm">Mes progrès</h1>
+    <p class="lead">L’XP récompense l’effort. Ta progression en anglais se mesure ici, sur tes vraies réponses.</p>
+    <section class="card"><h3>Progression réelle</h3>
+      <div class="row"><span>Réussite sur tes 40 dernières réponses</span><b>${recentAcc === null ? '—' : recentAcc + ' %'}</b></div>
+      <div class="row"><span>Temps maîtrisés (85 % sans aide)</span><b>${tm}/${TENSES.length}</b></div>
+      <div class="row"><span>Mots et verbes retenus</span><b>${L.srsRetained(s)}</b></div>
+      <div class="row"><span>Prêt pour le TOEIC</span><b>${r.pct} %</b></div>
+      <div class="row"><span>Niveau de discussion</span><b>${esc(t.cefr)} · ${esc(t.name)}</b></div>
+      <div class="row muted"><span>XP (effort, à part)</span><b>${s.xp}</b></div></section>
+    <section class="card"><h3>Par domaine</h3>${Object.entries(C.DOMAINS).map(([k, label]) => { const d = dom[k]; const acc = d && d[1] ? Math.round((d[0] / d[1]) * 100) : null; return `<div class="row"><span>${esc(label)}</span><b>${acc === null ? 'pas encore travaillé' : acc + ' %'}</b></div>${acc === null ? '' : bar(acc, acc >= 80 ? 'green' : acc >= 60 ? 'gold' : 'danger')}`; }).join('')}</section>
+    <article class="card targeted"><h3>Entraînement ciblé</h3><p>Une séance construite sur tes difficultés réelles : ${C.targetNotions(s, 3).map(k => '<b>' + esc(C.notionInfo(k).label) + '</b>').join(', ')}${dueQ ? `, puis ${pl(dueQ, 'exercice raté', 'exercices ratés')} à revoir` : ''}.</p>
+      <button class="btn primary" data-act="targeted">${icon('target', 18)} Lancer l’entraînement ciblé</button></article>
+    <section class="card"><h3>Tes difficultés</h3>${weak.map(x => notionRow(x, true)).join('') || '<p class="muted">Aucune notion sous 75 % pour l’instant (il faut au moins 4 réponses sur une notion).</p>'}</section>
+    <section class="card"><h3>Tes points forts</h3>${strong.map(x => notionRow(x, false)).join('') || '<p class="muted">Pas encore de notion à 80 % ou plus sur au moins 4 réponses.</p>'}</section>
+    ${untried.length ? `<section class="card"><h3>À travailler ensuite</h3><p class="hint">Pas encore assez de réponses pour juger :</p>${untried.map(k => `<div class="notion"><div><b>${esc(C.notionInfo(k).label)}</b><small>${esc(C.DOMAINS[C.notionInfo(k).domain])}</small></div><button class="btn ghost sm" data-act="notionRun" data-k="${esc(k)}">Essayer</button></div>`).join('')}</section>` : ''}
+    <section class="card"><h3>Révisions espacées</h3><div class="row"><span>Dues aujourd’hui</span><b>${dueAll.length}</b></div><div class="row"><span>dont exercices ratés à revoir</span><b>${dueQ}</b></div>
+      <button class="btn ghost" data-act="reviewRun">${icon('repeat', 18)} Réviser maintenant</button></section>
+  </section>`;
+};
+
 V.metier = () => {
   const s = S();
   return `<section class="page"><h1 class="display sm">Mon métier en anglais</h1>
@@ -711,10 +791,10 @@ V.oral = () => {
 V.review = () => {
   const s = S(), due = L.srsDue(s);
   const items = Object.entries(s.srs).sort((a, b) => (a[1].due < b[1].due ? -1 : 1));
-  const name = id => id.startsWith('v:') ? (VOCAB_BY_ID[id.slice(2)] || {}).en : (C.IRR_BY_ID[id.slice(2)] || {}).inf;
+  const name = id => id.startsWith('v:') ? (VOCAB_BY_ID[id.slice(2)] || {}).en : id.startsWith('c:') ? (s.carnet.find(c => c.id === id.slice(2)) || {}).en : id.startsWith('q:') ? 'Exercice raté · ' + ((C.ITEMS[id.slice(2)] || {}).prompt || '').slice(0, 48) : (C.IRR_BY_ID[id.slice(2)] || {}).inf;
   return `<section class="page"><h1 class="display sm">Révisions</h1>
     <p class="lead">Révision espacée : un mot réussi revient de plus en plus tard (1, 3, 7, 14, 30 jours…). Un mot raté revient dès le lendemain.</p>
-    <article class="card"><h3>${pl(due.length, 'élément dû', 'éléments dus')} aujourd’hui</h3><p>Plus les exercices que tu as ratés récemment.</p><button class="btn primary" data-act="reviewRun">${icon('repeat', 18)} Réviser</button></article>
+    <article class="card"><h3>${pl(due.length, 'élément dû', 'éléments dus')} aujourd’hui</h3><p>Mots, verbes, et chaque exercice raté : il revient le lendemain, puis à 3, 7, 14 jours… tant que tu ne le réussis pas.</p><button class="btn primary" data-act="reviewRun">${icon('repeat', 18)} Réviser</button></article>
     <article class="card"><h3>Verbes irréguliers</h3><p>Ajoute 5 verbes à ta liste de révision.</p><button class="btn ghost" data-act="addIrr">${icon('plus', 18)} Ajouter 5 verbes</button></article>
     <section class="card"><h3>Ta liste (${items.length})</h3>${items.slice(0, 60).map(([id, e]) => `<div class="row"><span class="en">${esc(name(id) || id)}</span><small>${e.due <= L.today() ? 'à revoir' : 'le ' + esc(e.due.slice(8) + '/' + e.due.slice(5, 7))}</small><b>${'●'.repeat(Math.min(6, e.box))}${'○'.repeat(Math.max(0, 6 - e.box))}</b></div>`).join('') || '<p class="muted">Ta liste est vide : elle se remplit avec les mots des quêtes et ceux que tu ajoutes depuis le Codex.</p>'}</section></section>`;
 };
@@ -754,7 +834,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -843,6 +923,8 @@ function onAction(act, b) {
       if (!c || !confirm('Retirer « ' + c.en + ' » de ton carnet ?')) return;
       L.carnetRemove(s, c.id); save(); return render();
     }
+    case 'notionRun': { const k = b.dataset.k; return simpleRun(C.notionCards(s, k, 6), C.notionInfo(k).label, 'cible'); }
+    case 'targeted': return runTargeted();
     case 'metierRun': return simpleRun(C.metierCards(s, b.dataset.c), 'Métier · ' + CATEGORIES[b.dataset.c].replace('Métier · ', ''), 'metier');
     case 'carnetRun': {
       const due = new Set(L.srsDue(s).filter(id => id.startsWith('c:')));
