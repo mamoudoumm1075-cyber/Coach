@@ -35,6 +35,10 @@ function save() {
 ctx.S = load();
 /* anciennes sauvegardes : héros sans portrait illustré */
 if (ctx.S.hero && !PORTRAIT_BY_ID[ctx.S.hero.portrait]) ctx.S.hero.portrait = (PORTRAITS.find(p => p.cls === ctx.S.hero.cls) || PORTRAITS[0]).id;
+/* révisions d’éléments qui n’existent plus (ancienne version, mot retiré) : retirées pour que les compteurs restent justes */
+for (const id of Object.keys(ctx.S.srs)) if (!C.srsKnown(ctx.S, id)) delete ctx.S.srs[id];
+/* classe inconnue (sauvegarde abîmée) : on reprend celle du portrait */
+if (ctx.S.hero && !CLASS_INFO[ctx.S.hero.cls]) ctx.S.hero.cls = PORTRAIT_BY_ID[ctx.S.hero.portrait].cls;
 ctx.save = save;
 ctx.go = route => { location.hash = '#/' + route; };
 ctx.refresh = () => render();

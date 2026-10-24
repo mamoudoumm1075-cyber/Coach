@@ -87,8 +87,13 @@ export function questCards(S, quest) {
 }
 
 /* Cartes de réactivation : révisions dues, sinon nouveaux mots du chapitre en cours */
+/* Une révision n’est proposée que si l’élément existe encore (mot, verbe ou entrée du carnet) */
+export function srsKnown(S, id) {
+  const k = id.slice(2);
+  return id.startsWith('v:') ? !!VOCAB_BY_ID[k] : id.startsWith('i:') ? !!IRR_BY_ID[k] : id.startsWith('c:') ? S.carnet.some(c => c.id === k) : false;
+}
 export function recallCards(S, max = 5, min = 3) {
-  const due = srsDue(S, today(), max);
+  const due = srsDue(S, today()).filter(id => srsKnown(S, id)).slice(0, max);
   const cards = due.map(id => ({ kind: 'recall', id }));
   if (cards.length < min) {
     const ch = currentChapter(S);
@@ -132,7 +137,7 @@ export function masteryCards(t) {
 
 /* Révisions : mots et verbes dus + exercices récemment ratés */
 export function reviewCards(S, max = 12) {
-  const cards = srsDue(S, today(), 8).map(id => ({ kind: 'recall', id }));
+  const cards = srsDue(S, today()).filter(id => srsKnown(S, id)).slice(0, 8).map(id => ({ kind: 'recall', id }));
   const seen = new Set();
   for (const e of S.errors.slice().reverse()) {
     if (cards.length >= max) break;

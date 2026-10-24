@@ -176,3 +176,31 @@ test('jauge de discussion : progresse avec l’oral, les temps et les mots', () 
   assert.equal(t.cefr, 'C1');
   assert.equal(t.next, null);
 });
+
+test('sauvegarde abîmée : chaque rubrique est nettoyée sans perdre ce qui est valable', () => {
+  const s = L.sanitize({
+    xp: '120', skills: { listening: null, reading: { attempts: 'x', recent: [1, 'a', 0] } }, hero: 'cassé',
+    toeic: { parts: { 2: null, 5: { attempts: 3, recent: [1] } }, tests: [null, {}, { kind: 'blanc', ok: 3, total: 4 }] },
+    days: { '2026-01-01': null, '2026-01-02': { mins: 5, done: 1 } }, srs: { 'v:a': { box: 9, due: '2026-01-01' }, 'v:b': null, 'v:c': { due: 'demain' } },
+    errors: [null, { id: 'x' }], quests: { 'q1-1': null, 'q1-2': { done: true } }, chapters: { 1: null, 2: { bossBeaten: 1 } },
+    inventory: { owned: null }, streak: null, settings: { theme: 42, rate: 'vite', sound: false, fr: 'peu' }
+  });
+  assert.equal(s.xp, 120);
+  assert.equal(s.hero, null);
+  assert.deepEqual(s.skills.reading, { attempts: 0, correct: 0, recent: [1, 0] });
+  assert.deepEqual(Object.keys(s.toeic.parts), ['5']);
+  assert.equal(s.toeic.tests.length, 1);
+  assert.deepEqual(Object.keys(s.days), ['2026-01-02']);
+  assert.deepEqual(Object.keys(s.srs), ['v:a']);
+  assert.equal(s.srs['v:a'].box, 6);
+  assert.equal(s.errors.length, 1);
+  assert.deepEqual(Object.keys(s.quests), ['q1-2']);
+  assert.equal(s.chapters[1].bossBeaten, false);
+  assert.equal(s.chapters[2].bossBeaten, true);
+  assert.deepEqual(s.inventory.owned, []);
+  assert.equal(s.streak.count, 0);
+  assert.equal(s.settings.theme, 'dark');
+  assert.equal(s.settings.rate, 0.9);
+  assert.equal(s.settings.sound, false);
+  assert.equal(s.settings.fr, 'peu');
+});

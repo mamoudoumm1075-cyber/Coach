@@ -66,26 +66,59 @@ export function newState() {
 }
 
 /* Relit un état sauvegardé : complète les champs manquants, refuse ce qui n'est pas un état Lingua Quest */
+const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
+const num = (x, d = 0) => (Number.isFinite(+x) ? +x : d);
+const isDay = x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+/* Garde seulement les valeurs d’un objet qui passent fix(v) (qui renvoie la valeur nettoyée ou null) */
+function cleanMap(o, fix) {
+  const out = {};
+  if (isObj(o)) for (const [k, v] of Object.entries(o)) { const c = fix(v); if (c) out[k] = c; }
+  return out;
+}
+const cleanRecent = r => (Array.isArray(r) ? r.filter(x => x === 0 || x === 1).slice(-30) : []);
+const cleanStat = v => (isObj(v) ? { ...v, attempts: num(v.attempts), correct: num(v.correct), recent: cleanRecent(v.recent) } : null);
+const SETTING_CHOICES = { theme: ['dark', 'light', 'auto'], fr: ['beaucoup', 'moyen', 'peu'] };
 export function sanitize(o) {
-  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('format');
+  if (!isObj(o)) throw new Error('format');
   if (!('xp' in o) || !('skills' in o)) throw new Error('format');
   const base = newState();
   const s = { ...base, ...o };
-  s.settings = { ...base.settings, ...(o.settings || {}) };
-  s.streak = { ...base.streak, ...(o.streak || {}) };
-  s.inventory = { ...base.inventory, ...(o.inventory || {}) };
-  s.toeic = { ...base.toeic, ...(o.toeic || {}) };
-  s.skills = { ...base.skills };
-  for (const k of SKILLS) {
-    const v = o.skills && o.skills[k];
-    if (v && typeof v === 'object') s.skills[k] = { attempts: +v.attempts || 0, correct: +v.correct || 0, recent: Array.isArray(v.recent) ? v.recent.slice(-30) : [] };
+  /* réglages : chaque valeur garde son type, sinon valeur par défaut */
+  s.settings = { ...base.settings };
+  if (isObj(o.settings)) for (const [k, v] of Object.entries(o.settings)) {
+    if (!(k in base.settings)) { s.settings[k] = v; continue; }
+    const d = base.settings[k];
+    if (SETTING_CHOICES[k] ? SETTING_CHOICES[k].includes(v) : typeof v === typeof d && (typeof v !== 'number' || Number.isFinite(v))) s.settings[k] = v;
   }
-  for (const k of ['quests', 'srs', 'tenses', 'chapters', 'days']) if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = base[k];
+  s.streak = { ...base.streak, ...(isObj(o.streak) ? o.streak : {}) };
+  s.streak.count = num(s.streak.count); s.streak.best = num(s.streak.best);
+  const inv = isObj(o.inventory) ? o.inventory : {};
+  s.inventory = { owned: Array.isArray(inv.owned) ? inv.owned.filter(x => typeof x === 'string') : [], equipped: isObj(inv.equipped) ? inv.equipped : {} };
+  const t = isObj(o.toeic) ? o.toeic : {};
+  s.toeic = {
+    ...base.toeic, ...t,
+    parts: cleanMap(t.parts, cleanStat),
+    tests: (Array.isArray(t.tests) ? t.tests : []).filter(x => isObj(x) && num(x.total) > 0).map(x => ({ ...x, ok: num(x.ok), total: num(x.total), seconds: num(x.seconds), parts: isObj(x.parts) ? x.parts : {} })),
+    drills: num(t.drills)
+  };
+  s.skills = { ...base.skills };
+  for (const k of SKILLS) { const v = cleanStat(o.skills && o.skills[k]); if (v) s.skills[k] = { attempts: v.attempts, correct: v.correct, recent: v.recent }; }
+  s.srs = cleanMap(o.srs, e => (isObj(e) && isDay(e.due) ? { ...e, box: Math.min(6, Math.max(0, num(e.box))), seen: num(e.seen), ok: num(e.ok), ko: num(e.ko) } : null));
+  s.tenses = cleanMap(o.tenses, cleanStat);
+  s.quests = cleanMap(o.quests, q => (isObj(q) ? { ...q, done: !!q.done, best: num(q.best), attempts: num(q.attempts) } : null));
+  s.chapters = cleanMap(o.chapters, c => (isObj(c) ? { ...c, bossBeaten: !!c.bossBeaten, bossTries: num(c.bossTries) } : null));
+  s.days = cleanMap(o.days, d => (isObj(d) ? { ...d, mins: num(d.mins), xp: num(d.xp), done: !!d.done } : null));
   for (const k of ['recent', 'errors', 'sessions', 'badges', 'carnet']) if (!Array.isArray(s[k])) s[k] = [];
-  s.carnet = s.carnet.filter(c => c && typeof c === 'object' && typeof c.en === 'string' && c.id);
+  s.recent = cleanRecent(s.recent);
+  s.errors = s.errors.filter(e => isObj(e) && e.id).slice(-200);
+  s.sessions = s.sessions.filter(isObj);
+  s.badges = s.badges.filter(b => typeof b === 'string');
+  s.carnet = s.carnet.filter(c => isObj(c) && typeof c.en === 'string' && c.id);
   if (!s.chapters[1]) s.chapters[1] = { bossBeaten: false, bossTries: 0 };
-  s.xp = Math.max(0, +s.xp || 0);
-  s.difficulty = Math.min(3, Math.max(1, +s.difficulty || 1));
+  if (s.hero && !(isObj(s.hero) && typeof s.hero.name === 'string')) s.hero = null;
+  if (s.placement && !isObj(s.placement)) s.placement = null;
+  s.xp = Math.max(0, num(s.xp));
+  s.difficulty = Math.min(3, Math.max(1, num(s.difficulty, 1)));
   s.v = STATE_VERSION;
   return s;
 }

@@ -129,10 +129,10 @@ function dialogueHTML(card) {
   const frMode = ctx.S.settings.fr;
   const html = show.map((ln, k) => {
     if (!Array.isArray(ln)) {
-      const done = R.cur.choice && R.cur.choice.k === k;
+      const ch = (R.cur.choices || {})[k], done = !!ch;
       return `<div class="choice-block"><p class="prompt">${esc(ln.choice)}</p>
-        <div class="options">${ln.options.map((o, j) => `<button class="opt ${done ? (o[1] ? 'good' : (R.cur.choice.j === j ? 'bad' : '')) : ''}" data-act="dlgChoice" data-k="${k}" data-j="${j}" ${done ? 'disabled' : ''}>${esc(o[0])}</button>`).join('')}</div>
-        ${done ? `<p class="fb ${ln.options[R.cur.choice.j][1] ? 'ok' : 'ko'}">${esc(ln.options[R.cur.choice.j][2])}</p>` : ''}</div>`;
+        <div class="options">${ln.options.map((o, j) => `<button class="opt ${done ? (o[1] ? 'good' : (ch.j === j ? 'bad' : '')) : ''}" data-act="dlgChoice" data-k="${k}" data-j="${j}" ${done ? 'disabled' : ''}>${esc(o[0])}</button>`).join('')}</div>
+        ${done ? `<p class="fb ${ln.options[ch.j][1] ? 'ok' : 'ko'}">${esc(ln.options[ch.j][2])}</p>` : ''}</div>`;
     }
     const [who, en, fr, dec] = ln;
     const ch = CHARACTERS[who] || CHARACTERS.hero;
@@ -149,7 +149,7 @@ function dialogueHTML(card) {
 function dialogueFoot(card) {
   const lines = DIALOGUES[card.id] || [];
   const ln = lines[R.dl];
-  if (ln && !Array.isArray(ln) && !(R.cur.choice && R.cur.choice.k === R.dl)) return '';
+  if (ln && !Array.isArray(ln) && !(R.cur.choices && R.cur.choices[R.dl])) return '';
   if (R.dl >= lines.length - 1) return `<button class="btn primary" data-act="next">Continuer</button>`;
   return `<button class="btn primary" data-act="dlgNext">Suite</button>`;
 }
@@ -168,7 +168,7 @@ function recallHTML(card) {
   const id = card.id;
   if (id.startsWith('c:')) {
     const c = ctx.S.carnet.find(x => x.id === id.slice(2));
-    if (!c) return `<p>Mot retiré du carnet.</p>`;
+    if (!c) return `<p>Mot retiré du carnet.</p><button class="btn primary" data-act="next">Continuer</button>`;
     return `<section class="recall"><p class="prompt">Mot de ton carnet : que veut-il dire ? Réponds dans ta tête avant de regarder.</p>
       <h2 class="big-word">${esc(c.en)}</h2><button class="mini" data-act="sayText" data-t="${esc(c.en)}">${icon('speaker', 16)} Écouter</button>
       <div id="reveal" hidden><div class="answer-box"><b>${esc(c.fr || 'Pas de traduction notée : ajoute-la dans ton carnet.')}</b></div>
@@ -178,7 +178,7 @@ function recallHTML(card) {
   }
   if (id.startsWith('v:')) {
     const v = VOCAB_BY_ID[id.slice(2)];
-    if (!v) return `<p>Mot introuvable.</p>`;
+    if (!v) return `<p>Mot introuvable.</p><button class="btn primary" data-act="next">Continuer</button>`;
     return `<section class="recall"><p class="prompt">Que veut dire ce mot ? Réponds dans ta tête avant de regarder.</p>
       <h2 class="big-word">${esc(v.en)}</h2><button class="mini" data-act="sayText" data-t="${esc(v.en)}">${icon('speaker', 16)} Écouter</button>
       <p class="example en">${clickable(v.ex)}</p>
@@ -188,7 +188,7 @@ function recallHTML(card) {
       <button class="btn primary wide" id="revealBtn" data-act="reveal">Voir la réponse</button></section>`;
   }
   const r = IRR_BY_ID[id.slice(2)];
-  if (!r) return `<p>Verbe introuvable.</p>`;
+  if (!r) return `<p>Verbe introuvable.</p><button class="btn primary" data-act="next">Continuer</button>`;
   return `<section class="recall"><p class="prompt">Verbe irrégulier : donne le prétérit et le participe passé dans ta tête.</p>
     <h2 class="big-word">${esc(r.inf)}</h2><p class="muted">${esc(r.fr)}</p>
     <div id="reveal" hidden><div class="answer-box"><b>${esc(r.inf)} → ${esc(r.past)} → ${esc(r.pp)}</b><p class="en">${esc(r.ex)}</p><p>${esc(r.exFr)}</p></div>
@@ -288,7 +288,9 @@ function handle(act, b, card) {
     case 'dlgNext': R.dl++; return rerenderDialogue(card);
     case 'dlgChoice': {
       const k = +b.dataset.k, j = +b.dataset.j, ln = DIALOGUES[card.id][k];
-      R.cur.choice = { k, j };
+      R.cur.choices = R.cur.choices || {};
+      if (R.cur.choices[k]) return;
+      R.cur.choices[k] = { j };
       const ok = ln.options[j][1];
       answer({ id: 'dlg-' + card.id + '-' + k, skill: 'reflexes', prompt: ln.choice, tags: [] }, ok, ln.options[j][0], ln.options.filter(o => o[1]).map(o => o[0]).join(' / '));
       return rerenderDialogue(card);
@@ -362,8 +364,8 @@ function gradeRecall(card, g) {
   const S = ctx.S;
   srsReview(S, card.id, g);
   R.reviewed.push({ id: card.id, g });
-  const label = card.id.startsWith('v:') ? (VOCAB_BY_ID[card.id.slice(2)] || {}).en : (IRR_BY_ID[card.id.slice(2)] || {}).inf;
-  answer({ id: card.id, skill: 'grammar', prompt: 'Révision : ' + label, tags: ['revision'] }, g === 'ok', g === 'ok' ? 'su' : g === 'hard' ? 'hésitation' : 'pas su', 'à retenir');
+  const label = card.id.startsWith('v:') ? (VOCAB_BY_ID[card.id.slice(2)] || {}).en : card.id.startsWith('c:') ? (S.carnet.find(c => c.id === card.id.slice(2)) || {}).en : (IRR_BY_ID[card.id.slice(2)] || {}).inf;
+  answer({ id: card.id, skill: 'grammar', prompt: 'Révision : ' + (label || 'élément retiré'), tags: ['revision'] }, g === 'ok', g === 'ok' ? 'su' : g === 'hard' ? 'hésitation' : 'pas su', 'à retenir');
   next();
 }
 
@@ -428,6 +430,9 @@ async function doMic(it, btn) {
   if (R.cur.answered) return;
   /* avec le serveur voix, un second appui termine l’enregistrement */
   if (R.cur.listening) { if (R.cur.byServer) stopListening(); return; }
+  const cur = R.cur;
+  /* la partie a pu être quittée ou avoir avancé pendant l’écoute */
+  const gone = () => !R || R.cur !== cur;
   R.cur.listening = true;
   R.cur.byServer = micByServer();
   stopSpeaking();
@@ -437,11 +442,13 @@ async function doMic(it, btn) {
   st.textContent = R.cur.byServer ? 'J’écoute… parle, puis appuie de nouveau quand tu as fini.' : 'J’écoute… parle maintenant.';
   try {
     const text = await listen({ lang: 'en-US', onPhase: () => { btn.classList.remove('rec'); st.textContent = 'Transcription…'; } });
+    if (gone()) return;
     btn.classList.remove('rec');
     R.cur.listening = false;
     st.textContent = '';
     evaluateSpeech(it, text, false);
   } catch (e) {
+    if (gone()) return;
     btn.classList.remove('rec');
     R.cur.listening = false;
     st.textContent = STT_ERRORS[e.message] || 'La reconnaissance vocale a échoué. Réessaie ou réponds par écrit.';
