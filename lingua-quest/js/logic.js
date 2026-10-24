@@ -61,31 +61,70 @@ export function newState() {
     inventory: { owned: [], equipped: {} },
     badges: [],
     carnet: [],
+    notions: {},
+    skins: { owned: ['recrue'], equipped: 'recrue' },
     settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '', toeicGoal: 850 }
   };
 }
 
 /* Relit un état sauvegardé : complète les champs manquants, refuse ce qui n'est pas un état Lingua Quest */
+const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
+const num = (x, d = 0) => (Number.isFinite(+x) ? +x : d);
+const isDay = x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
+/* Garde seulement les valeurs d’un objet qui passent fix(v) (qui renvoie la valeur nettoyée ou null) */
+function cleanMap(o, fix) {
+  const out = {};
+  if (isObj(o)) for (const [k, v] of Object.entries(o)) { const c = fix(v); if (c) out[k] = c; }
+  return out;
+}
+const cleanRecent = r => (Array.isArray(r) ? r.filter(x => x === 0 || x === 1).slice(-30) : []);
+const cleanStat = v => (isObj(v) ? { ...v, attempts: num(v.attempts), correct: num(v.correct), recent: cleanRecent(v.recent) } : null);
+const SETTING_CHOICES = { theme: ['dark', 'light', 'auto'], fr: ['beaucoup', 'moyen', 'peu'] };
 export function sanitize(o) {
-  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('format');
+  if (!isObj(o)) throw new Error('format');
   if (!('xp' in o) || !('skills' in o)) throw new Error('format');
   const base = newState();
   const s = { ...base, ...o };
-  s.settings = { ...base.settings, ...(o.settings || {}) };
-  s.streak = { ...base.streak, ...(o.streak || {}) };
-  s.inventory = { ...base.inventory, ...(o.inventory || {}) };
-  s.toeic = { ...base.toeic, ...(o.toeic || {}) };
-  s.skills = { ...base.skills };
-  for (const k of SKILLS) {
-    const v = o.skills && o.skills[k];
-    if (v && typeof v === 'object') s.skills[k] = { attempts: +v.attempts || 0, correct: +v.correct || 0, recent: Array.isArray(v.recent) ? v.recent.slice(-30) : [] };
+  /* réglages : chaque valeur garde son type, sinon valeur par défaut */
+  s.settings = { ...base.settings };
+  if (isObj(o.settings)) for (const [k, v] of Object.entries(o.settings)) {
+    if (!(k in base.settings)) { s.settings[k] = v; continue; }
+    const d = base.settings[k];
+    if (SETTING_CHOICES[k] ? SETTING_CHOICES[k].includes(v) : typeof v === typeof d && (typeof v !== 'number' || Number.isFinite(v))) s.settings[k] = v;
   }
-  for (const k of ['quests', 'srs', 'tenses', 'chapters', 'days']) if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k])) s[k] = base[k];
+  s.streak = { ...base.streak, ...(isObj(o.streak) ? o.streak : {}) };
+  s.streak.count = num(s.streak.count); s.streak.best = num(s.streak.best);
+  const inv = isObj(o.inventory) ? o.inventory : {};
+  s.inventory = { owned: Array.isArray(inv.owned) ? inv.owned.filter(x => typeof x === 'string') : [], equipped: isObj(inv.equipped) ? inv.equipped : {} };
+  const t = isObj(o.toeic) ? o.toeic : {};
+  s.toeic = {
+    ...base.toeic, ...t,
+    parts: cleanMap(t.parts, cleanStat),
+    tests: (Array.isArray(t.tests) ? t.tests : []).filter(x => isObj(x) && num(x.total) > 0).map(x => ({ ...x, ok: num(x.ok), total: num(x.total), seconds: num(x.seconds), parts: isObj(x.parts) ? x.parts : {} })),
+    drills: num(t.drills)
+  };
+  s.skills = { ...base.skills };
+  for (const k of SKILLS) { const v = cleanStat(o.skills && o.skills[k]); if (v) s.skills[k] = { attempts: v.attempts, correct: v.correct, recent: v.recent }; }
+  s.srs = cleanMap(o.srs, e => (isObj(e) && isDay(e.due) ? { ...e, box: Math.min(6, Math.max(0, num(e.box))), seen: num(e.seen), ok: num(e.ok), ko: num(e.ko) } : null));
+  s.tenses = cleanMap(o.tenses, cleanStat);
+  s.notions = cleanMap(o.notions, v => (isObj(v) ? { n: num(v.n), ok: num(v.ok), recent: cleanRecent(v.recent), last: isDay(v.last) ? v.last : null } : null));
+  s.quests = cleanMap(o.quests, q => (isObj(q) ? { ...q, done: !!q.done, best: num(q.best), attempts: num(q.attempts) } : null));
+  s.chapters = cleanMap(o.chapters, c => (isObj(c) ? { ...c, bossBeaten: !!c.bossBeaten, bossTries: num(c.bossTries) } : null));
+  s.days = cleanMap(o.days, d => (isObj(d) ? { ...d, mins: num(d.mins), xp: num(d.xp), done: !!d.done } : null));
   for (const k of ['recent', 'errors', 'sessions', 'badges', 'carnet']) if (!Array.isArray(s[k])) s[k] = [];
-  s.carnet = s.carnet.filter(c => c && typeof c === 'object' && typeof c.en === 'string' && c.id);
+  s.recent = cleanRecent(s.recent);
+  s.errors = s.errors.filter(e => isObj(e) && e.id).slice(-200);
+  s.sessions = s.sessions.filter(isObj);
+  s.badges = s.badges.filter(b => typeof b === 'string');
+  s.carnet = s.carnet.filter(c => isObj(c) && typeof c.en === 'string' && c.id);
+  const sk = isObj(o.skins) ? o.skins : {};
+  const owned = ['recrue', ...(Array.isArray(sk.owned) ? sk.owned.filter(x => typeof x === 'string' && x !== 'recrue') : [])];
+  s.skins = { owned: [...new Set(owned)], equipped: owned.includes(sk.equipped) ? sk.equipped : 'recrue' };
   if (!s.chapters[1]) s.chapters[1] = { bossBeaten: false, bossTries: 0 };
-  s.xp = Math.max(0, +s.xp || 0);
-  s.difficulty = Math.min(3, Math.max(1, +s.difficulty || 1));
+  if (s.hero && !(isObj(s.hero) && typeof s.hero.name === 'string')) s.hero = null;
+  if (s.placement && !isObj(s.placement)) s.placement = null;
+  s.xp = Math.max(0, num(s.xp));
+  s.difficulty = Math.min(3, Math.max(1, num(s.difficulty, 1)));
   s.v = STATE_VERSION;
   return s;
 }
@@ -117,6 +156,15 @@ export function recordAnswer(S, a) {
     if (a.ok) t.correct++;
     t.recent.push(a.ok ? 1 : 0);
     if (t.recent.length > 20) t.recent.shift();
+  }
+  /* suivi par notion (temps, partie TOEIC, prépositions, vocabulaire…) */
+  for (const k of a.notions || []) {
+    const n = S.notions[k] || (S.notions[k] = { n: 0, ok: 0, recent: [], last: null });
+    n.n++;
+    if (a.ok) n.ok++;
+    n.recent.push(a.ok ? 1 : 0);
+    if (n.recent.length > 20) n.recent.shift();
+    n.last = today();
   }
   if (!a.ok) {
     S.errors.push({ d: today(), id: a.itemId || '', skill: a.skill, tags: a.tags || [], q: a.prompt || '', given: a.given ?? '', expected: a.expected ?? '' });
@@ -249,6 +297,33 @@ export function talkLevel(S, tenseCount = 9) {
   return { score, name, cefr, desc, next: next ? { name: next[1], at: next[0] } : null, parts, tips };
 }
 
+/* ---------- Skins évolutifs : état de chaque condition ----------
+   m : mesures du joueur { level, quests, bosses: [n…], tenses, words, talk, toeic, carnet } */
+export const MASTERY_REQS = ['tenses', 'words', 'talk', 'toeic', 'carnet'];
+export function skinReqs(skin, m) {
+  return skin.req.map(r => {
+    const cur = r.t === 'boss' ? ((m.bosses || []).includes(r.n) ? 1 : 0) : num(m[r.t]);
+    const need = r.t === 'boss' ? 1 : r.n;
+    return { ...r, cur: Math.min(cur, need), need, ok: cur >= need, mastery: MASTERY_REQS.includes(r.t) };
+  });
+}
+export function skinState(S, skin, m) {
+  const reqs = skinReqs(skin, m), owned = S.skins.owned.includes(skin.id);
+  const done = reqs.filter(r => r.ok).length;
+  return { owned, ready: !owned && reqs.every(r => r.ok), equipped: S.skins.equipped === skin.id, reqs, pct: reqs.length ? Math.round((done / reqs.length) * 100) : 100 };
+}
+export function unlockSkin(S, skin, m) {
+  const st = skinState(S, skin, m);
+  if (!st.ready) return false;
+  S.skins.owned.push(skin.id);
+  return true;
+}
+export function equipSkin(S, id) {
+  if (!S.skins.owned.includes(id)) return false;
+  S.skins.equipped = id;
+  return true;
+}
+
 /* ---------- Plan d’examen : sprint de 4 semaines avant la date du TOEIC ---------- */
 export function examPlan(examDate, d = today()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(examDate || '')) return null;
@@ -290,7 +365,28 @@ export function carnetRemove(S, id) {
   delete S.srs['c:' + id];
 }
 
-export function srsRetained(S) { return Object.values(S.srs).filter(e => e.box >= 3).length; }
+/* mots et verbes retenus (les exercices ratés en révision « q: » ne comptent pas comme des mots) */
+export function srsRetained(S) { return Object.entries(S.srs).filter(([id, e]) => !id.startsWith('q:') && e.box >= 3).length; }
+
+/* ---------- Suivi par notion : forces, difficultés, notions à travailler ---------- */
+/* Une notion est jugée sur ses 20 dernières réponses ; il en faut au moins 4 pour conclure. */
+export const NOTION_MIN = 4;
+export function notionStats(S) {
+  return Object.entries(S.notions).map(([key, v]) => ({ key, n: v.n, ok: v.ok, acc: accuracy(v.recent), last: v.last, enough: v.recent.length >= NOTION_MIN }));
+}
+export function weakNotions(S, max = 3) {
+  return notionStats(S).filter(x => x.enough && x.acc < 75).sort((a, b) => a.acc - b.acc || b.n - a.n).slice(0, max);
+}
+export function strongNotions(S, max = 3) {
+  return notionStats(S).filter(x => x.enough && x.acc >= 80).sort((a, b) => b.acc - a.acc || b.n - a.n).slice(0, max);
+}
+/* Anciennes sauvegardes : on reconstruit le suivi à partir des temps et des parties TOEIC déjà enregistrés */
+export function seedNotions(S) {
+  if (Object.keys(S.notions).length) return false;
+  for (const [id, t] of Object.entries(S.tenses)) if (t.recent && t.recent.length) S.notions['temps:' + id] = { n: t.attempts, ok: t.correct, recent: t.recent.slice(-20), last: null };
+  for (const [p, t] of Object.entries(S.toeic.parts)) if (t.recent && t.recent.length) S.notions['toeic:' + p] = { n: t.attempts, ok: t.correct, recent: t.recent.slice(-20), last: null };
+  return true;
+}
 
 /* ---------- Série quotidienne (1 joker par semaine) ---------- */
 export function completeDay(S, d = today()) {

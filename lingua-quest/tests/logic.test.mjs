@@ -176,3 +176,74 @@ test('jauge de discussion : progresse avec l’oral, les temps et les mots', () 
   assert.equal(t.cefr, 'C1');
   assert.equal(t.next, null);
 });
+
+test('sauvegarde abîmée : chaque rubrique est nettoyée sans perdre ce qui est valable', () => {
+  const s = L.sanitize({
+    xp: '120', skills: { listening: null, reading: { attempts: 'x', recent: [1, 'a', 0] } }, hero: 'cassé',
+    toeic: { parts: { 2: null, 5: { attempts: 3, recent: [1] } }, tests: [null, {}, { kind: 'blanc', ok: 3, total: 4 }] },
+    days: { '2026-01-01': null, '2026-01-02': { mins: 5, done: 1 } }, srs: { 'v:a': { box: 9, due: '2026-01-01' }, 'v:b': null, 'v:c': { due: 'demain' } },
+    errors: [null, { id: 'x' }], quests: { 'q1-1': null, 'q1-2': { done: true } }, chapters: { 1: null, 2: { bossBeaten: 1 } },
+    inventory: { owned: null }, streak: null, settings: { theme: 42, rate: 'vite', sound: false, fr: 'peu' }
+  });
+  assert.equal(s.xp, 120);
+  assert.equal(s.hero, null);
+  assert.deepEqual(s.skills.reading, { attempts: 0, correct: 0, recent: [1, 0] });
+  assert.deepEqual(Object.keys(s.toeic.parts), ['5']);
+  assert.equal(s.toeic.tests.length, 1);
+  assert.deepEqual(Object.keys(s.days), ['2026-01-02']);
+  assert.deepEqual(Object.keys(s.srs), ['v:a']);
+  assert.equal(s.srs['v:a'].box, 6);
+  assert.equal(s.errors.length, 1);
+  assert.deepEqual(Object.keys(s.quests), ['q1-2']);
+  assert.equal(s.chapters[1].bossBeaten, false);
+  assert.equal(s.chapters[2].bossBeaten, true);
+  assert.deepEqual(s.inventory.owned, []);
+  assert.equal(s.streak.count, 0);
+  assert.equal(s.settings.theme, 'dark');
+  assert.equal(s.settings.rate, 0.9);
+  assert.equal(s.settings.sound, false);
+  assert.equal(s.settings.fr, 'peu');
+});
+
+test('suivi par notion : réponses comptées, forces et difficultés, reconstruction des anciennes sauvegardes', () => {
+  const s = L.newState();
+  for (let i = 0; i < 6; i++) L.recordAnswer(s, { skill: 'grammar', ok: i < 1, notions: ['prepositions'] });
+  for (let i = 0; i < 5; i++) L.recordAnswer(s, { skill: 'grammar', ok: true, notions: ['temps:past-simple'] });
+  L.recordAnswer(s, { skill: 'grammar', ok: false, notions: ['irreguliers'] });
+  assert.equal(s.notions.prepositions.n, 6);
+  assert.deepEqual(L.weakNotions(s).map(x => x.key), ['prepositions']);
+  assert.deepEqual(L.strongNotions(s).map(x => x.key), ['temps:past-simple']);
+  const old = L.newState();
+  old.tenses['present-simple'] = { attempts: 4, correct: 3, recent: [1, 1, 0, 1] };
+  old.toeic.parts[5] = { attempts: 2, correct: 1, recent: [1, 0] };
+  assert.ok(L.seedNotions(old));
+  assert.deepEqual(Object.keys(old.notions).sort(), ['temps:present-simple', 'toeic:5']);
+  assert.equal(L.seedNotions(old), false);
+});
+
+test('mots retenus : les exercices en révision ne comptent pas comme des mots', () => {
+  const s = L.newState();
+  s.srs['v:a'] = { box: 3, due: '2026-01-01' };
+  s.srs['q:t5-1'] = { box: 4, due: '2026-01-01' };
+  assert.equal(L.srsRetained(s), 1);
+});
+
+test('skins : conditions de jeu ET d’anglais, déblocage, équipement, sauvegarde', async () => {
+  const { SKINS, SKIN_BY_ID } = await import('../data/world.js');
+  for (const k of SKINS.slice(1)) assert.ok(k.req.some(r => L.MASTERY_REQS.includes(r.t)), k.id + ' : demande une vraie progression en anglais');
+  const s = L.newState();
+  const m = { level: 3, quests: 3, bosses: [], tenses: 0, words: 9, talk: 0, toeic: 0, carnet: 0 };
+  let st = L.skinState(s, SKIN_BY_ID.eveil, m);
+  assert.equal(st.ready, false, 'il manque un mot retenu');
+  assert.equal(L.unlockSkin(s, SKIN_BY_ID.eveil, m), false);
+  assert.equal(L.equipSkin(s, 'eveil'), false, 'impossible d’équiper sans débloquer');
+  m.words = 10;
+  assert.equal(L.skinState(s, SKIN_BY_ID.eveil, m).ready, true);
+  assert.ok(L.unlockSkin(s, SKIN_BY_ID.eveil, m));
+  assert.ok(L.equipSkin(s, 'eveil'));
+  const back = L.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(back.skins, { owned: ['recrue', 'eveil'], equipped: 'eveil' });
+  assert.deepEqual(L.sanitize({ xp: 0, skills: {}, skins: { owned: 'x', equipped: 'maitre' } }).skins, { owned: ['recrue'], equipped: 'recrue' });
+  st = L.skinState(s, SKIN_BY_ID.agent, { ...m, bosses: [1] });
+  assert.equal(st.reqs.find(r => r.t === 'boss').ok, true);
+});

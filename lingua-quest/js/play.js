@@ -7,7 +7,7 @@ import { VOCAB_BY_ID, DECODE_BY_ID } from '../data/codex.js';
 import { DIALOGUES, CHARACTERS, DIALOGUE_ART } from '../data/world.js';
 import { TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS } from '../data/toeic.js';
-import { IRR_BY_ID, learnWord } from './content.js';
+import { IRR_BY_ID, learnWord, ITEMS, notionKeys } from './content.js';
 import { openWordSheet, openTenseSheet, openDecodeSheet, openCodexSheet, wordEntryHTML } from './codexview.js';
 
 let R = null;
@@ -62,7 +62,7 @@ function header() {
   const boss = R.opts.boss;
   return `<header class="run-head">
     <button class="icon-btn" data-act="quit" aria-label="Quitter">${icon('x')}</button>
-    <div class="run-title"><span>${esc(R.opts.title)}</span>${bar(pct, 'thin')}</div>
+    <div class="run-title"><span>${esc(R.opts.title)}</span><div class="run-progress">${bar(pct, 'thin')}<small>${Math.min(R.i + 1, n)}/${n}</small></div></div>
     ${R.opts.seconds ? `<span id="runTimer" class="timer">${icon('clock', 16)} --:--</span>` : ''}
     ${R.opts.noHelp ? '' : `<button class="icon-btn" data-act="codex" aria-label="Ouvrir le Codex">${icon('codex')}</button>`}
   </header>
@@ -89,9 +89,18 @@ function render() {
   else if (card.kind === 'learn') body = learnHTML(card);
   else if (card.kind === 'recall') body = recallHTML(card);
   else body = itemHTML(card.item);
-  layer().innerHTML = header() + `<main class="run-body" id="runBody">${body}</main><footer class="run-foot" id="runFoot">${footInitial(card)}</footer>`;
+  layer().innerHTML = header() + `<main class="run-body card-in" id="runBody">${body}</main><footer class="run-foot" id="runFoot">${footInitial(card)}</footer>`;
   bindCard(card);
   if (R.opts.seconds) tick();
+  if (R.opts.boss && R.i === 0 && !R.introShown) {
+    R.introShown = true;
+    const intro = document.createElement('div');
+    intro.className = 'boss-intro';
+    intro.setAttribute('aria-hidden', 'true');
+    intro.innerHTML = `<span>Combat</span><b>${esc(R.opts.boss.name)}</b><small>${R.allowed + 1} vie${R.allowed ? 's' : ''} · ${Math.round(R.opts.boss.pass * 100)} % pour vaincre</small>`;
+    el.appendChild(intro);
+    setTimeout(() => intro.remove(), 2200);
+  }
   const h = layer().querySelector('.run-body h2, .run-body .prompt');
   if (h) h.setAttribute('tabindex', '-1');
 }
@@ -129,14 +138,14 @@ function dialogueHTML(card) {
   const frMode = ctx.S.settings.fr;
   const html = show.map((ln, k) => {
     if (!Array.isArray(ln)) {
-      const done = R.cur.choice && R.cur.choice.k === k;
+      const ch = (R.cur.choices || {})[k], done = !!ch;
       return `<div class="choice-block"><p class="prompt">${esc(ln.choice)}</p>
-        <div class="options">${ln.options.map((o, j) => `<button class="opt ${done ? (o[1] ? 'good' : (R.cur.choice.j === j ? 'bad' : '')) : ''}" data-act="dlgChoice" data-k="${k}" data-j="${j}" ${done ? 'disabled' : ''}>${esc(o[0])}</button>`).join('')}</div>
-        ${done ? `<p class="fb ${ln.options[R.cur.choice.j][1] ? 'ok' : 'ko'}">${esc(ln.options[R.cur.choice.j][2])}</p>` : ''}</div>`;
+        <div class="options">${ln.options.map((o, j) => `<button class="opt ${done ? (o[1] ? 'good' : (ch.j === j ? 'bad' : '')) : ''}" data-act="dlgChoice" data-k="${k}" data-j="${j}" ${done ? 'disabled' : ''}>${esc(o[0])}</button>`).join('')}</div>
+        ${done ? `<p class="fb ${ln.options[ch.j][1] ? 'ok' : 'ko'}">${esc(ln.options[ch.j][2])}</p>` : ''}</div>`;
     }
     const [who, en, fr, dec] = ln;
     const ch = CHARACTERS[who] || CHARACTERS.hero;
-    return `<div class="line ${who === 'shadow' ? 'enemy' : ''}">${portrait(ch, 40)}<div class="bubble">
+    return `<div class="line ${who === 'shadow' ? 'enemy' : ''} ${k === show.length - 1 ? 'last' : 'past'}">${portrait(ch, 48)}<div class="bubble" style="--who:${ch.color || '#FF6B9A'}">
       <span class="who">${esc(ch.name)}</span>
       <p class="en">${clickable(en)}</p>
       <details class="fr" ${frMode === 'beaucoup' ? 'open' : ''}><summary>Traduction</summary><p>${esc(fr)}</p></details>
@@ -149,7 +158,7 @@ function dialogueHTML(card) {
 function dialogueFoot(card) {
   const lines = DIALOGUES[card.id] || [];
   const ln = lines[R.dl];
-  if (ln && !Array.isArray(ln) && !(R.cur.choice && R.cur.choice.k === R.dl)) return '';
+  if (ln && !Array.isArray(ln) && !(R.cur.choices && R.cur.choices[R.dl])) return '';
   if (R.dl >= lines.length - 1) return `<button class="btn primary" data-act="next">Continuer</button>`;
   return `<button class="btn primary" data-act="dlgNext">Suite</button>`;
 }
@@ -168,7 +177,7 @@ function recallHTML(card) {
   const id = card.id;
   if (id.startsWith('c:')) {
     const c = ctx.S.carnet.find(x => x.id === id.slice(2));
-    if (!c) return `<p>Mot retiré du carnet.</p>`;
+    if (!c) return `<p>Mot retiré du carnet.</p><button class="btn primary" data-act="next">Continuer</button>`;
     return `<section class="recall"><p class="prompt">Mot de ton carnet : que veut-il dire ? Réponds dans ta tête avant de regarder.</p>
       <h2 class="big-word">${esc(c.en)}</h2><button class="mini" data-act="sayText" data-t="${esc(c.en)}">${icon('speaker', 16)} Écouter</button>
       <div id="reveal" hidden><div class="answer-box"><b>${esc(c.fr || 'Pas de traduction notée : ajoute-la dans ton carnet.')}</b></div>
@@ -178,7 +187,7 @@ function recallHTML(card) {
   }
   if (id.startsWith('v:')) {
     const v = VOCAB_BY_ID[id.slice(2)];
-    if (!v) return `<p>Mot introuvable.</p>`;
+    if (!v) return `<p>Mot introuvable.</p><button class="btn primary" data-act="next">Continuer</button>`;
     return `<section class="recall"><p class="prompt">Que veut dire ce mot ? Réponds dans ta tête avant de regarder.</p>
       <h2 class="big-word">${esc(v.en)}</h2><button class="mini" data-act="sayText" data-t="${esc(v.en)}">${icon('speaker', 16)} Écouter</button>
       <p class="example en">${clickable(v.ex)}</p>
@@ -188,7 +197,7 @@ function recallHTML(card) {
       <button class="btn primary wide" id="revealBtn" data-act="reveal">Voir la réponse</button></section>`;
   }
   const r = IRR_BY_ID[id.slice(2)];
-  if (!r) return `<p>Verbe introuvable.</p>`;
+  if (!r) return `<p>Verbe introuvable.</p><button class="btn primary" data-act="next">Continuer</button>`;
   return `<section class="recall"><p class="prompt">Verbe irrégulier : donne le prétérit et le participe passé dans ta tête.</p>
     <h2 class="big-word">${esc(r.inf)}</h2><p class="muted">${esc(r.fr)}</p>
     <div id="reveal" hidden><div class="answer-box"><b>${esc(r.inf)} → ${esc(r.past)} → ${esc(r.pp)}</b><p class="en">${esc(r.ex)}</p><p>${esc(r.exFr)}</p></div>
@@ -206,7 +215,7 @@ function itemHTML(it) {
   if (it.part) h += `<span class="chip blue">${esc(PARTS[it.part].name)}</span>`;
   if (it.tense && TENSE_BY_ID[it.tense] && !R.opts.noHelp) h += ` <button class="chip violet as-btn" data-act="tense" data-id="${it.tense}">${esc(TENSE_BY_ID[it.tense].name)}</button>`;
   h += `<p class="prompt">${esc(it.prompt)}</p>`;
-  if (it.img) h += `<figure class="toeic-photo"><img src="${esc(it.img)}" alt="${esc(it.alt || 'Photo')}"></figure>`;
+  if (it.img) h += `<figure class="toeic-photo"><img decoding="async" src="${esc(it.img)}" alt="${esc(it.alt || 'Photo')}"></figure>`;
   if (listening) {
     if (textMode) h += `<div class="notice">L’audio n’est pas disponible sur cet appareil : l’exercice passe en mode texte. Il compte alors comme de la lecture, pas de l’écoute.</div><pre class="passage">${esc(it.transcript)}</pre>`;
     else h += `<button class="btn listen" data-act="play">${icon('speaker')} Écouter</button>`;
@@ -288,7 +297,9 @@ function handle(act, b, card) {
     case 'dlgNext': R.dl++; return rerenderDialogue(card);
     case 'dlgChoice': {
       const k = +b.dataset.k, j = +b.dataset.j, ln = DIALOGUES[card.id][k];
-      R.cur.choice = { k, j };
+      R.cur.choices = R.cur.choices || {};
+      if (R.cur.choices[k]) return;
+      R.cur.choices[k] = { j };
       const ok = ln.options[j][1];
       answer({ id: 'dlg-' + card.id + '-' + k, skill: 'reflexes', prompt: ln.choice, tags: [] }, ok, ln.options[j][0], ln.options.filter(o => o[1]).map(o => o[0]).join(' / '));
       return rerenderDialogue(card);
@@ -362,8 +373,8 @@ function gradeRecall(card, g) {
   const S = ctx.S;
   srsReview(S, card.id, g);
   R.reviewed.push({ id: card.id, g });
-  const label = card.id.startsWith('v:') ? (VOCAB_BY_ID[card.id.slice(2)] || {}).en : (IRR_BY_ID[card.id.slice(2)] || {}).inf;
-  answer({ id: card.id, skill: 'grammar', prompt: 'Révision : ' + label, tags: ['revision'] }, g === 'ok', g === 'ok' ? 'su' : g === 'hard' ? 'hésitation' : 'pas su', 'à retenir');
+  const label = card.id.startsWith('v:') ? (VOCAB_BY_ID[card.id.slice(2)] || {}).en : card.id.startsWith('c:') ? (S.carnet.find(c => c.id === card.id.slice(2)) || {}).en : (IRR_BY_ID[card.id.slice(2)] || {}).inf;
+  answer({ id: card.id, skill: 'grammar', prompt: 'Révision : ' + (label || 'élément retiré'), tags: ['revision'] }, g === 'ok', g === 'ok' ? 'su' : g === 'hard' ? 'hésitation' : 'pas su', 'à retenir');
   next();
 }
 
@@ -381,13 +392,40 @@ function pick(it, k) {
 }
 
 /* Enregistre une réponse et met à jour les compteurs du jeu */
+/* Retour visuel : éclair, texte qui s’envole (+XP, combo, dégâts) */
+function fx(kind, text, where) {
+  const el = layer();
+  if (!el || el.hidden) return;
+  const f = document.createElement('div');
+  f.className = 'fx-flash ' + kind;
+  el.appendChild(f);
+  setTimeout(() => f.remove(), 650);
+  if (text) {
+    const t = document.createElement('div');
+    t.className = 'fx-float ' + kind + (where ? ' at-' + where : '');
+    t.textContent = text;
+    el.appendChild(t);
+    setTimeout(() => t.remove(), 1300);
+  }
+}
 function answer(meta, ok, given, expected) {
   const S = ctx.S;
   const skill = meta.textMode && meta.skill === 'listening' ? 'reading' : meta.skill;
-  if (R.opts.mode !== 'placement') recordAnswer(S, { skill, ok, tags: meta.tags, itemId: meta.id, prompt: meta.prompt, given, expected, tense: meta.tense });
+  let gain = 0;
+  if (R.opts.mode !== 'placement') {
+    gain = recordAnswer(S, { skill, ok, tags: meta.tags, itemId: meta.id, prompt: meta.prompt, given, expected, tense: meta.tense, notions: notionKeys({ ...meta, skill }) });
+    /* révision espacée des exercices : un exercice raté revient demain, puis de plus en plus tard */
+    if (meta.id && ITEMS[meta.id] && (!ok || S.srs['q:' + meta.id])) srsReview(S, 'q:' + meta.id, ok ? 'ok' : 'ko');
+  }
   if (meta.part && R.opts.mode !== 'placement' && !meta.textMode) recordToeic(S, meta.part, ok);
   R.results.push({ id: meta.id, ok, given, expected, skill, tags: meta.tags || [], prompt: meta.prompt, explain: meta.explain, part: meta.part, tense: meta.tense, skipped: meta.skipped });
   if (ok) { R.combo++; sfx(R.combo >= 3 ? 'combo' : 'ok'); } else { R.combo = 0; sfx('ko'); }
+  const body = document.getElementById('runBody');
+  if (body) { body.classList.remove('card-in', 'jolt'); void body.offsetWidth; if (!ok) body.classList.add('jolt'); }
+  if (R.opts.boss) {
+    const dmg = Math.round(100 / R.cards.length);
+    fx(ok ? 'boss-hit' : 'player-hit', ok ? '−' + dmg + ' %' : '−1 vie', 'boss');
+  } else fx(ok ? 'ok' : 'ko', ok ? (gain ? '+' + gain + ' XP' : 'Bien joué') + (R.combo >= 3 ? ' · combo ×' + R.combo : '') : null);
   if (R.opts.boss && !ok) {
     R.hearts--;
     const bb = layer().querySelector('.hearts');
@@ -428,6 +466,9 @@ async function doMic(it, btn) {
   if (R.cur.answered) return;
   /* avec le serveur voix, un second appui termine l’enregistrement */
   if (R.cur.listening) { if (R.cur.byServer) stopListening(); return; }
+  const cur = R.cur;
+  /* la partie a pu être quittée ou avoir avancé pendant l’écoute */
+  const gone = () => !R || R.cur !== cur;
   R.cur.listening = true;
   R.cur.byServer = micByServer();
   stopSpeaking();
@@ -437,11 +478,13 @@ async function doMic(it, btn) {
   st.textContent = R.cur.byServer ? 'J’écoute… parle, puis appuie de nouveau quand tu as fini.' : 'J’écoute… parle maintenant.';
   try {
     const text = await listen({ lang: 'en-US', onPhase: () => { btn.classList.remove('rec'); st.textContent = 'Transcription…'; } });
+    if (gone()) return;
     btn.classList.remove('rec');
     R.cur.listening = false;
     st.textContent = '';
     evaluateSpeech(it, text, false);
   } catch (e) {
+    if (gone()) return;
     btn.classList.remove('rec');
     R.cur.listening = false;
     st.textContent = STT_ERRORS[e.message] || 'La reconnaissance vocale a échoué. Réessaie ou réponds par écrit.';
@@ -518,7 +561,7 @@ function bilanHTML(s, info, lvl) {
   for (const r of s.results) if (r.part) { parts[r.part] = parts[r.part] || [0, 0]; parts[r.part][1]++; if (r.ok) parts[r.part][0]++; }
   return `<header class="run-head"><div class="run-title"><span>Bilan</span></div><button class="icon-btn" data-act="close" aria-label="Fermer">${icon('x')}</button></header>
   <main class="run-body bilan">
-    <section class="bilan-top ${info.win === false ? 'lose' : ''}">
+    <section class="bilan-top ${info.win === false ? 'lose' : info.win ? 'win' : ''}">${info.win ? '<div class="sparks" aria-hidden="true">' + '<i></i>'.repeat(14) + '</div>' : ''}
       <h2>${esc(info.title || 'Mission terminée')}</h2>
       ${info.text ? `<p>${esc(info.text)}</p>` : ''}
       <div class="score-row"><div><b>${s.okN}/${s.total}</b><span>réussites</span></div><div><b>+${gained}</b><span>XP</span></div><div><b>${s.mins}</b><span>min</span></div></div>

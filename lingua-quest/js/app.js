@@ -6,7 +6,7 @@ import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
 import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
-import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES } from '../data/world.js';
+import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES, SKINS, SKIN_BY_ID } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
 import { VOCAB_BY_ID, PREP_ITEMS, CATEGORIES } from '../data/codex.js';
@@ -35,6 +35,11 @@ function save() {
 ctx.S = load();
 /* anciennes sauvegardes : héros sans portrait illustré */
 if (ctx.S.hero && !PORTRAIT_BY_ID[ctx.S.hero.portrait]) ctx.S.hero.portrait = (PORTRAITS.find(p => p.cls === ctx.S.hero.cls) || PORTRAITS[0]).id;
+/* révisions d’éléments qui n’existent plus (ancienne version, mot retiré) : retirées pour que les compteurs restent justes */
+for (const id of Object.keys(ctx.S.srs)) if (!C.srsKnown(ctx.S, id)) delete ctx.S.srs[id];
+L.seedNotions(ctx.S);
+/* classe inconnue (sauvegarde abîmée) : on reprend celle du portrait */
+if (ctx.S.hero && !CLASS_INFO[ctx.S.hero.cls]) ctx.S.hero.cls = PORTRAIT_BY_ID[ctx.S.hero.portrait].cls;
 ctx.save = save;
 ctx.go = route => { location.hash = '#/' + route; };
 ctx.refresh = () => render();
@@ -54,10 +59,44 @@ function applyTheme() {
 /* ---------- Déblocages : objets et badges (cosmétiques uniquement) ---------- */
 function own(id) { const inv = S().inventory; if (!inv.owned.includes(id)) { inv.owned.push(id); return true; } return false; }
 function badge(id) { if (!S().badges.includes(id)) { S().badges.push(id); toast('Badge : ' + BADGES[id]); } }
+/* ---------- Skins évolutifs ---------- */
+function masteryMetrics(s) {
+  return {
+    level: L.levelInfo(s.xp).level,
+    quests: Object.values(s.quests).filter(q => q.done).length,
+    bosses: CHAPTERS.filter(c => s.chapters[c.n] && s.chapters[c.n].bossBeaten).map(c => c.n),
+    tenses: TENSES.filter(t => s.tenses[t.id] && s.tenses[t.id].mastered).length,
+    words: L.srsRetained(s),
+    talk: L.talkLevel(s, TENSES.length).score,
+    toeic: L.toeicReadiness(s).pct,
+    carnet: s.carnet.length
+  };
+}
+const skinOf = s => SKIN_BY_ID[s.skins.equipped] || SKINS[0];
+function reqLabel(r) {
+  const boss = CHAPTERS.find(c => c.n === r.n);
+  return {
+    level: `Niveau ${r.n}`, quests: `${r.n} quêtes réussies`, boss: `Vaincre ${boss ? boss.boss.name : 'le boss ' + r.n}`,
+    tenses: `${r.n} temps maîtrisés (85 % sans aide)`, words: `${r.n} mots et verbes retenus`,
+    talk: `Niveau de discussion ${r.n}/100`, toeic: `Jauge « Prêt pour le TOEIC » à ${r.n} %`, carnet: `${r.n} mots dans ton carnet`
+  }[r.t] || r.t;
+}
+let skinsNotified = null;
+function notifySkins(s) {
+  const m = masteryMetrics(s);
+  const ready = SKINS.filter(k => L.skinState(s, k, m).ready).map(k => k.id);
+  if (skinsNotified) for (const id of ready) if (!skinsNotified.includes(id)) toast('Nouvelle évolution disponible : ' + SKIN_BY_ID[id].name + ' (Héros → Apparence)');
+  skinsNotified = ready;
+  return ready;
+}
+
 function checkUnlocks() {
   const s = S(), lvl = L.levelInfo(s.xp).level;
   for (const c of COSMETICS) {
-    if (c.level && lvl >= c.level && own(c.id) && c.level > 1) toast('Nouvel objet : ' + c.name);
+    /* certaines récompenses demandent aussi une vraie maîtrise, pas seulement de l’XP */
+    const need = c.need || {}, tm = Object.values(s.tenses).filter(t => t.mastered).length;
+    const mastery = (!need.tenses || tm >= need.tenses) && (!need.words || L.srsRetained(s) >= need.words);
+    if (c.level && lvl >= c.level && mastery && own(c.id) && c.level > 1) toast('Nouvel objet : ' + c.name);
     if (c.streak && s.streak.best >= c.streak && own(c.id)) toast('Nouvel objet : ' + c.name);
   }
   if (!s.inventory.equipped.outfit) s.inventory.equipped.outfit = 'outfit-start';
@@ -67,6 +106,7 @@ function checkUnlocks() {
   for (const n of L.CARNET_GOALS) if (s.carnet.length >= n) badge('carnet-' + n);
   if (Object.values(s.tenses).some(t => t.mastered)) badge('tense-master');
   L.adaptDifficulty(s);
+  notifySkins(s);
 }
 
 /* ---------- Mission conseillée ---------- */
@@ -115,7 +155,7 @@ function runBoss(ch) {
   const c = s.chapters[ch.n] || (s.chapters[ch.n] = { bossBeaten: false, bossTries: 0 });
   c.bossTries++;
   startRun(cards, {
-    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: BOSS_ART[ch.n] || 'img/boss.webp', hue: BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
+    mode: 'boss', title: 'Boss · ' + b.name, boss: { name: b.name, pass: b.pass }, bg: BOSS_ART[ch.n] || BOSS_ART[6], hue: BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n], seconds: b.toeicTest ? b.toeicTest.seconds : 0,
     onDone(sum) {
       const win = sum.pct >= b.pass && sum.reason !== 'quit';
       const rewards = [];
@@ -207,6 +247,24 @@ function runTenseMastery(t) {
       const rewards = [];
       if (win && !st.mastered) { st.mastered = true; S().xp += 80; rewards.push('Temps maîtrisé : +80 XP'); badge('tense-master'); }
       return { win, rewards, title: win ? t.name + ' maîtrisé' : 'Pas encore maîtrisé', text: win ? 'Réussi sans aide avec au moins 85 %.' : 'Il faut 85 % sans aide. Revois la fiche, entraîne-toi, puis retente.', retry: () => runTenseMastery(t), next: { label: 'Fiche ' + t.name, route: 'tense/' + t.id } };
+    }
+  });
+}
+function runTargeted() {
+  const s = S(), { keys, cards } = C.targetedCards(s);
+  if (!cards.length) return toast('Rien à cibler pour l’instant : joue quelques quêtes d’abord.');
+  startRun(cards, {
+    mode: 'targeted', title: 'Entraînement ciblé',
+    onDone(sum) {
+      const lines = keys.map(k => {
+        const rs = sum.results.filter(r => C.notionKeys(r).includes(k));
+        const ok = rs.filter(r => r.ok).length;
+        return C.notionInfo(k).label + ' : ' + ok + '/' + rs.length;
+      });
+      const win = sum.pct >= 0.7;
+      const rewards = [];
+      if (win && sum.reason !== 'quit') { s.xp += 25; rewards.push('Entraînement ciblé réussi : +25 XP'); }
+      return { title: 'Entraînement ciblé terminé', text: lines.join(' · ') + '. Les exercices ratés reviendront en révision.', win, rewards, next: { label: 'Voir mes progrès', route: 'progres' } };
     }
   });
 }
@@ -347,11 +405,29 @@ function tierOf(level) { let t = TIERS[0]; for (const x of TIERS) if (level >= x
 function hud(s) {
   const lvl = L.levelInfo(s.xp);
   return `<header class="hud">
-    <a href="#/hero" class="hud-hero" aria-label="Fiche du héros">${heroMedal(s.hero, s.inventory.equipped, 52, COSMETICS)}<span class="lvl">${lvl.level}</span></a>
+    <a href="#/hero" class="hud-hero" aria-label="Fiche du héros">${heroMedal(s.hero, s.inventory.equipped, 52, COSMETICS, skinOf(s))}<span class="lvl">${lvl.level}</span></a>
     <div class="hud-who"><b>${esc(s.hero.name)}</b><small>${esc(CLASS_INFO[s.hero.cls].name)} · ${tierOf(lvl.level)}</small>${bar(lvl.pct, 'gold thin')}<small class="xp">${lvl.into} / ${lvl.need} XP</small></div>
     <span class="pill gold" title="Série">${icon('flame', 15)} ${L.streakNow(s)}</span>
     <a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a>
   </header>`;
+}
+
+/* Avancement du chapitre en cours : quêtes principales puis boss */
+function chapterProgressHTML(s, ch) {
+  const main = ch.quests.filter(q => q.cat === 'principale');
+  const done = main.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
+  const boss = !!(s.chapters[ch.n] && s.chapters[ch.n].bossBeaten);
+  const steps = [...main.map(q => !!(s.quests[q.id] && s.quests[q.id].done)), boss];
+  return `<span class="qb-steps" aria-label="${done}/${main.length} quêtes principales${boss ? ', boss vaincu' : ''}">${steps.map((v, k) => `<i class="${v ? 'on' : ''} ${k === steps.length - 1 ? 'boss' : ''}"></i>`).join('')}<small>${done}/${main.length} quêtes · ${boss ? 'boss vaincu' : 'boss à affronter'}</small></span>`;
+}
+
+function targetCardHTML(s) {
+  const weak = L.weakNotions(s, 1)[0];
+  const k = weak ? weak.key : C.targetNotions(s, 1)[0];
+  const inf = C.notionInfo(k);
+  return `<section class="card target-card"><div class="card-head"><h3>${weak ? 'Ton point faible du moment' : 'À découvrir'}</h3><a href="#/progres">Mes progrès</a></div>
+    <p><b>${esc(inf.label)}</b>${weak ? ` · ${weak.acc} % de réussite récente` : ' · pas encore assez de réponses'}</p>
+    <button class="btn ghost" data-act="targeted">${icon('target', 18)} Entraînement ciblé</button></section>`;
 }
 
 /* ---------- Jauges : prêt pour le TOEIC, niveau de discussion ---------- */
@@ -392,7 +468,9 @@ V.home = () => {
   const acc = sk => { let a = 0, b = 0; for (const q of PART_IDS) if (PARTS[q].skill === sk && tl[q]) { a += tl[q].correct; b += tl[q].attempts; } return b ? Math.round((a / b) * 100) + ' %' : '—'; };
   const quick = [['world', 'map', 'Monde'], ['hero', 'user', 'Héros'], ['dialogues', 'heart', 'Dialogues'], ['toeic', 'target', 'TOEIC'], ['codex', 'codex', 'Codex']];
   return `<section class="screen home-screen">
-    <div class="scene" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="scene skin-${skinOf(s).id}" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="skin-fx skin-${skinOf(s).id}" aria-hidden="true"></div>
+    <div class="embers" aria-hidden="true">${'<i></i>'.repeat(10)}</div>
     ${hud(s)}
     <div class="home-stage">
       <span class="wordmark">LINGUA QUEST</span>
@@ -401,6 +479,7 @@ V.home = () => {
       <a class="quest-banner" href="#/${esc(nm.route)}">
         <span class="qb-label">Quête en cours</span>
         <b>${esc(nm.label)}</b>
+        ${chapterProgressHTML(s, ch)}
       </a>
       <a class="btn primary big glow continue" href="#/${esc(nm.route)}">${icon('play', 18)} CONTINUER L’AVENTURE</a>
       <nav class="quick" aria-label="Accès rapides">${quick.map(([r, ic, l]) => `<a href="#/${r}">${icon(ic, 22)}<span>${l}</span></a>`).join('')}</nav>
@@ -420,6 +499,7 @@ V.home = () => {
     </div>
     <p class="hint">La série mesure ta régularité, pas ton niveau d’anglais. 1 jour manqué par semaine est couvert par un joker.</p>
     ${gaugesCardHTML(s)}
+    ${targetCardHTML(s)}
     <section class="card"><div class="card-head"><h3>Compétences réelles</h3><a href="#/skills">Détails</a></div>${L.SKILLS.map(skillMini).join('')}</section>
     <section class="grid2">
       <a class="card tile" href="#/toeic"><small>TOEIC · réussite</small><b>Écoute ${acc('listening')}</b><b>Lecture ${acc('reading')}</b></a>
@@ -438,7 +518,7 @@ V.world = () => {
   return `<section class="screen world-screen">
     <header class="world-head"><span class="kicker">Carte</span><h1 class="display sm">Halden City</h1><p class="lead">Un quartier s’ouvre quand tu bats le boss du précédent : ce sont tes compétences qui comptent, pas le temps passé.</p></header>
     <div class="city-map">
-      <img src="img/carte.webp" alt="Vue aérienne de Halden City la nuit, de Maple District en bas jusqu’à la forteresse des Ombres au sommet">
+      <img src="img/carte.webp" decoding="async" alt="Vue aérienne de Halden City la nuit, de Maple District en bas jusqu’à la forteresse des Ombres au sommet">
       ${CHAPTERS.map(ch => { const st = chapterState(s, ch), a = CHAPTER_ART[ch.n]; return `<button class="marker ${st.beaten ? 'beaten' : st.current ? 'current' : st.open ? '' : 'locked'}" style="left:${a.x}%;top:${a.y}%;--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'} aria-label="${esc(ch.region)} : ${st.beaten ? 'terminé' : st.open ? 'ouvert' : 'verrouillé'}"><span class="pin">${st.beaten ? icon('check', 16) : st.open ? ch.n : icon('lock', 14)}</span><span class="lbl">${esc(ch.region)}</span></button>`; }).join('')}
     </div>
   </section>
@@ -447,7 +527,7 @@ V.world = () => {
       const st = chapterState(s, ch), a = CHAPTER_ART[ch.n];
       const doneQ = ch.quests.filter(q => s.quests[q.id] && s.quests[q.id].done).length;
       return `<button class="node district ${st.open ? '' : 'locked'} ${st.beaten ? 'beaten' : ''}" style="--cc:${ch.color}" data-act="go" data-r="chapter/${ch.n}" ${st.open ? '' : 'aria-disabled="true"'}>
-        <img src="${a.img}" alt="" style="object-position:${a.pos}">
+        <img src="${a.img}" alt="" loading="lazy" decoding="async" style="object-position:${a.pos}">
         <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(ch.title)}</b><small>${st.open ? `${doneQ}/${ch.quests.length} quêtes${st.beaten ? ' · boss vaincu' : ''}` : 'Bats le boss précédent'}</small></span>
         <span class="state">${st.beaten ? icon('check', 18) : st.open ? icon('chevron', 18) : icon('lock', 16)}</span></button>`;
     }).join('')}</div>
@@ -473,7 +553,7 @@ V.chapter = n => {
     ${cq ? `<h2>Quête de ta classe</h2>${questCardHTML(cq, !st.open)}` : ''}
     <h2>Boss</h2>
     <article class="boss-card ${c.bossBeaten ? 'beaten' : ''}">
-      <div class="boss-art" style="--hue:${BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n]}deg"><img src="${BOSS_ART[ch.n] || 'img/boss.webp'}" alt=""></div>
+      <div class="boss-art" style="--hue:${BOSS_ART[ch.n] ? 0 : BOSS_HUE[ch.n]}deg"><img src="${BOSS_ART[ch.n] || BOSS_ART[6]}" alt="" decoding="async"></div>
       <div class="boss-info">
         <h3>${esc(ch.boss.name)}</h3><p>${esc(ch.boss.desc)}</p>
         <p class="crit">${icon('target', 14)} Victoire : ${Math.round(ch.boss.pass * 100)} % de bonnes réponses${ch.boss.toeicTest ? ` en ${ch.boss.toeicTest.seconds / 60} min` : ''}. En cas d’échec : corrections, quête de renforcement, et tu retentes quand tu veux.</p>
@@ -490,7 +570,7 @@ V.dialogues = () => {
     <div class="districts">${CHAPTERS.flatMap(ch => ch.quests.flatMap(q => q.steps.filter(x => x.dialogue).map(x => ({ ch, q, id: x.dialogue })))).map(({ ch, q, id }) => {
       const open = L.chapterUnlocked(s, ch.n);
       return `<button class="node district ${open ? '' : 'locked'}" data-act="replayDialogue" data-id="${id}" ${open ? '' : 'aria-disabled="true"'} style="--cc:${ch.color}">
-        <img src="${DIALOGUE_ART[id] || CHAPTER_ART[ch.n].img}" alt="" style="object-position:50% 20%">
+        <img src="${DIALOGUE_ART[id] || CHAPTER_ART[ch.n].img}" loading="lazy" decoding="async" alt="" style="object-position:50% 20%">
         <span class="txt"><small>Chapitre ${ch.n} · ${esc(ch.region)}</small><b>${esc(q.title)}</b><small>${open ? pl(DIALOGUES[id].length, 'réplique') : 'Verrouillé'}</small></span>
         <span class="state">${open ? icon('play', 16) : icon('lock', 16)}</span></button>`;
     }).join('')}</div></section>`;
@@ -520,6 +600,7 @@ V.learn = () => {
     ${tile('review', 'repeat', 'Révisions', pl(due, 'élément dû', 'éléments dus'))}
     ${tile('oral', 'mic', 'Entraînement oral', 'Écouter, répéter, répondre')}
     ${tile('toeic', 'target', 'Progression TOEIC', 'Méthode, tests blancs, 7 parties')}
+    ${tile('progres', 'chart', 'Mes progrès', 'Forces, difficultés, travail ciblé')}
     ${tile('metier', 'tree', 'Mon métier en anglais', 'CVC, VMC, BTP, data center')}
     ${tile('carnet', 'codex', 'Mon carnet', pl(S().carnet.length, 'mot noté', 'mots notés'))}
     ${tile('skills', 'tree', 'Arbre de compétences', '5 branches')}
@@ -554,11 +635,45 @@ V.skills = () => {
   </section>`;
 };
 
+function evolutionCardHTML(s) {
+  const m = masteryMetrics(s), cur = skinOf(s);
+  const next = SKINS.find(k => !s.skins.owned.includes(k.id));
+  const ready = SKINS.filter(k => L.skinState(s, k, m).ready);
+  let body = '';
+  if (ready.length) body = `<p class="ok-t">${icon('star', 16)} ${pl(ready.length, 'évolution prête', 'évolutions prêtes')} à débloquer : ${ready.map(k => esc(k.name)).join(', ')}.</p>`;
+  else if (next) { const st = L.skinState(s, next, m); body = `<p>Prochaine évolution : <b>${esc(next.name)}</b></p>${bar(st.pct, 'gold')}<ul class="reqs">${st.reqs.map(r => `<li class="${r.ok ? 'ok' : ''}">${icon(r.ok ? 'check' : 'lock', 14)} ${esc(reqLabel(r))}${r.ok || r.t === 'boss' ? '' : ` <small>${r.cur}/${r.need}</small>`}</li>`).join('')}</ul>`; }
+  else body = `<p>Toutes les évolutions sont débloquées.</p>`;
+  return `<section class="card evolution"><div class="card-head"><h3>Évolution · ${esc(cur.name)}</h3><a href="#/appearance">Apparence</a></div>${body}</section>`;
+}
+
+/* Menu Apparence : prévisualiser, débloquer, équiper */
+let skinPreview = null;
+V.appearance = () => {
+  const s = S(), m = masteryMetrics(s), p = heroPortrait(s.hero);
+  const sel = SKIN_BY_ID[skinPreview] || skinOf(s), st = L.skinState(s, sel, m);
+  const action = st.equipped ? `<button class="btn ghost" disabled>Équipée</button>`
+    : st.owned ? `<button class="btn primary" data-act="skinEquip" data-id="${sel.id}">Équiper</button>`
+    : st.ready ? `<button class="btn primary glow" data-act="skinUnlock" data-id="${sel.id}">${icon('star', 18)} Débloquer</button>`
+    : `<button class="btn ghost" disabled>${icon('lock', 16)} Verrouillée</button>`;
+  return `<section class="page appearance"><a class="back" href="#/hero">${icon('back', 18)} Héros</a><h1 class="display sm">Apparence</h1>
+    <div class="skin-stage">
+      <div class="scene skin-${sel.id}" style="--img:url(${p.img});--pos:${p.full}"></div><div class="skin-fx skin-${sel.id}"></div>
+      <div class="skin-stage-info"><span class="chip ${st.owned ? 'gold' : ''}">Évolution ${sel.tier}/${SKINS.length}${st.owned ? '' : ' · aperçu'}</span><h2>${esc(sel.name)}</h2><p>${esc(sel.desc)}</p>${action}</div>
+    </div>
+    ${st.owned ? '' : `<section class="card"><h3>Conditions</h3><ul class="reqs">${st.reqs.map(r => `<li class="${r.ok ? 'ok' : ''}">${icon(r.ok ? 'check' : 'lock', 14)} ${esc(reqLabel(r))}${r.t === 'boss' ? '' : ` <small>${r.cur}/${r.need}</small>`}${r.mastery ? ' <span class="tag">anglais</span>' : ''}</li>`).join('')}</ul>
+      <p class="hint">Les conditions marquées « anglais » se gagnent en progressant vraiment (temps maîtrisés, mots retenus, jauges, carnet) : l’XP seule ne suffit pas.</p></section>`}
+    <div class="skin-list">${SKINS.map(k => { const ks = L.skinState(s, k, m); return `<button class="skin-card ${k.id === sel.id ? 'on' : ''} ${ks.owned ? 'owned' : ks.ready ? 'ready' : 'locked'}" data-act="skinPreview" data-id="${k.id}" aria-pressed="${k.id === sel.id}">
+      <span class="skin-thumb"><span class="scene skin-${k.id}" style="--img:url(${p.img});--pos:${p.face}"></span><span class="skin-fx skin-${k.id}"></span></span>
+      <b>${esc(k.name)}</b><small>${ks.equipped ? 'Équipée' : ks.owned ? 'Débloquée' : ks.ready ? 'Prête à débloquer' : ks.pct + ' %'}</small></button>`; }).join('')}</div>
+  </section>`;
+};
+
 V.hero = () => {
   const s = S(), h = s.hero, c = CLASS_INFO[h.cls], lvl = L.levelInfo(s.xp), ch = C.currentChapter(s), p = heroPortrait(h);
   const eq = s.inventory.equipped, aura = COSMETICS.find(x => x.id === eq.aura), form = eq.form === 'form-lantern';
   return `<section class="screen hero-screen">
-    <div class="scene tall ${aura || form ? 'aura' : ''}" style="--img:url(${p.img});--pos:${p.full};--glow:${form ? '#FFD166' : aura ? aura.color : c.color}"></div>
+    <div class="scene tall skin-${skinOf(s).id} ${aura || form ? 'aura' : ''}" style="--img:url(${p.img});--pos:${p.full};--glow:${form ? '#FFD166' : aura ? aura.color : c.color}"></div>
+    <div class="skin-fx skin-${skinOf(s).id}" aria-hidden="true"></div>
     <div class="hero-head"><a class="back glass" href="#/home">${icon('back', 18)} Accueil</a><a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a></div>
     <div class="hero-id">
       <span class="power" style="--cc:${c.color}">${esc(c.name)} · ${tierOf(lvl.level)} · niveau ${lvl.level}</span>
@@ -569,11 +684,12 @@ V.hero = () => {
   <section class="page below">
     <div class="card"><div class="row"><span>Niveau ${lvl.level}</span><b>${lvl.into} / ${lvl.need} XP</b></div>${bar(lvl.pct, 'gold')}
       <div class="row"><span>Chapitre</span><b>${ch.n} · ${esc(ch.title)}</b></div><div class="row"><span>Meilleure série</span><b>${pl(s.streak.best || 0, 'jour')}</b></div></div>
-    <h2>Évolution</h2>
+    ${evolutionCardHTML(s)}
+    <h2>Rangs</h2>
     <div class="tiers">${TIERS.map(([n, name]) => `<div class="tier ${lvl.level >= n ? 'on' : ''}">${heroMedal(h, lvl.level >= n ? eq : {}, 64, COSMETICS)}<b>${name}</b><small>Niveau ${n}+</small></div>`).join('')}</div>
     <p class="hint">Le niveau du héros récompense ta participation. Il ne mesure pas ton anglais : pour ça, regarde l’arbre de compétences.</p>
     <h2>Badges</h2><div class="badges">${Object.entries(BADGES).map(([k, v]) => `<span class="badge ${s.badges.includes(k) ? 'on' : ''}">${icon(s.badges.includes(k) ? 'star' : 'lock', 16)} ${esc(v)}</span>`).join('')}</div>
-    <div class="actions"><a class="btn primary" href="#/inventory">${icon('bag', 18)} Inventaire</a><a class="btn ghost" href="#/skills">${icon('tree', 18)} Compétences</a><button class="btn ghost" data-act="go" data-r="create">Changer de héros</button></div>
+    <div class="actions"><a class="btn primary" href="#/appearance">${icon('star', 18)} Apparence</a><a class="btn ghost" href="#/inventory">${icon('bag', 18)} Inventaire</a><a class="btn ghost" href="#/skills">${icon('tree', 18)} Compétences</a><button class="btn ghost" data-act="go" data-r="create">Changer de héros</button></div>
   </section>`;
 };
 
@@ -581,7 +697,7 @@ V.inventory = () => {
   const s = S(), inv = s.inventory;
   const kinds = { outfit: 'Tenues', aura: 'Auras', companion: 'Compagnons', form: 'Formes évoluées' };
   return `<section class="page"><a class="back" href="#/hero">${icon('back', 18)} Héros</a><h1 class="display sm">Inventaire</h1>
-    <div class="center">${heroMedal(s.hero, inv.equipped, 140, COSMETICS)}</div>
+    <div class="center">${heroMedal(s.hero, inv.equipped, 140, COSMETICS, skinOf(s))}</div>
     ${Object.entries(kinds).map(([k, label]) => `<h2>${label}</h2><div class="list">${COSMETICS.filter(c => c.kind === k).map(c => {
       const has = inv.owned.includes(c.id) || c.id === 'outfit-start', on = inv.equipped[k] === c.id;
       return `<div class="list-item inv ${has ? '' : 'locked'}"><span>${esc(c.name)}</span><small>${has ? (on ? 'Équipé' : 'Disponible') : 'À débloquer : ' + esc(c.unlock)}</small>
@@ -656,6 +772,42 @@ V.toeic = () => {
   </section>`;
 };
 
+/* ---------- Mes progrès : progression réelle, domaines, forces, difficultés ---------- */
+function notionRow(x, btn) {
+  const inf = C.notionInfo(x.key);
+  return `<div class="notion"><div><b>${esc(inf.label)}</b><small>${esc(C.DOMAINS[inf.domain])} · ${x.acc} % sur tes ${Math.min(20, x.n)} dernières réponses</small>${bar(x.acc, x.acc >= 80 ? 'green' : x.acc >= 60 ? 'gold' : 'danger')}</div>${btn ? `<button class="btn ghost sm" data-act="notionRun" data-k="${esc(x.key)}">Travailler</button>` : ''}</div>`;
+}
+V.progres = () => {
+  const s = S(), stats = L.notionStats(s);
+  const dom = {};
+  for (const x of stats) { const d = C.notionInfo(x.key).domain; dom[d] = dom[d] || [0, 0]; const r = s.notions[x.key].recent; dom[d][0] += r.reduce((a, b) => a + b, 0); dom[d][1] += r.length; }
+  const weak = L.weakNotions(s, 4), strong = L.strongNotions(s, 4);
+  const untried = C.targetNotions(s, 6).filter(k => !stats.some(x => x.key === k && x.enough));
+  const dueAll = L.srsDue(s).filter(id => C.srsKnown(s, id));
+  const dueQ = dueAll.filter(id => id.startsWith('q:')).length;
+  const tm = TENSES.filter(t => s.tenses[t.id] && s.tenses[t.id].mastered).length;
+  const r = L.toeicReadiness(s), t = L.talkLevel(s, TENSES.length);
+  const recentAcc = L.accuracy(s.recent);
+  return `<section class="page"><h1 class="display sm">Mes progrès</h1>
+    <p class="lead">L’XP récompense l’effort. Ta progression en anglais se mesure ici, sur tes vraies réponses.</p>
+    <section class="card"><h3>Progression réelle</h3>
+      <div class="row"><span>Réussite sur tes 40 dernières réponses</span><b>${recentAcc === null ? '—' : recentAcc + ' %'}</b></div>
+      <div class="row"><span>Temps maîtrisés (85 % sans aide)</span><b>${tm}/${TENSES.length}</b></div>
+      <div class="row"><span>Mots et verbes retenus</span><b>${L.srsRetained(s)}</b></div>
+      <div class="row"><span>Prêt pour le TOEIC</span><b>${r.pct} %</b></div>
+      <div class="row"><span>Niveau de discussion</span><b>${esc(t.cefr)} · ${esc(t.name)}</b></div>
+      <div class="row muted"><span>XP (effort, à part)</span><b>${s.xp}</b></div></section>
+    <section class="card"><h3>Par domaine</h3>${Object.entries(C.DOMAINS).map(([k, label]) => { const d = dom[k]; const acc = d && d[1] ? Math.round((d[0] / d[1]) * 100) : null; return `<div class="row"><span>${esc(label)}</span><b>${acc === null ? 'pas encore travaillé' : acc + ' %'}</b></div>${acc === null ? '' : bar(acc, acc >= 80 ? 'green' : acc >= 60 ? 'gold' : 'danger')}`; }).join('')}</section>
+    <article class="card targeted"><h3>Entraînement ciblé</h3><p>Une séance construite sur tes difficultés réelles : ${C.targetNotions(s, 3).map(k => '<b>' + esc(C.notionInfo(k).label) + '</b>').join(', ')}${dueQ ? `, puis ${pl(dueQ, 'exercice raté', 'exercices ratés')} à revoir` : ''}.</p>
+      <button class="btn primary" data-act="targeted">${icon('target', 18)} Lancer l’entraînement ciblé</button></article>
+    <section class="card"><h3>Tes difficultés</h3>${weak.map(x => notionRow(x, true)).join('') || '<p class="muted">Aucune notion sous 75 % pour l’instant (il faut au moins 4 réponses sur une notion).</p>'}</section>
+    <section class="card"><h3>Tes points forts</h3>${strong.map(x => notionRow(x, false)).join('') || '<p class="muted">Pas encore de notion à 80 % ou plus sur au moins 4 réponses.</p>'}</section>
+    ${untried.length ? `<section class="card"><h3>À travailler ensuite</h3><p class="hint">Pas encore assez de réponses pour juger :</p>${untried.map(k => `<div class="notion"><div><b>${esc(C.notionInfo(k).label)}</b><small>${esc(C.DOMAINS[C.notionInfo(k).domain])}</small></div><button class="btn ghost sm" data-act="notionRun" data-k="${esc(k)}">Essayer</button></div>`).join('')}</section>` : ''}
+    <section class="card"><h3>Révisions espacées</h3><div class="row"><span>Dues aujourd’hui</span><b>${dueAll.length}</b></div><div class="row"><span>dont exercices ratés à revoir</span><b>${dueQ}</b></div>
+      <button class="btn ghost" data-act="reviewRun">${icon('repeat', 18)} Réviser maintenant</button></section>
+  </section>`;
+};
+
 V.metier = () => {
   const s = S();
   return `<section class="page"><h1 class="display sm">Mon métier en anglais</h1>
@@ -707,10 +859,10 @@ V.oral = () => {
 V.review = () => {
   const s = S(), due = L.srsDue(s);
   const items = Object.entries(s.srs).sort((a, b) => (a[1].due < b[1].due ? -1 : 1));
-  const name = id => id.startsWith('v:') ? (VOCAB_BY_ID[id.slice(2)] || {}).en : (C.IRR_BY_ID[id.slice(2)] || {}).inf;
+  const name = id => id.startsWith('v:') ? (VOCAB_BY_ID[id.slice(2)] || {}).en : id.startsWith('c:') ? (s.carnet.find(c => c.id === id.slice(2)) || {}).en : id.startsWith('q:') ? 'Exercice raté · ' + ((C.ITEMS[id.slice(2)] || {}).prompt || '').slice(0, 48) : (C.IRR_BY_ID[id.slice(2)] || {}).inf;
   return `<section class="page"><h1 class="display sm">Révisions</h1>
     <p class="lead">Révision espacée : un mot réussi revient de plus en plus tard (1, 3, 7, 14, 30 jours…). Un mot raté revient dès le lendemain.</p>
-    <article class="card"><h3>${pl(due.length, 'élément dû', 'éléments dus')} aujourd’hui</h3><p>Plus les exercices que tu as ratés récemment.</p><button class="btn primary" data-act="reviewRun">${icon('repeat', 18)} Réviser</button></article>
+    <article class="card"><h3>${pl(due.length, 'élément dû', 'éléments dus')} aujourd’hui</h3><p>Mots, verbes, et chaque exercice raté : il revient le lendemain, puis à 3, 7, 14 jours… tant que tu ne le réussis pas.</p><button class="btn primary" data-act="reviewRun">${icon('repeat', 18)} Réviser</button></article>
     <article class="card"><h3>Verbes irréguliers</h3><p>Ajoute 5 verbes à ta liste de révision.</p><button class="btn ghost" data-act="addIrr">${icon('plus', 18)} Ajouter 5 verbes</button></article>
     <section class="card"><h3>Ta liste (${items.length})</h3>${items.slice(0, 60).map(([id, e]) => `<div class="row"><span class="en">${esc(name(id) || id)}</span><small>${e.due <= L.today() ? 'à revoir' : 'le ' + esc(e.due.slice(8) + '/' + e.due.slice(5, 7))}</small><b>${'●'.repeat(Math.min(6, e.box))}${'○'.repeat(Math.max(0, 6 - e.box))}</b></div>`).join('') || '<p class="muted">Ta liste est vide : elle se remplit avec les mots des quêtes et ceux que tu ajoutes depuis le Codex.</p>'}</section></section>`;
 };
@@ -750,7 +902,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', inventory: 'hero', appearance: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -839,6 +991,20 @@ function onAction(act, b) {
       if (!c || !confirm('Retirer « ' + c.en + ' » de ton carnet ?')) return;
       L.carnetRemove(s, c.id); save(); return render();
     }
+    case 'skinPreview': skinPreview = b.dataset.id; render(); return window.scrollTo(0, 0);
+    case 'skinUnlock': {
+      const k = SKIN_BY_ID[b.dataset.id];
+      if (!k || !L.unlockSkin(s, k, masteryMetrics(s))) return toast('Conditions pas encore remplies.');
+      L.equipSkin(s, k.id); save(); notifySkins(s);
+      toast('Évolution débloquée et équipée : ' + k.name);
+      render();
+      const stage = document.querySelector('.skin-stage');
+      if (stage) stage.classList.add('unlocked');
+      return;
+    }
+    case 'skinEquip': if (L.equipSkin(s, b.dataset.id)) { save(); toast('Apparence équipée'); } return render();
+    case 'notionRun': { const k = b.dataset.k; return simpleRun(C.notionCards(s, k, 6), C.notionInfo(k).label, 'cible'); }
+    case 'targeted': return runTargeted();
     case 'metierRun': return simpleRun(C.metierCards(s, b.dataset.c), 'Métier · ' + CATEGORIES[b.dataset.c].replace('Métier · ', ''), 'metier');
     case 'carnetRun': {
       const due = new Set(L.srsDue(s).filter(id => id.startsWith('c:')));

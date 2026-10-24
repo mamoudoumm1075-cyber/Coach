@@ -1,9 +1,9 @@
 /* Assemble les contenus en suites de « cartes » jouables : quêtes, session du jour, boss, révisions. */
 import { TENSES, TENSE_ITEMS, TENSE_BY_ID } from '../data/tenses.js';
-import { TOEIC, PART_IDS } from '../data/toeic.js';
+import { TOEIC, PART_IDS, PARTS } from '../data/toeic.js';
 import { WORLD_ITEMS, CHAPTERS, CLASS_QUESTS, PLACEMENT } from '../data/world.js';
-import { VOCAB, VOCAB_BY_ID, IRREGULAR } from '../data/codex.js';
-import { shuffle, srsDue, srsAdd, weakestPart, chapterUnlocked, today } from './logic.js';
+import { VOCAB, VOCAB_BY_ID, IRREGULAR, PREP_ITEMS } from '../data/codex.js';
+import { shuffle, srsDue, srsAdd, weakestPart, chapterUnlocked, today, weakNotions, notionStats } from './logic.js';
 
 export const ITEMS = Object.fromEntries([...TENSE_ITEMS, ...TOEIC, ...WORLD_ITEMS, ...PLACEMENT].map(i => [i.id, i]));
 export const IRR_BY_ID = Object.fromEntries(IRREGULAR.map(r => [r.id, r]));
@@ -31,6 +31,80 @@ export function metierCards(S, cat) {
   const known = shuffle(pool.filter(v => S.srs['v:' + v.id]));
   const quizWords = [...fresh, ...known].slice(0, 8);
   return [...fresh.map(v => ({ kind: 'learn', id: v.id })), ...metierQuiz(quizWords, pool, 8).map(item => ({ kind: 'item', item }))];
+}
+
+/* ---------- Apprentissage personnalisé : notions, domaines, entraînement ciblé ---------- */
+const PREP_SET = new Set(PREP_ITEMS);
+export const DOMAINS = { vocab: 'Vocabulaire', grammaire: 'Grammaire', ecoute: 'Compréhension orale', lecture: 'Compréhension écrite', oral: 'Oral et réflexes' };
+const NOTION_LABELS = {
+  prepositions: ['grammaire', 'Prépositions'], traduction: ['grammaire', 'Traduction et construction de phrases'],
+  vocabulaire: ['vocab', 'Mots et carnet'], irreguliers: ['vocab', 'Verbes irréguliers'], metier: ['vocab', 'Vocabulaire de ton métier'],
+  dialogues: ['oral', 'Réagir dans un dialogue'], oral: ['oral', 'Parler (exercices oraux)'],
+  ecoute: ['ecoute', 'Écouter des dialogues et annonces'], lecture: ['lecture', 'Lire des textes courts']
+};
+export function notionInfo(key) {
+  const [type, id] = key.split(':');
+  if (type === 'temps') return { domain: 'grammaire', label: (TENSE_BY_ID[id] || {}).name || id };
+  if (type === 'toeic') { const p = +id; return { domain: p <= 4 ? 'ecoute' : p === 7 ? 'lecture' : 'grammaire', label: PARTS[p] ? PARTS[p].name : 'TOEIC' }; }
+  const m = NOTION_LABELS[key];
+  return m ? { domain: m[0], label: m[1] } : { domain: 'grammaire', label: key };
+}
+/* Notions touchées par une réponse */
+export function notionKeys(meta) {
+  const k = new Set(), id = meta.id || '', tags = meta.tags || [];
+  if (meta.tense) k.add('temps:' + meta.tense);
+  if (meta.part) k.add('toeic:' + meta.part);
+  if (PREP_SET.has(id)) k.add('prepositions');
+  if (tags.includes('traduction')) k.add('traduction');
+  if (tags.includes('metier')) k.add('metier');
+  if (id.startsWith('v:') || id.startsWith('c:')) k.add('vocabulaire');
+  if (id.startsWith('i:')) k.add('irreguliers');
+  if (id.startsWith('dlg-')) k.add('dialogues');
+  if (meta.skill === 'speaking') k.add('oral');
+  if (!k.size && meta.skill === 'listening') k.add('ecoute');
+  if (!k.size && meta.skill === 'reading') k.add('lecture');
+  return [...k];
+}
+const asItems = list => list.filter(Boolean).map(item => ({ kind: 'item', item }));
+/* Exercices pour travailler une notion précise */
+export function notionCards(S, key, n = 4) {
+  const [type, id] = key.split(':');
+  if (type === 'temps') return TENSE_BY_ID[id] ? asItems(pickItems(TENSE_BY_ID[id].exercises, S, n)) : [];
+  if (type === 'toeic') return asItems(toeicItems(S, [+id], n));
+  if (key === 'prepositions') return asItems(shuffle(PREP_ITEMS.map(x => ITEMS[x])).slice(0, n));
+  if (key === 'traduction') return asItems(shuffle(Object.values(ITEMS).filter(i => (i.tags || []).includes('traduction'))).slice(0, n));
+  if (key === 'metier') return asItems(metierQuiz(metierWords(), metierWords(), n));
+  if (key === 'vocabulaire') {
+    const ids = shuffle(Object.keys(S.srs).filter(x => (x.startsWith('v:') || x.startsWith('c:')) && srsKnown(S, x)));
+    return ids.slice(0, n + 2).map(x => ({ kind: 'recall', id: x }));
+  }
+  if (key === 'irreguliers') return shuffle(IRREGULAR).slice(0, n).map(r => ({ kind: 'recall', id: 'i:' + r.id }));
+  if (key === 'dialogues') return asItems(shuffle(Object.values(ITEMS).filter(i => i.skill === 'reflexes' && i.type !== 'speak')).slice(0, n));
+  if (key === 'oral') return asItems(oralItems(S, n));
+  if (key === 'ecoute') return asItems(toeicItems(S, [2, 3, 4], n));
+  if (key === 'lecture') return asItems(toeicItems(S, [7], n));
+  return [];
+}
+/* Notions de base à essayer quand il n’y a pas encore assez de données */
+const CORE_NOTIONS = ['temps:present-simple', 'temps:past-simple', 'temps:present-perfect', 'prepositions', 'toeic:2', 'toeic:5', 'toeic:7', 'irreguliers'];
+export function targetNotions(S, max = 3) {
+  const weak = weakNotions(S, max).map(x => x.key);
+  if (weak.length >= max) return weak;
+  const seen = new Map(notionStats(S).map(x => [x.key, x]));
+  const fresh = CORE_NOTIONS.filter(k => !weak.includes(k) && !(seen.get(k) && seen.get(k).enough));
+  return [...weak, ...fresh].slice(0, max);
+}
+/* Séance ciblée : tes notions les plus faibles, puis les exercices ratés à revoir */
+export function targetedCards(S) {
+  const keys = targetNotions(S, 3);
+  const cards = [];
+  for (const k of keys) {
+    cards.push({ kind: 'stage', title: notionInfo(k).label, mins: 2, text: 'Notion choisie d’après tes réponses : on la travaille maintenant.' });
+    cards.push(...notionCards(S, k, 4));
+  }
+  const dueQ = srsDue(S, today()).filter(id => id.startsWith('q:') && ITEMS[id.slice(2)]).slice(0, 3);
+  for (const id of dueQ) cards.push({ kind: 'item', item: ITEMS[id.slice(2)] });
+  return { keys, cards };
 }
 
 export function allQuests(S) {
@@ -87,8 +161,13 @@ export function questCards(S, quest) {
 }
 
 /* Cartes de réactivation : révisions dues, sinon nouveaux mots du chapitre en cours */
+/* Une révision n’est proposée que si l’élément existe encore (mot, verbe ou entrée du carnet) */
+export function srsKnown(S, id) {
+  const k = id.slice(2);
+  return id.startsWith('v:') ? !!VOCAB_BY_ID[k] : id.startsWith('i:') ? !!IRR_BY_ID[k] : id.startsWith('c:') ? S.carnet.some(c => c.id === k) : id.startsWith('q:') ? !!ITEMS[k] : false;
+}
 export function recallCards(S, max = 5, min = 3) {
-  const due = srsDue(S, today(), max);
+  const due = srsDue(S, today()).filter(id => srsKnown(S, id)).slice(0, max);
   const cards = due.map(id => ({ kind: 'recall', id }));
   if (cards.length < min) {
     const ch = currentChapter(S);
@@ -132,8 +211,11 @@ export function masteryCards(t) {
 
 /* Révisions : mots et verbes dus + exercices récemment ratés */
 export function reviewCards(S, max = 12) {
-  const cards = srsDue(S, today(), 8).map(id => ({ kind: 'recall', id }));
+  const due = srsDue(S, today()).filter(id => srsKnown(S, id));
+  /* mots et verbes à réactiver, puis exercices ratés dont la révision est due (révision espacée) */
+  const cards = due.filter(id => !id.startsWith('q:')).slice(0, 8).map(id => ({ kind: 'recall', id }));
   const seen = new Set();
+  for (const id of due.filter(x => x.startsWith('q:')).slice(0, 6)) { seen.add(id.slice(2)); cards.push({ kind: 'item', item: ITEMS[id.slice(2)] }); }
   for (const e of S.errors.slice().reverse()) {
     if (cards.length >= max) break;
     if (ITEMS[e.id] && !seen.has(e.id)) { seen.add(e.id); cards.push({ kind: 'item', item: ITEMS[e.id] }); }

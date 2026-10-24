@@ -253,8 +253,8 @@ export const PLACEMENT_AREAS = { vocab: 'Vocabulaire', sentences: 'Phrases simpl
 /* ---------- Objets cosmétiques (n’influencent jamais l’apprentissage) ---------- */
 export const COSMETICS = [
   { id: 'outfit-start', kind: 'outfit', name: 'Tenue de départ', unlock: 'Dès le début', level: 1 },
-  { id: 'outfit-street', kind: 'outfit', name: 'Veste urbaine', unlock: 'Niveau 4', level: 4 },
-  { id: 'outfit-agent', kind: 'outfit', name: 'Manteau d’agent', unlock: 'Niveau 8', level: 8 },
+  { id: 'outfit-street', kind: 'outfit', name: 'Veste urbaine', unlock: 'Niveau 4 et 1 temps maîtrisé', level: 4, need: { tenses: 1 } },
+  { id: 'outfit-agent', kind: 'outfit', name: 'Manteau d’agent', unlock: 'Niveau 8, 3 temps maîtrisés et 40 mots retenus', level: 8, need: { tenses: 3, words: 40 } },
   { id: 'outfit-traveller', kind: 'outfit', name: 'Tenue de voyageur', unlock: 'Boss du chapitre 4' },
   { id: 'aura-dawn', kind: 'aura', name: 'Aura de l’aube', unlock: 'Boss du chapitre 1', color: '#FFD166' },
   { id: 'aura-archive', kind: 'aura', name: 'Aura des archives', unlock: 'Boss du chapitre 3', color: '#2F80ED' },
@@ -292,12 +292,12 @@ export const CHAPTER_ART = {
   3: { img: 'img/explorateur.webp', pos: '70% 40%', x: 46, y: 41 },
   4: { img: 'img/technicien.webp', pos: '60% 30%', x: 76, y: 27 },
   5: { img: 'img/stratege.webp', pos: '50% 30%', x: 51, y: 16 },
-  6: { img: 'img/boss.webp', pos: '50% 20%', x: 53, y: 5 }
+  6: { img: 'img/boss-6.webp', pos: '50% 20%', x: 53, y: 5 }
 };
 /* Décor des dialogues */
 export const DIALOGUE_ART = {
   'd1-intro': 'img/titre.webp', 'd1-day': 'img/titre.webp', 'd2-cafe': 'img/cafe.webp', 'd3-archives': 'img/explorateur.webp',
-  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss.webp'
+  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss-6.webp'
 };
 /* Les boss partagent l’illustration de l’Ombre ; chacun a sa teinte */
 export const BOSS_HUE = { 1: 0, 2: 40, 3: 200, 4: 120, 5: 280, 6: 330 };
@@ -318,3 +318,18 @@ WORLD_ITEMS.push(
 );
 CHAPTERS[0].quests.push({ id: 'q1-6', cat: 'secondaire', title: 'Le carnet de Nora', objective: 'Traduire tes premières phrases sans aide.', mins: 5, skill: 'grammar', diff: 1, xp: 40, steps: [{ items: ['tr1-1', 'tr1-2', 'tr1-3', 'tr1-4'] }] });
 CHAPTERS[1].quests.push({ id: 'q2-5', cat: 'secondaire', title: 'Les messages du marché', objective: 'Traduire des phrases de la vie courante.', mins: 6, skill: 'grammar', diff: 2, xp: 50, steps: [{ items: ['tr2-1', 'tr2-2', 'tr2-3', 'tr2-4'] }] });
+
+/* ---------- Skins évolutifs du héros ----------
+   Chaque évolution demande de jouer (niveau, quêtes, boss) ET de progresser en anglais
+   (temps maîtrisés, mots retenus, niveau de discussion, jauge TOEIC, carnet).
+   req : { t: 'level' | 'quests' | 'boss' | 'tenses' | 'words' | 'talk' | 'toeic' | 'carnet', n } */
+export const SKINS = [
+  { id: 'recrue', name: 'Recrue', tier: 1, desc: 'Ton apparence de départ, encore discrète dans les rues de Halden.', ring: '', glow: '', req: [] },
+  { id: 'eveil', name: 'Éveil', tier: 2, desc: 'Une première lueur violette : la ville commence à te répondre.', ring: 'linear-gradient(135deg,#8B6CFF,#C9A8FF)', glow: '#8B6CFF', req: [{ t: 'level', n: 3 }, { t: 'quests', n: 3 }, { t: 'words', n: 10 }] },
+  { id: 'agent', name: 'Agent de Halden', tier: 3, desc: 'Liseré d’or et regard sûr : la Société des Lanternes te fait confiance.', ring: 'linear-gradient(135deg,#E0A92E,#FFD166,#8B6CFF)', glow: '#FFD166', req: [{ t: 'level', n: 6 }, { t: 'boss', n: 1 }, { t: 'tenses', n: 1 }, { t: 'words', n: 25 }] },
+  { id: 'archiviste', name: 'Gardien des archives', tier: 4, desc: 'Des glyphes bleus parcourent ta silhouette : tu lis ce que les autres ne voient pas.', ring: 'conic-gradient(#2F80ED,#8EC1FF,#2F80ED)', glow: '#2F80ED', req: [{ t: 'boss', n: 3 }, { t: 'quests', n: 12 }, { t: 'tenses', n: 3 }, { t: 'words', n: 50 }] },
+  { id: 'voyageur', name: 'Voyageur des lignes', tier: 5, desc: 'Une aura émeraude qui file comme un train de nuit : tu parles avec le monde entier.', ring: 'conic-gradient(#2ECC71,#7EE2A8,#2F80ED,#2ECC71)', glow: '#2ECC71', req: [{ t: 'boss', n: 4 }, { t: 'talk', n: 40 }, { t: 'words', n: 80 }] },
+  { id: 'lanterne', name: 'Lanterne', tier: 6, desc: 'Des rayons dorés que les Ombres n’osent plus traverser.', ring: 'conic-gradient(#FFD166,#FFF1C2,#E0A92E,#FFD166)', glow: '#FFD166', req: [{ t: 'boss', n: 5 }, { t: 'toeic', n: 60 }, { t: 'tenses', n: 5 }, { t: 'carnet', n: 50 }] },
+  { id: 'maitre', name: 'Maître des voix', tier: 7, desc: 'L’évolution ultime : un halo prismatique, ta voix dissipe les Ombres.', ring: 'conic-gradient(#FFD166,#FF6B9A,#A894FF,#2F80ED,#2ECC71,#FFD166)', glow: '#C9A8FF', req: [{ t: 'boss', n: 6 }, { t: 'toeic', n: 85 }, { t: 'talk', n: 60 }, { t: 'tenses', n: 7 }, { t: 'carnet', n: 100 }] }
+];
+export const SKIN_BY_ID = Object.fromEntries(SKINS.map(x => [x.id, x]));
