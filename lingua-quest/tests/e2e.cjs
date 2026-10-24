@@ -246,6 +246,30 @@ const noOverflow = async (page, label) => {
   check(await playRun(page, true), 'révision du carnet');
   await page.click('#play [data-act="close"]');
 
+  /* Jauges : accueil, TOEIC, oral */
+  await page.goto(BASE + '#/home');
+  check(await page.locator('.gauges .gauge').count() === 2, 'deux jauges sur l’accueil');
+  await page.locator('.gauges').scrollIntoViewIfNeeded();
+  await shot('41-jauges-accueil');
+  await page.goto(BASE + '#/toeic');
+  check(await page.locator('.readiness .gauge').count() === 1, 'jauge « prêt pour le TOEIC »');
+  await page.click('.readiness [data-act="set"][data-v="900"]');
+  check(/environ 90 %/.test(await page.textContent('.readiness')), 'objectif 900 → 90 % visé');
+  await shot('42-jauge-toeic');
+  await page.goto(BASE + '#/oral');
+  check(await page.locator('.talk .gauge').count() === 1, 'jauge du niveau de discussion');
+  await shot('43-jauge-discussion');
+
+  /* Vocabulaire du métier */
+  await page.goto(BASE + '#/metier');
+  await page.waitForSelector('[data-act="metierRun"]');
+  await shot('44-metier');
+  await page.click('[data-act="metierRun"][data-c="cvc"]');
+  check(await playRun(page, true), 'séance vocabulaire CVC');
+  await page.click('#play [data-act="close"]');
+  const seen = await page.evaluate(() => Object.keys(window.__LQ.ctx.S.srs).filter(k => ['v:duct', 'v:hvac', 'v:damper', 'v:airflow', 'v:mech-vent', 'v:humidity-controlled', 'v:ahu', 'v:exhaust-fan'].includes(k)).length);
+  check(seen >= 6, 'mots du métier ajoutés aux révisions (' + seen + ')');
+
   /* Chaque boss a son illustration */
   for (const n of [1, 6]) {
     await page.goto(BASE + '#/chapter/' + n);

@@ -478,3 +478,21 @@ body.playing #toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 .prep-row p { margin: 4px 0 0; }
 .toeic-photo { margin: 10px 0 14px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
 .toeic-photo img { display: block; width: 100%; height: auto; }
+
+/* ---------- Jauges ---------- */
+.gauge { position: relative; text-align: center; max-width: 220px; margin: 0 auto; }
+.gauge svg { width: 100%; display: block; }
+.gauge path { fill: none; stroke-width: 10; stroke-linecap: round; }
+.gauge .g-bg { stroke: var(--line); }
+.gauge .g-fg { stroke: var(--violet, #8B6CFF); transition: stroke-dashoffset .8s ease; }
+.gauge.blue .g-fg { stroke: var(--blue, #4EA8FF); }
+.gauge.green .g-fg { stroke: var(--green, #2ECC71); }
+.gauge b { position: absolute; left: 0; right: 0; top: 48%; font-size: 1.15rem; line-height: 1.1; }
+.gauge small { display: block; margin-top: 4px; color: var(--muted); font-size: .78rem; }
+.gauge-big .gauge { max-width: 260px; }
+.gauge-big .gauge b { font-size: 1.4rem; top: 46%; }
+.gauge-link { text-decoration: none; color: inherit; display: block; text-align: center; }
+.gauge-link > span { display: block; font-weight: 600; font-size: .9rem; margin-top: 2px; }
+.gauges .grid2 { gap: 10px; }
+ul.todo { margin: 6px 0 10px; padding-left: 18px; }
+ul.todo li { margin: 4px 0; }

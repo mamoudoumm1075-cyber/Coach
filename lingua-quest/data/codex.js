@@ -4,7 +4,8 @@
 
 export const CATEGORIES = {
   quotidien: 'Vie quotidienne', travail: 'Travail et entreprise', reunions: 'Réunions', emails: 'E-mails professionnels',
-  voyages: 'Voyages', transports: 'Transports', achats: 'Achats', conversation: 'Conversations', toeic: 'TOEIC', expressions: 'Expressions courantes'
+  voyages: 'Voyages', transports: 'Transports', achats: 'Achats', conversation: 'Conversations', toeic: 'TOEIC', expressions: 'Expressions courantes',
+  cvc: 'Métier · CVC et VMC', btp: 'Métier · Chantier et BTP', datacenter: 'Métier · Data center'
 };
 export const REGISTRES = { courant: 'courant', pro: 'professionnel', familier: 'familier' };
 
@@ -140,7 +141,64 @@ const V = [
   ['run-late', 'run late', [['être en retard (sur le moment)', '']], 'ran LÉÏT', 'Sorry, I’m running late.', 'Désolé, je suis en retard.', 'be late', 'courant', 'expressions', ['running late']],
   ['handle', 'handle', [['gérer, s’occuper de', '']], 'HAN-deul', 'Who handles customer complaints?', 'Qui s’occupe des réclamations clients ?', 'deal with, manage', 'pro', 'toeic', ['handled', 'handles', 'handling']],
   ['complaint', 'complaint', [['réclamation, plainte', '']], 'keum-PLÉÏNT', 'We received a complaint about the delivery.', 'Nous avons reçu une réclamation sur la livraison.', '', 'pro', 'toeic', ['complaints', 'complain']],
-  ['upcoming', 'upcoming', [['à venir, prochain', '']], 'AP-ka-ming', 'Don’t forget the upcoming meeting.', 'N’oublie pas la réunion à venir.', 'next, forthcoming', 'pro', 'toeic', []]
+  ['upcoming', 'upcoming', [['à venir, prochain', '']], 'AP-ka-ming', 'Don’t forget the upcoming meeting.', 'N’oublie pas la réunion à venir.', 'next, forthcoming', 'pro', 'toeic', []],
+  /* --- Mon métier : CVC et VMC --- */
+  ['hvac', 'HVAC', [['CVC (chauffage, ventilation, climatisation)', '']], 'éïtch-vi-éï-SI', 'We install HVAC systems in office buildings.', 'Nous installons des systèmes CVC dans des immeubles de bureaux.', 'heating, ventilation and air conditioning', 'pro', 'cvc', []],
+  ['mech-vent', 'mechanical ventilation', [['ventilation mécanique (VMC)', '']], 'mi-KA-ni-keul vèn-ti-LÉÏ-cheun', 'The flat has a mechanical ventilation system in every wet room.', 'L’appartement a une VMC dans chaque pièce humide.', 'MEV (simple flux), MVHR (double flux)', 'pro', 'cvc', []],
+  ['humidity-controlled', 'humidity-controlled', [['hygroréglable', '']], 'hiou-MI-di-ti keun-TRÔLD', 'We fit humidity-controlled extract grilles.', 'Nous posons des bouches d’extraction hygroréglables.', 'humidity-sensitive', 'pro', 'cvc', []],
+  ['duct', 'duct', [['gaine, conduit', '']], 'dakt', 'The duct runs above the false ceiling.', 'La gaine passe au-dessus du faux plafond.', 'ductwork (réseau de gaines)', 'pro', 'cvc', ['ducts', 'ductwork']],
+  ['ahu', 'air handling unit', [['centrale de traitement d’air (CTA)', '']], 'èr HANN-dling YOU-nit', 'The air handling unit is on the roof.', 'La CTA est sur le toit.', 'AHU', 'pro', 'cvc', ['air handling units']],
+  ['exhaust-fan', 'exhaust fan', [['extracteur, caisson d’extraction', '']], 'ig-ZOST fan', 'We need to replace the exhaust fan on the roof.', 'Il faut remplacer le caisson d’extraction en toiture.', 'extractor fan (UK)', 'pro', 'cvc', ['exhaust fans']],
+  ['air-inlet', 'air inlet', [['entrée d’air', '']], 'èr IN-lèt', 'Each bedroom needs an air inlet above the window.', 'Chaque chambre a besoin d’une entrée d’air au-dessus de la fenêtre.', 'air intake', 'pro', 'cvc', ['air inlets']],
+  ['extract-grille', 'extract grille', [['bouche d’extraction', '']], 'EKS-trakt gril', 'The extract grille in the bathroom is blocked.', 'La bouche d’extraction de la salle de bain est bouchée.', 'exhaust vent', 'pro', 'cvc', ['extract grilles']],
+  ['damper', 'damper', [['registre (de réglage)', '']], 'DAM-peur', 'Adjust the damper to balance the airflow.', 'Règle le registre pour équilibrer le débit.', 'volume control damper', 'pro', 'cvc', ['dampers']],
+  ['fire-damper', 'fire damper', [['clapet coupe-feu', '']], 'FAÏ-eur DAM-peur', 'Fire dampers must be tested every year.', 'Les clapets coupe-feu doivent être testés chaque année.', '', 'pro', 'cvc', ['fire dampers']],
+  ['airflow', 'airflow', [['débit d’air', '']], 'ÈR-flô', 'The airflow is ninety cubic meters per hour.', 'Le débit d’air est de 90 m³/h.', 'air flow rate', 'pro', 'cvc', []],
+  ['pressure-drop', 'pressure drop', [['perte de charge', '']], 'PRÈ-cheur drop', 'Too many bends increase the pressure drop.', 'Trop de coudes augmentent la perte de charge.', 'pressure loss', 'pro', 'cvc', []],
+  ['bend', 'bend', [['coude (de gaine)', '']], 'bènd', 'Use a ninety-degree bend here.', 'Mets un coude à 90 degrés ici.', 'elbow', 'pro', 'cvc', ['bends']],
+  ['heat-recovery', 'heat recovery unit', [['VMC double flux, récupérateur de chaleur', '']], 'hit ri-KA-veu-ri YOU-nit', 'A heat recovery unit saves a lot of energy.', 'Une VMC double flux économise beaucoup d’énergie.', 'MVHR unit', 'pro', 'cvc', ['heat recovery']],
+  ['heat-pump', 'heat pump', [['pompe à chaleur', '']], 'hit pamp', 'The heat pump heats and cools the building.', 'La pompe à chaleur chauffe et rafraîchit le bâtiment.', '', 'pro', 'cvc', ['heat pumps']],
+  ['chiller', 'chiller', [['groupe froid, refroidisseur', '']], 'TCHI-leur', 'The chiller supplies chilled water to the system.', 'Le groupe froid alimente le réseau en eau glacée.', '', 'pro', 'cvc', ['chillers']],
+  ['boiler', 'boiler', [['chaudière', '']], 'BOÏ-leur', 'The boiler needs a yearly service.', 'La chaudière doit être entretenue chaque année.', '', 'pro', 'cvc', ['boilers']],
+  ['filter', 'filter', [['filtre', '']], 'FIL-teur', 'Change the filters every six months.', 'Change les filtres tous les six mois.', '', 'pro', 'cvc', ['filters']],
+  ['airtight', 'airtight', [['étanche à l’air', '']], 'ÈR-taït', 'All the joints must be airtight.', 'Tous les raccords doivent être étanches à l’air.', 'sealed', 'pro', 'cvc', []],
+  ['rooftop-unit', 'rooftop unit', [['caisson, unité en toiture', '']], 'ROUF-top YOU-nit', 'The rooftop unit sits on the flat roof.', 'L’unité est posée en toiture-terrasse.', 'roof unit', 'pro', 'cvc', ['rooftop units']],
+  ['commissioning', 'commissioning', [['mise en service', '']], 'keu-MI-cheu-ning', 'Commissioning is planned for next week.', 'La mise en service est prévue la semaine prochaine.', 'start-up', 'pro', 'cvc', ['commission', 'commissioned']],
+  /* --- Mon métier : chantier et BTP --- */
+  ['construction-site', 'construction site', [['chantier', '']], 'keun-STRAK-cheun saït', 'Wear your hard hat on the construction site.', 'Porte ton casque sur le chantier.', 'job site, building site', 'pro', 'btp', ['construction sites']],
+  ['contractor', 'contractor', [['entreprise (prestataire), entrepreneur', '']], 'KON-trak-teur', 'The contractor sent us a new quote.', 'L’entreprise nous a envoyé un nouveau devis.', 'main contractor (entreprise générale)', 'pro', 'btp', ['contractors']],
+  ['subcontractor', 'subcontractor', [['sous-traitant', '']], 'sab-keun-TRAK-teur', 'We work as a subcontractor for the main contractor.', 'Nous travaillons en sous-traitance pour l’entreprise générale.', '', 'pro', 'btp', ['subcontractors']],
+  ['site-manager', 'site manager', [['conducteur de travaux, chef de chantier', '']], 'saït MA-ni-djeur', 'Call the site manager before you start.', 'Appelle le conducteur de travaux avant de commencer.', 'foreman (chef d’équipe)', 'pro', 'btp', ['site managers']],
+  ['drawings', 'drawings', [['plans', '']], 'DRO-ingz', 'Check the drawings before drilling.', 'Vérifie les plans avant de percer.', 'plans, blueprints', 'pro', 'btp', ['drawing']],
+  ['as-built', 'as-built drawings', [['plans de récolement (DOE)', '']], 'az BILT DRO-ingz', 'We must hand over the as-built drawings.', 'Nous devons remettre les plans de récolement.', 'record drawings', 'pro', 'btp', []],
+  ['bill-of-quantities', 'bill of quantities', [['métré, quantitatif (DPGF)', '']], 'bil ov KOUON-ti-tiz', 'The bill of quantities lists every duct and fitting.', 'Le métré liste chaque gaine et chaque raccord.', 'take-off', 'pro', 'btp', []],
+  ['fitting', 'fitting', [['raccord, accessoire (de réseau)', '']], 'FI-ting', 'We are short of fittings for the main duct.', 'Il nous manque des raccords pour la gaine principale.', 'connector', 'pro', 'btp', ['fittings']],
+  ['false-ceiling', 'false ceiling', [['faux plafond', '']], 'fols SI-ling', 'The ducts are hidden in the false ceiling.', 'Les gaines sont cachées dans le faux plafond.', 'suspended ceiling', 'pro', 'btp', []],
+  ['handover', 'handover', [['réception (des travaux)', '']], 'HAND-ô-veur', 'The handover is scheduled for June.', 'La réception est prévue en juin.', 'hand over (remettre)', 'pro', 'btp', []],
+  ['snag-list', 'snag list', [['liste des réserves', '']], 'snag list', 'There are still three items on the snag list.', 'Il reste trois réserves à lever.', 'punch list (US)', 'pro', 'btp', []],
+  ['lead-time', 'lead time', [['délai (de livraison, de fabrication)', '']], 'LID taïm', 'The lead time for the fans is six weeks.', 'Le délai pour les ventilateurs est de six semaines.', '', 'pro', 'btp', []],
+  ['behind-schedule', 'behind schedule', [['en retard sur le planning', '']], 'bi-HAÏND SKÈ-djoul', 'The job is two weeks behind schedule.', 'Le chantier a deux semaines de retard.', 'on schedule (dans les temps)', 'pro', 'btp', []],
+  ['ppe', 'PPE', [['EPI (équipements de protection individuelle)', '']], 'pi-pi-I', 'PPE is mandatory on site.', 'Les EPI sont obligatoires sur le chantier.', 'personal protective equipment', 'pro', 'btp', []],
+  ['hard-hat', 'hard hat', [['casque de chantier', '']], 'HARD hat', 'Put your hard hat on.', 'Mets ton casque.', 'helmet', 'pro', 'btp', ['hard hats']],
+  ['harness', 'safety harness', [['harnais de sécurité', '']], 'SÉÏF-ti HAR-nis', 'Wear a harness when you work at height.', 'Porte un harnais quand tu travailles en hauteur.', '', 'pro', 'btp', ['harness']],
+  ['scaffolding', 'scaffolding', [['échafaudage', '']], 'SKA-feul-ding', 'The scaffolding will be removed on Friday.', 'L’échafaudage sera démonté vendredi.', 'scaffold', 'pro', 'btp', ['scaffold']],
+  ['work-at-height', 'work at height', [['travail en hauteur', '']], 'oueurk at HAÏT', 'Work at height needs a permit.', 'Le travail en hauteur demande une autorisation.', '', 'pro', 'btp', []],
+  ['risk-assessment', 'risk assessment', [['analyse des risques', 'PPSPS, plan de prévention']], 'risk eu-SÈS-meunt', 'Send me the risk assessment before Monday.', 'Envoie-moi l’analyse des risques avant lundi.', 'method statement (mode opératoire)', 'pro', 'btp', []],
+  /* --- Mon métier : data center --- */
+  ['data-center', 'data center', [['centre de données, data center', '']], 'DÉÏ-teu SÈN-teur', 'The new data center needs a lot of cooling.', 'Le nouveau data center demande beaucoup de refroidissement.', 'data centre (UK)', 'pro', 'datacenter', ['data centers', 'data centre']],
+  ['server-room', 'server room', [['salle serveurs', '']], 'SEUR-veur roum', 'Only authorized staff can enter the server room.', 'Seul le personnel autorisé entre en salle serveurs.', 'data hall', 'pro', 'datacenter', []],
+  ['rack', 'rack', [['baie (serveurs)', '']], 'rak', 'Each rack uses about ten kilowatts.', 'Chaque baie consomme environ dix kilowatts.', 'cabinet', 'pro', 'datacenter', ['racks']],
+  ['raised-floor', 'raised floor', [['faux plancher technique', '']], 'RÉÏZD flor', 'Cold air is blown under the raised floor.', 'L’air froid est soufflé sous le faux plancher.', 'access floor', 'pro', 'datacenter', []],
+  ['aisles', 'hot aisle / cold aisle', [['allée chaude / allée froide', '']], 'hot AÏL / kôld AÏL', 'Cold aisle containment improves cooling.', 'Le confinement d’allée froide améliore le refroidissement.', 'containment (confinement)', 'pro', 'datacenter', ['hot aisle', 'cold aisle']],
+  ['crac', 'CRAC unit', [['armoire de climatisation (salle informatique)', '']], 'krak YOU-nit', 'One CRAC unit is down for maintenance.', 'Une armoire de clim est arrêtée pour maintenance.', 'computer room air conditioner, CRAH', 'pro', 'datacenter', []],
+  ['ups', 'UPS', [['onduleur', '']], 'you-pi-ÈS', 'The UPS keeps the servers running during a power cut.', 'L’onduleur maintient les serveurs pendant une coupure.', 'uninterruptible power supply', 'pro', 'datacenter', []],
+  ['backup-generator', 'backup generator', [['groupe électrogène de secours', '']], 'BAK-ap DJÈ-neu-réï-teur', 'The backup generator is tested every month.', 'Le groupe électrogène est testé chaque mois.', 'standby generator', 'pro', 'datacenter', ['generator']],
+  ['redundancy', 'redundancy', [['redondance (N+1)', 'technique'], ['licenciement économique', 'RH (UK)']], 'ri-DAN-deun-si', 'The cooling system has N plus one redundancy.', 'Le refroidissement est redondant en N+1.', 'backup', 'pro', 'datacenter', ['redundant']],
+  ['uptime', 'uptime', [['disponibilité, temps de fonctionnement', '']], 'AP-taïm', 'The client expects 99.99 percent uptime.', 'Le client attend 99,99 % de disponibilité.', 'availability', 'pro', 'datacenter', []],
+  ['downtime', 'downtime', [['temps d’arrêt, interruption', '']], 'DAOUN-taïm', 'The work must be done without any downtime.', 'Les travaux doivent se faire sans aucune interruption.', 'outage (panne)', 'pro', 'datacenter', []],
+  ['cooling-capacity', 'cooling capacity', [['puissance frigorifique', '']], 'KOU-ling keu-PA-si-ti', 'Each unit has a cooling capacity of one hundred kilowatts.', 'Chaque unité a une puissance frigorifique de 100 kW.', '', 'pro', 'datacenter', []],
+  ['free-cooling', 'free cooling', [['free cooling (refroidissement par l’air extérieur)', '']], 'fri KOU-ling', 'In winter, free cooling cuts energy use.', 'En hiver, le free cooling réduit la consommation.', '', 'pro', 'datacenter', []],
+  ['pue', 'PUE', [['indicateur d’efficacité énergétique (PUE)', '']], 'pi-you-I', 'Our goal is a PUE below 1.3.', 'Notre objectif est un PUE inférieur à 1,3.', 'power usage effectiveness', 'pro', 'datacenter', []]
 ];
 
 export const VOCAB = V.map(([id, en, senses, pron, ex, exFr, syn, reg, cat, forms]) => ({ id, en, senses, pron, ex, exFr, syn, reg, cat, forms: forms || [] }));

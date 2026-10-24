@@ -142,3 +142,37 @@ test('analyse d’un test : la partie où l’on perd le plus de points', () => 
   assert.equal(L.mostLostPart({ 2: [1, 3], 5: [2, 6], 7: [3, 4] }).part, 5);
   assert.equal(L.mostLostPart({ 2: [0, 2], 6: [2, 4] }).part, 2);
 });
+
+test('jauge TOEIC : 0 au départ, prête seulement avec toutes les parties et 2 tests blancs réussis', () => {
+  const s = L.newState();
+  let r = L.toeicReadiness(s);
+  assert.equal(r.pct, 0);
+  assert.equal(r.ready, false);
+  assert.equal(r.target, 85);
+  const fill = (p, ok, n = 20) => { s.toeic.parts[p] = { attempts: n, correct: ok, recent: Array.from({ length: n }, (_, i) => (i < ok ? 1 : 0)) }; };
+  for (const p of [1, 2, 3, 4, 5, 6, 7]) fill(p, 18);
+  r = L.toeicReadiness(s);
+  assert.equal(r.ready, false, 'sans test blanc, pas prêt');
+  assert.equal(r.pct, 99);
+  s.toeic.tests.push({ kind: 'blanc', ok: 27, total: 30 }, { kind: 'blanc', ok: 26, total: 30 });
+  assert.equal(L.toeicReadiness(s).ready, true);
+  fill(7, 10);
+  r = L.toeicReadiness(s);
+  assert.equal(r.ready, false, 'une partie faible bloque');
+  assert.equal(r.todo[0].part, 7);
+  s.settings.toeicGoal = 700;
+  assert.equal(L.toeicReadiness(s).target, 70);
+});
+
+test('jauge de discussion : progresse avec l’oral, les temps et les mots', () => {
+  const s = L.newState();
+  assert.equal(L.talkLevel(s).score, 0);
+  assert.equal(L.talkLevel(s).cefr, 'A1');
+  s.skills.speaking = { attempts: 150, correct: 140, recent: Array(30).fill(1) };
+  s.skills.reflexes = { attempts: 40, correct: 40, recent: Array(30).fill(1) };
+  for (const id of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) s.tenses[id] = { mastered: true };
+  const t = L.talkLevel(s, 9);
+  assert.equal(t.score, 85);
+  assert.equal(t.cefr, 'C1');
+  assert.equal(t.next, null);
+});

@@ -111,3 +111,17 @@ test('prépositions : les questions d’entraînement existent', async () => {
   for (const id of PREP_ITEMS) assert.ok(TOEIC_BY_ID[id], id);
   for (const g of PREPOSITIONS) for (const r of g.rows) assert.equal(r.length, 4, g.id + ' ' + r[0]);
 });
+
+test('vocabulaire métier : 3 domaines, quiz jouable dans les deux sens', async () => {
+  const C = await import('../js/content.js');
+  const { newState } = await import('../js/logic.js');
+  for (const cat of C.METIER_CATS) assert.ok(C.metierWords(cat).length >= 12, cat);
+  const cards = C.metierCards(newState(), 'cvc');
+  assert.equal(cards.filter(c => c.kind === 'learn').length, 6);
+  const quiz = cards.filter(c => c.kind === 'item').map(c => c.item);
+  assert.ok(quiz.length >= 6);
+  for (const it of quiz) {
+    assert.equal(new Set(it.options).size, it.options.length, it.id + ' : options en double');
+    assert.ok(it.options.length === 4 && it.answer === 0 && it.explain);
+  }
+});
