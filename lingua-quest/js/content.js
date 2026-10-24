@@ -3,9 +3,10 @@ import { TENSES, TENSE_ITEMS, TENSE_BY_ID } from '../data/tenses.js';
 import { TOEIC, PART_IDS, PARTS } from '../data/toeic.js';
 import { WORLD_ITEMS, CHAPTERS, CLASS_QUESTS, PLACEMENT } from '../data/world.js';
 import { VOCAB, VOCAB_BY_ID, IRREGULAR, PREP_ITEMS } from '../data/codex.js';
-import { shuffle, srsDue, srsAdd, weakestPart, chapterUnlocked, today, weakNotions, notionStats } from './logic.js';
+import { shuffle, srsDue, srsAdd, weakestPart, chapterUnlocked, today, weakNotions, notionStats, partQuota } from './logic.js';
 
 export const ITEMS = Object.fromEntries([...TENSE_ITEMS, ...TOEIC, ...WORLD_ITEMS, ...PLACEMENT].map(i => [i.id, i]));
+export const TOEIC_COUNT = TOEIC.length;
 export const IRR_BY_ID = Object.fromEntries(IRREGULAR.map(r => [r.id, r]));
 
 /* ---------- Vocabulaire de ton métier (CVC, VMC, BTP, data center) ---------- */
@@ -105,6 +106,17 @@ export function targetedCards(S) {
   const dueQ = srsDue(S, today()).filter(id => id.startsWith('q:') && ITEMS[id.slice(2)]).slice(0, 3);
   for (const id of dueQ) cards.push({ kind: 'item', item: ITEMS[id.slice(2)] });
   return { keys, cards };
+}
+
+/* Questions d’un étage de la Tour : proportions du vrai TOEIC, difficulté la plus proche de l’étage,
+   questions du test précédent évitées si possible, ordre du vrai test (écoute puis lecture) */
+export function arenaItems(S, floor, count = 30) {
+  const avoid = new Set((S.arena && S.arena.last) || []);
+  const score = i => Math.abs(i.diff - floor.pref) + (avoid.has(i.id) ? 1.5 : 0);
+  const out = [];
+  for (const [p, q] of partQuota(count)) out.push(...shuffle(TOEIC.filter(i => i.part === p)).sort((a, b) => score(a) - score(b)).slice(0, q));
+  if (out.length < count) out.push(...shuffle(TOEIC.filter(i => !out.includes(i))).sort((a, b) => score(a) - score(b)).slice(0, count - out.length));
+  return out.sort((a, b) => a.part - b.part);
 }
 
 export function allQuests(S) {

@@ -247,3 +247,20 @@ test('skins : conditions de jeu ET d’anglais, déblocage, équipement, sauvega
   st = L.skinState(s, SKIN_BY_ID.agent, { ...m, bosses: [1] });
   assert.equal(st.reqs.find(r => r.t === 'boss').ok, true);
 });
+
+test('Tour des examens : seuils croissants jusqu’à l’objectif, départ selon le niveau, répartition du vrai TOEIC', () => {
+  const p = [1, 2, 3, 4, 5, 6].map(n => L.arenaPass(n, 850));
+  assert.equal(p[0], 0.55);
+  assert.equal(p[5], 0.85);
+  for (let k = 1; k < 6; k++) assert.ok(p[k] > p[k - 1], 'seuil croissant');
+  assert.equal(L.arenaPass(6, 700), 0.7);
+  const s = L.newState();
+  assert.equal(L.arenaStart(s), 1);
+  s.difficulty = 3;
+  assert.equal(L.arenaStart(s), 3);
+  const q = L.partQuota(30);
+  assert.equal(q.reduce((a, [, n]) => a + n, 0), 30);
+  assert.deepEqual(Object.fromEntries(q), { 1: 1, 2: 4, 3: 6, 4: 5, 5: 4, 6: 2, 7: 8 });
+  const back = L.sanitize(JSON.parse(JSON.stringify({ ...s, arena: { floor: 3, beaten: [1, 2, 'x'], best: { 1: 80, 2: 'a' }, last: ['t5-1'] } })));
+  assert.deepEqual(back.arena, { floor: 3, beaten: [1, 2], best: { 1: 80 }, last: ['t5-1'] });
+});

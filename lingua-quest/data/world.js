@@ -333,3 +333,16 @@ export const SKINS = [
   { id: 'maitre', name: 'Maître des voix', tier: 7, desc: 'L’évolution ultime : un halo prismatique, ta voix dissipe les Ombres.', ring: 'conic-gradient(#FFD166,#FF6B9A,#A894FF,#2F80ED,#2ECC71,#FFD166)', glow: '#C9A8FF', req: [{ t: 'boss', n: 6 }, { t: 'toeic', n: 85 }, { t: 'talk', n: 60 }, { t: 'tenses', n: 7 }, { t: 'carnet', n: 100 }] }
 ];
 export const SKIN_BY_ID = Object.fromEntries(SKINS.map(x => [x.id, x]));
+
+/* ---------- La Tour des examens : un test blanc = un combat en direct ----------
+   Chaque bonne réponse frappe l’Ombre ; le test validé, elle tombe et l’étage suivant s’ouvre.
+   pref : difficulté visée des questions (1 facile → 3 difficile) ; seconds : temps pour 30 questions. */
+export const ARENA = [
+  { floor: 1, boss: 1, name: 'Echo, l’Ombre muette', level: 'Facile', pref: 1, seconds: 1800 },
+  { floor: 2, boss: 2, name: 'Le Marchand d’Ombres', level: 'Facile à moyen', pref: 1.5, seconds: 1680 },
+  { floor: 3, boss: 3, name: 'Le Gardien des Archives', level: 'Moyen', pref: 2, seconds: 1560 },
+  { floor: 4, boss: 4, name: 'Le Passeur silencieux', level: 'Moyen à difficile', pref: 2.4, seconds: 1440 },
+  { floor: 5, boss: 5, name: 'La Sentinelle du chronomètre', level: 'Difficile', pref: 2.8, seconds: 1320 },
+  { floor: 6, boss: 6, name: 'Le Seigneur des Ombres', level: 'Niveau objectif', pref: 3, seconds: 1200 }
+];
+export const ARENA_QUESTIONS = 30;

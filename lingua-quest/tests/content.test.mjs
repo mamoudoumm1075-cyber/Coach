@@ -143,3 +143,21 @@ test('apprentissage ciblé : chaque notion produit des exercices jouables', asyn
   s.srs['q:t5-1'] = { box: 1, due: '2000-01-01' };
   assert.ok(C.reviewCards(s).some(c => c.kind === 'item' && c.item.id === 't5-1'), 'exercice raté dû en révision');
 });
+
+test('Tour des examens : 30 questions, ordre du vrai test, difficulté qui monte d’étage en étage', async () => {
+  const C = await import('../js/content.js');
+  const { ARENA } = await import('../data/world.js');
+  const { newState } = await import('../js/logic.js');
+  const s = newState();
+  const avg = f => { let t = 0; for (let k = 0; k < 20; k++) { const it = C.arenaItems(s, f, 30); t += it.reduce((a, i) => a + i.diff, 0) / it.length; } return t / 20; };
+  const diffs = ARENA.map(avg);
+  for (let k = 1; k < diffs.length; k++) assert.ok(diffs[k] >= diffs[k - 1] - 0.02, `étage ${k + 1} au moins aussi dur (${diffs.map(d => d.toFixed(2)).join(' < ')})`);
+  assert.ok(diffs[5] - diffs[0] > 0.8, 'nette différence entre le premier et le dernier étage');
+  const it = C.arenaItems(s, ARENA[2], 30);
+  assert.equal(it.length, 30);
+  assert.equal(new Set(it.map(i => i.id)).size, 30, 'pas de doublon');
+  assert.deepEqual(it.map(i => i.part), it.map(i => i.part).slice().sort((a, b) => a - b), 'écoute puis lecture');
+  s.arena.last = it.map(i => i.id);
+  const again = C.arenaItems(s, ARENA[2], 30);
+  assert.ok(again.filter(i => s.arena.last.includes(i.id)).length < 30, 'le test suivant change de questions');
+});

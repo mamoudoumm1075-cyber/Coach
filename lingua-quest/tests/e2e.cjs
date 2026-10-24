@@ -296,6 +296,33 @@ const noOverflow = async (page, label) => {
   await page.click('[data-act="skinEquip"][data-id="eveil"]');
   await shot('47-apparence');
 
+  /* Tour des examens : combat en direct, victoire qui ouvre l’étage suivant, défaite */
+  await page.goto(BASE + '#/arene');
+  await page.waitForSelector('.arena-boss');
+  const f0 = await page.evaluate(() => window.__LQ.ctx.S.arena.floor);
+  check(f0 >= 1, 'Tour des examens : étage de départ fixé selon le niveau (' + f0 + ')');
+  await shot('48-tour');
+  await page.click(`.arena-boss [data-act="arena"]`);
+  await page.waitForSelector('#play .boss-bar');
+  let hits = 0;
+  for (let k = 0; k < 40 && !(await page.locator('#play .boss-bar.down').count()); k++) { await answerCard(page, true); hits++; }
+  check(await page.locator('#play .boss-bar.down').count() === 1, 'chaque bonne réponse frappe : l’Ombre tombe au seuil (' + hits + ' coups)');
+  await shot('49-ombre-vaincue');
+  await page.click('#play [data-act="quit"]');
+  await page.waitForSelector('#play .bilan');
+  check(/vaincu/.test(await page.textContent('#play .bilan-top')), 'quitter après la victoire garde la victoire');
+  await page.click('#play [data-act="close"]');
+  const ar = await page.evaluate(() => window.__LQ.ctx.S.arena);
+  check(ar.beaten.includes(f0) && ar.floor === f0 + 1, 'étage suivant ouvert après la victoire');
+  check(await page.evaluate(() => window.__LQ.ctx.S.toeic.tests.slice(-1)[0].kind === 'blanc'), 'le combat compte comme un test blanc');
+  await page.goto(BASE + '#/arene');
+  await page.click('.arena-boss [data-act="arena"]');
+  await page.waitForSelector('#play .boss-bar');
+  check(await playRun(page, false, 60), 'défaite : le combat s’arrête quand l’Ombre ne peut plus être vaincue');
+  check(/tient encore/.test(await page.textContent('#play .bilan-top')), 'bilan de défaite affiché');
+  await page.click('#play [data-act="close"]');
+  check(await page.evaluate(() => window.__LQ.ctx.S.arena.floor) === f0 + 1, 'une défaite ne fait pas reculer d’étage');
+
   /* Vocabulaire du métier */
   await page.goto(BASE + '#/metier');
   await page.waitForSelector('[data-act="metierRun"]');

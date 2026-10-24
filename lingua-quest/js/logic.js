@@ -63,6 +63,7 @@ export function newState() {
     carnet: [],
     notions: {},
     skins: { owned: ['recrue'], equipped: 'recrue' },
+    arena: { floor: null, beaten: [], best: {}, last: [] },
     settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '', toeicGoal: 850 }
   };
 }
@@ -117,6 +118,13 @@ export function sanitize(o) {
   s.sessions = s.sessions.filter(isObj);
   s.badges = s.badges.filter(b => typeof b === 'string');
   s.carnet = s.carnet.filter(c => isObj(c) && typeof c.en === 'string' && c.id);
+  const ar = isObj(o.arena) ? o.arena : {};
+  s.arena = {
+    floor: Number.isInteger(ar.floor) && ar.floor >= 1 ? ar.floor : null,
+    beaten: Array.isArray(ar.beaten) ? ar.beaten.filter(Number.isInteger) : [],
+    best: cleanMap(ar.best, v => (Number.isFinite(v) ? v : null)),
+    last: Array.isArray(ar.last) ? ar.last.filter(x => typeof x === 'string').slice(-40) : []
+  };
   const sk = isObj(o.skins) ? o.skins : {};
   const owned = ['recrue', ...(Array.isArray(sk.owned) ? sk.owned.filter(x => typeof x === 'string' && x !== 'recrue') : [])];
   s.skins = { owned: [...new Set(owned)], equipped: owned.includes(sk.equipped) ? sk.equipped : 'recrue' };
@@ -322,6 +330,25 @@ export function equipSkin(S, id) {
   if (!S.skins.owned.includes(id)) return false;
   S.skins.equipped = id;
   return true;
+}
+
+/* ---------- Tour des examens ---------- */
+/* Seuil de victoire : 55 % au premier étage, puis monte jusqu’au taux visé par ton objectif au dernier */
+export function arenaPass(floor, goal, floors = 6) {
+  const top = goalRate(goal) / 100;
+  return Math.round((0.55 + (top - 0.55) * (Math.min(floor, floors) - 1) / (floors - 1)) * 100) / 100;
+}
+/* Étage de départ selon ton niveau : difficulté réglée par l’évaluation, +1 si la jauge TOEIC dépasse 60 % */
+export function arenaStart(S) {
+  return Math.min(4, Math.max(1, S.difficulty + (toeicReadiness(S).pct >= 60 ? 1 : 0)));
+}
+/* Répartition des questions par partie, proportionnelle au vrai TOEIC (plus forts restes) */
+export function partQuota(count) {
+  const raw = Object.entries(PART_WEIGHT).map(([p, w]) => [+p, (w / 200) * count]);
+  const q = raw.map(([p, x]) => [p, Math.floor(x), x - Math.floor(x)]);
+  let left = count - q.reduce((a, x) => a + x[1], 0);
+  for (const x of q.slice().sort((a, b) => b[2] - a[2])) { if (left <= 0) break; x[1]++; left--; }
+  return q.map(([p, n]) => [p, n]);
 }
 
 /* ---------- Plan d’examen : sprint de 4 semaines avant la date du TOEIC ---------- */
