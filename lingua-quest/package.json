@@ -1,0 +1,9 @@
+{
+  "name": "lingua-quest",
+  "private": true,
+  "type": "module",
+  "description": "RPG pour apprendre l’anglais, préparer le TOEIC et parler couramment. Aucune dépendance : servi tel quel.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

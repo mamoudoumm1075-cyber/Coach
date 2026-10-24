@@ -40,3 +40,7 @@ Application de budget (salaire, charges, dépenses, épargne), dans `ma-paie.htm
 - **Important :** l'appli installée a sa propre mémoire. Avant d'installer, télécharger la sauvegarde (.json) dans Safari, puis l'importer dans l'appli installée.
 - Import de relevés : Dépenses → « Importer un relevé bancaire ». Fichiers CSV (Société Générale : site internet → télécharger les opérations ; Revolut : Relevé au format Excel). Les PDF ne sont pas lus.
 - Fichiers : `ma-paie.html`, `ma-paie-sw.js`, `ma-paie.webmanifest`, `ma-paie-icon-*.png`. `ma-paie.xlsx` est la version Excel d'exemple.
+
+## Lingua Quest
+
+RPG pour apprendre l’anglais (TOEIC + oral), dans le dossier `lingua-quest/`. Même principe : tout reste dans le téléphone. Détails, installation et limites : `lingua-quest/README.md`.
