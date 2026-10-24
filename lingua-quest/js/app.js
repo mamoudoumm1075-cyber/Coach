@@ -5,7 +5,7 @@ import { esc, icon, heroMedal, heroPortrait, bar, toast, pl } from './ui.js';
 import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
-import { ttsAvailable, sttAvailable, setSound, speak, voiceCount } from './audio.js';
+import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
 import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, DIALOGUES } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS } from '../data/toeic.js';
@@ -48,6 +48,7 @@ function applyTheme() {
   const t = S().settings.theme;
   document.documentElement.dataset.theme = t === 'auto' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t;
   setSound(S().settings.sound);
+  setVoiceServer(S().settings.voiceUrl, S().settings.voiceCode);
 }
 
 /* ---------- Déblocages : objets et badges (cosmétiques uniquement) ---------- */
@@ -558,12 +559,20 @@ V.toeic = () => {
   </section>`;
 };
 
+function voiceStatusRows() {
+  const m = voiceMode();
+  if (m === 'navigateur') return `<p class="hint">Voix ElevenLabs : pas configurée. <a href="#/profile">Profil → Voix ElevenLabs</a>.</p>`;
+  if (m === 'secours') return `<div class="notice">Serveur voix indisponible pour l’instant (${esc(SERVER_ERRORS[lastServerError] || lastServerError)}). La voix du navigateur prend le relais.</div>`;
+  return '';
+}
+
 V.oral = () => {
   const tts = ttsAvailable(), stt = sttAvailable();
   return `<section class="page"><h1 class="display sm">Entraînement oral</h1>
     <section class="card"><h3>Sur cet appareil</h3>
-      <div class="row"><span>Écoute des phrases (voix du navigateur)</span><b class="${tts ? 'ok-t' : 'ko-t'}">${tts ? 'Disponible' + (voiceCount() ? ' · ' + pl(voiceCount(), 'voix anglaise', 'voix anglaises') : '') : 'Indisponible'}</b></div>
-      <div class="row"><span>Micro (reconnaissance vocale)</span><b class="${stt ? 'ok-t' : 'ko-t'}">${stt ? 'Disponible' : 'Indisponible : mode texte'}</b></div>
+      ${voiceStatusRows()}
+      <div class="row"><span>Écoute des phrases</span><b class="${tts ? 'ok-t' : 'ko-t'}">${tts ? (voiceMode() === 'elevenlabs' ? 'Voix ElevenLabs' : 'Voix du navigateur' + (voiceCount() ? ' · ' + pl(voiceCount(), 'voix anglaise', 'voix anglaises') : '')) : 'Indisponible'}</b></div>
+      <div class="row"><span>Micro (reconnaissance vocale)</span><b class="${stt ? 'ok-t' : 'ko-t'}">${stt ? (voiceMode() === 'elevenlabs' ? 'ElevenLabs' : 'Navigateur') : 'Indisponible : mode texte'}</b></div>
       <p class="hint">La reconnaissance vocale vérifie les mots compris. Elle n’analyse pas ton accent : Lingua Quest ne prétend pas le noter. ${stt ? '' : 'Sur iPhone, elle peut ne pas marcher dans l’appli installée : essaie dans Safari.'}</p>
       ${tts ? `<button class="btn ghost" data-act="testVoice">${icon('speaker', 18)} Tester la voix</button>` : ''}</section>
     <article class="card"><h3>Séance orale</h3><p>6 exercices : écouter, répéter, construire une phrase, répondre librement.</p><button class="btn primary" data-act="oralRun">${icon('mic', 18)} Commencer</button></article>
@@ -590,6 +599,13 @@ V.profile = () => {
       <p class="hint">« Beaucoup » affiche la traduction des dialogues. Réduis-la quand tu te sens prêt : plus d’anglais, plus de progrès.</p></section>
     <section class="card"><h3>Son</h3><p class="label">Vitesse de la voix</p>${seg('rate', [['0.75', 'Lente'], ['0.9', 'Normale'], ['1', 'Rapide']])}
       <p class="label">Bruitages</p>${seg('sound', [['true', 'Activés'], ['false', 'Coupés']])}</section>
+    <section class="card" id="voix"><h3>Voix ElevenLabs</h3>
+      <p>Avec ton serveur Cloudflare, l’écoute et le micro passent par ElevenLabs : vraies voix américaine et britannique, et micro qui marche aussi dans l’appli installée sur iPhone. Sans serveur, l’appli utilise la voix du navigateur.</p>
+      <label class="field"><span>Adresse du serveur</span><input id="voiceUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://lingua-quest-voix.….workers.dev" value="${esc(st.voiceUrl)}"></label>
+      <label class="field"><span>Code secret</span><input id="voiceCode" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(st.voiceCode)}"></label>
+      <p class="hint" id="voiceMsg">${st.voiceUrl ? (voiceMode() === 'elevenlabs' ? 'Configuré.' : esc(SERVER_ERRORS[lastServerError] || 'Serveur momentanément indisponible.')) : 'Pas encore configuré.'} Le code n’est jamais inclus dans la sauvegarde exportée.</p>
+      <button class="btn primary" data-act="voiceSave">Tester et enregistrer</button>
+      ${st.voiceUrl ? `<button class="btn ghost" data-act="voiceTry">${icon('speaker', 18)} Écouter une phrase</button><button class="btn ghost" data-act="voiceForget">Retirer le serveur</button>` : ''}</section>
     <section class="card"><h3>Parcours</h3><p class="label">Difficulté actuelle (elle s’adapte aussi toute seule)</p><div class="seg">${[1, 2, 3].map(n => `<button class="${s.difficulty === n ? 'on' : ''}" data-act="setDiff" data-v="${n}">${DIFF[n]}</button>`).join('')}</div>
       <p class="label">Objectif de sessions par semaine</p>${seg('weeklyGoal', [[3, '3'], [5, '5'], [7, '7']])}
       <button class="btn ghost" data-act="go" data-r="placement">Refaire l’évaluation initiale</button></section>
@@ -600,8 +616,8 @@ V.profile = () => {
       <button class="btn danger" data-act="reset">Tout effacer</button></section>
     <section class="card"><h3>Ce qui fonctionne vraiment</h3><ul class="honest">
       <li>Exercices, corrections, XP, niveaux, boss, révisions espacées, sauvegarde locale : opérationnels.</li>
-      <li>Écoute : voix de synthèse du navigateur (${ttsAvailable() ? 'disponible ici' : 'indisponible ici, mode texte'}).</li>
-      <li>Micro : reconnaissance vocale du navigateur (${sttAvailable() ? 'disponible ici' : 'indisponible ici, mode texte'}), qui vérifie les mots, pas l’accent.</li>
+      <li>Écoute : ${voiceMode() === 'elevenlabs' ? 'voix ElevenLabs par ton serveur' : 'voix de synthèse du navigateur (' + (ttsAvailable() ? 'disponible ici' : 'indisponible ici, mode texte') + ')'}.</li>
+      <li>Micro : ${voiceMode() === 'elevenlabs' ? 'transcription ElevenLabs' : 'reconnaissance vocale du navigateur (' + (sttAvailable() ? 'disponible ici' : 'indisponible ici, mode texte') + ')'}, qui vérifie les mots, pas l’accent.</li>
       <li>Pas de compte ni de synchronisation en ligne dans cette version.</li>
       <li>Pas de score TOEIC estimé : seulement ta réussite réelle par partie.</li></ul></section></section>`;
 };
@@ -689,7 +705,22 @@ function onAction(act, b) {
       if (k === 'rate') v = +v; if (k === 'weeklyGoal') v = +v; if (k === 'sound') v = v === 'true';
       s.settings[k] = v; save(); applyTheme(); return render();
     }
-    case 'export': return download('lingua-quest-' + L.today() + '.json', JSON.stringify(s, null, 1));
+    case 'voiceSave': {
+      const url = document.getElementById('voiceUrl').value.trim(), code = document.getElementById('voiceCode').value;
+      const msg = document.getElementById('voiceMsg');
+      if (!/^(https:\/\/|http:\/\/localhost[:/])\S+$/.test(url) || !code) { msg.textContent = 'Il faut l’adresse (commençant par https://) et le code secret.'; return; }
+      msg.textContent = 'Test du serveur…';
+      return pingServer(url, code).then(p => {
+        s.settings.voiceUrl = url; s.settings.voiceCode = code; save(); applyTheme();
+        toast('Serveur voix connecté');
+        render();
+        const m = document.getElementById('voiceMsg');
+        if (m) m.textContent = 'Connecté. Aujourd’hui : ' + p.chars + ' / ' + p.charsMax + ' caractères de voix, ' + p.stt + ' / ' + p.sttMax + ' transcriptions.' + (p.plafond ? '' : ' Attention : plafond quotidien inactif (espace KV « LQ_KV » non lié).');
+      }).catch(e => { msg.textContent = SERVER_ERRORS[e.message] || 'Échec du test : ' + e.message; });
+    }
+    case 'voiceTry': return speak('Welcome to Halden City. Your first mission starts now.', { rate: s.settings.rate });
+    case 'voiceForget': s.settings.voiceUrl = ''; s.settings.voiceCode = ''; save(); applyTheme(); toast('Serveur voix retiré'); return render();
+    case 'export': return download('lingua-quest-' + L.today() + '.json', JSON.stringify({ ...s, settings: { ...s.settings, voiceCode: '' } }, null, 1));
     case 'exportBad': return download('lingua-quest-illisible-' + L.today() + '.json', lsGet(KEY_BAD) || '');
     case 'reset':
       if (!confirm('Effacer toute ta progression sur ce téléphone ? Pense à exporter une sauvegarde avant.')) return;
@@ -719,6 +750,8 @@ function importFile(input) {
     try { n = L.sanitize(JSON.parse(String(r.result || ''))); } catch (e) { toast('Ce fichier n’est pas une sauvegarde Lingua Quest. Rien n’a changé.'); return; }
     if (!n.hero) { toast('Cette sauvegarde ne contient pas de héros. Rien n’a changé.'); return; }
     if (S().hero && !confirm('Remplacer ta progression actuelle par cette sauvegarde (' + n.hero.name + ', ' + n.xp + ' XP) ?')) return;
+    /* le code secret n’est pas exporté : on garde celui de cet appareil */
+    if (!n.settings.voiceCode && S().settings.voiceCode) { n.settings.voiceUrl = n.settings.voiceUrl || S().settings.voiceUrl; n.settings.voiceCode = S().settings.voiceCode; }
     ctx.S = n; lockSave = false; save(); applyTheme(); toast('Sauvegarde restaurée.'); ctx.go('home'); render();
   };
   r.onerror = () => toast('Impossible de lire ce fichier.');

@@ -23,6 +23,7 @@ L’appli fonctionne ensuite hors ligne. Elle a sa propre mémoire : avant de ch
 | `js/codexview.js` | Codex (page et panneau ouvert par-dessus un exercice). |
 | `js/app.js` | Sauvegarde, navigation et écrans. |
 | `sons/` | Bruitages générés avec ElevenLabs. |
+| `serveur/` | Serveur voix Cloudflare (`worker.js`) et son guide d’installation (`GUIDE.md`). |
 | `img/` | Illustrations anime urban fantasy (écran titre, 5 héros, carte de la ville, café, boss). |
 | `lingua-quest-complet.html` | Version en un seul fichier, générée à partir des fichiers ci-dessus (à régénérer après chaque modification). |
 
@@ -44,8 +45,8 @@ node tests/e2e.cjs                         # parcours complet en taille téléph
 Fonctionne : création du héros, évaluation initiale, 6 chapitres et leurs boss, quêtes (principales, quotidienne, secondaires, révision, maîtrise, TOEIC, orales, quête de classe), session de 20 minutes, Codex (dictionnaire, décodeur, temps, marqueurs, auxiliaires, verbes irréguliers), révision espacée, XP, niveaux, badges, objets cosmétiques, arbre de compétences, statistiques, progression TOEIC par partie, simulation chronométrée, thèmes sombre et clair, sauvegarde locale, export et import, hors ligne.
 
 Limites honnêtes de cette version :
-- L’écoute utilise la voix de synthèse du navigateur. Sans elle, les exercices d’écoute passent en mode texte et comptent comme de la lecture.
-- Le micro utilise la reconnaissance vocale du navigateur : elle vérifie les mots compris, pas l’accent. Elle peut être indisponible dans l’appli installée sur iPhone ; l’oral passe alors en mode écrit.
+- Voix ElevenLabs : seulement après avoir installé ton serveur Cloudflare (voir `serveur/GUIDE.md`). Sans lui, l’écoute utilise la voix de synthèse du navigateur ; sans voix du tout, les exercices d’écoute passent en mode texte et comptent comme de la lecture.
+- Le micro utilise la transcription ElevenLabs (avec le serveur) ou la reconnaissance vocale du navigateur : les deux vérifient les mots compris, pas l’accent. Sans serveur, elle peut être indisponible dans l’appli installée sur iPhone ; l’oral passe alors en mode écrit.
 - Les réponses orales libres sont vérifiées sur des éléments précis (une structure, un mot clé), pas corrigées comme le ferait un professeur.
 - Le décodeur de phrases fonctionne sur les phrases du jeu annotées une par une, pas sur n’importe quelle phrase tapée.
 - Pas de score TOEIC estimé : seulement la réussite réelle par partie. La partie 1 (photographies) n’est pas encore là.

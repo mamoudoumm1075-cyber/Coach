@@ -60,7 +60,7 @@ export function newState() {
     days: {},
     inventory: { owned: [], equipped: {} },
     badges: [],
-    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5 }
+    settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '' }
   };
 }
 

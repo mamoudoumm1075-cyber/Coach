@@ -2,7 +2,7 @@
 import { ctx } from './ctx.js';
 import { esc, icon, portrait, bar, toast, pl } from './ui.js';
 import { recordAnswer, recordToeic, checkTyped, wordMatch, normalize, shuffle, levelInfo, srsReview, SKILL_LABEL, today } from './logic.js';
-import { speak, speakLines, stopSpeaking, ttsAvailable, sttAvailable, listen, stopListening, STT_ERRORS, sfx } from './audio.js';
+import { speak, speakLines, stopSpeaking, ttsAvailable, sttAvailable, listen, stopListening, micByServer, STT_ERRORS, sfx } from './audio.js';
 import { VOCAB_BY_ID, DECODE_BY_ID } from '../data/codex.js';
 import { DIALOGUES, CHARACTERS, DIALOGUE_ART } from '../data/world.js';
 import { TENSE_BY_ID } from '../data/tenses.js';
@@ -414,24 +414,28 @@ function next() { R.i++; render(); }
 
 /* ---------- Oral ---------- */
 async function doMic(it, btn) {
-  if (R.cur.answered || R.cur.listening) return;
+  if (R.cur.answered) return;
+  /* avec le serveur voix, un second appui termine l’enregistrement */
+  if (R.cur.listening) { if (R.cur.byServer) stopListening(); return; }
   R.cur.listening = true;
+  R.cur.byServer = micByServer();
   stopSpeaking();
   sfx('mic');
   btn.classList.add('rec');
   const st = document.getElementById('micState');
-  st.textContent = 'J’écoute… parle maintenant.';
+  st.textContent = R.cur.byServer ? 'J’écoute… parle, puis appuie de nouveau quand tu as fini.' : 'J’écoute… parle maintenant.';
   try {
-    const text = await listen({ lang: 'en-US' });
+    const text = await listen({ lang: 'en-US', onPhase: () => { btn.classList.remove('rec'); st.textContent = 'Transcription…'; } });
     btn.classList.remove('rec');
     R.cur.listening = false;
+    st.textContent = '';
     evaluateSpeech(it, text, false);
   } catch (e) {
     btn.classList.remove('rec');
     R.cur.listening = false;
     st.textContent = STT_ERRORS[e.message] || 'La reconnaissance vocale a échoué. Réessaie ou réponds par écrit.';
     const alt = layer().querySelector('details.alt');
-    if (alt && ['not-allowed', 'service-not-allowed', 'network', 'audio-capture', 'unavailable'].includes(e.message)) alt.open = true;
+    if (alt && ['not-allowed', 'service-not-allowed', 'network', 'audio-capture', 'unavailable', 'server'].includes(e.message)) alt.open = true;
   }
 }
 
@@ -442,7 +446,7 @@ function evaluateSpeech(it, text, written) {
     const m = wordMatch(text, it.target);
     ok = m.ratio >= 0.8;
     html += `<p>Mots retrouvés : ${Math.round(m.ratio * 100)} %${m.missing.length ? ' · manquants : <b class="en">' + esc(m.missing.join(', ')) + '</b>' : ''}</p>`;
-    html += written ? `<p class="hint">Mode écrit : la prononciation n’est pas évaluée.</p>` : `<p class="hint">C’est la reconnaissance vocale du navigateur : elle vérifie les mots compris, elle n’analyse pas ton accent.</p>`;
+    html += written ? `<p class="hint">Mode écrit : la prononciation n’est pas évaluée.</p>` : `<p class="hint">C’est la reconnaissance vocale ${R.cur.byServer ? 'd’ElevenLabs' : 'du navigateur'} : elle vérifie les mots compris, elle n’analyse pas ton accent.</p>`;
   } else {
     const plain = text.toLowerCase().replace(/[‘’]/g, "'");
     const res = (it.checks || []).map(([re, label]) => [new RegExp(re, 'i').test(plain) || new RegExp(re, 'i').test(normalize(text)), label]);

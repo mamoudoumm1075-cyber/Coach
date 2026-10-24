@@ -1,6 +1,6 @@
 /* Lingua Quest hors ligne. Réseau d’abord (pour recevoir les mises à jour), cache si hors ligne.
    Change VERSION à chaque mise à jour des fichiers. Ne touche qu’aux caches « lingua-quest- ». */
-const VERSION = 'lingua-quest-v2';
+const VERSION = 'lingua-quest-v3';
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'js/app.js', 'js/logic.js', 'js/ctx.js', 'js/ui.js', 'js/audio.js', 'js/content.js', 'js/play.js', 'js/codexview.js',
