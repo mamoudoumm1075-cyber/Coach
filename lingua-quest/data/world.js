@@ -3,10 +3,10 @@
    quand les gens ne se comprennent plus, elles grandissent. La Société des Lanternes les combat. */
 
 export const CHARACTERS = {
-  nora: { name: 'Nora Vance', role: 'Agente de la Société des Lanternes, ta mentore', color: '#6C4CF1', initials: 'NV' },
-  leo: { name: 'Leo Hart', role: 'Barista au Copper Cup, il sait tout ce qui se passe en ville', color: '#FF6B9A', initials: 'LH' },
-  priya: { name: 'Priya Shah', role: 'Analyste de la Société, spécialiste des signaux d’Ombre', color: '#2F80ED', initials: 'PS' },
-  marcus: { name: 'Marcus Osei', role: 'Coursier du Réseau des voyageurs', color: '#FFD166', initials: 'MO' },
+  nora: { name: 'Nora Vance', role: 'Agente de la Société des Lanternes, ta mentore', color: '#6C4CF1', initials: 'NV', img: 'img/perso-nora.webp' },
+  leo: { name: 'Leo Hart', role: 'Barista au Copper Cup, il sait tout ce qui se passe en ville', color: '#FF6B9A', initials: 'LH', img: 'img/perso-leo.webp' },
+  priya: { name: 'Priya Shah', role: 'Analyste de la Société, spécialiste des signaux d’Ombre', color: '#2F80ED', initials: 'PS', img: 'img/perso-priya.webp' },
+  marcus: { name: 'Marcus Osei', role: 'Coursier du Réseau des voyageurs', color: '#FFD166', initials: 'MO', img: 'img/perso-marcus.webp' },
   shadow: { name: 'Le Seigneur des Ombres', role: 'Il veut un monde où plus personne ne se comprend', color: '#FF5B6E', initials: 'SO' },
   hero: { name: 'Toi', role: '', color: '#2ECC71', initials: '' }
 };
@@ -287,17 +287,17 @@ export const PORTRAIT_BY_ID = Object.fromEntries(PORTRAITS.map(p => [p.id, p]));
 
 /* Décor de chaque chapitre, et position de son quartier sur la carte (en % de l’illustration img/carte.webp) */
 export const CHAPTER_ART = {
-  1: { img: 'img/titre.webp', pos: '50% 70%', x: 52, y: 80 },
-  2: { img: 'img/cafe.webp', pos: '50% 20%', x: 38, y: 62 },
-  3: { img: 'img/explorateur.webp', pos: '70% 40%', x: 46, y: 41 },
-  4: { img: 'img/technicien.webp', pos: '60% 30%', x: 76, y: 27 },
-  5: { img: 'img/stratege.webp', pos: '50% 30%', x: 51, y: 16 },
-  6: { img: 'img/boss-6.webp', pos: '50% 20%', x: 53, y: 5 }
+  1: { img: 'img/decor-maple.webp', pos: '42% 50%', x: 52, y: 80 },
+  2: { img: 'img/decor-marche.webp', pos: '55% 50%', x: 38, y: 62 },
+  3: { img: 'img/decor-archives.webp', pos: '50% 50%', x: 46, y: 41 },
+  4: { img: 'img/decor-gare.webp', pos: '50% 50%', x: 76, y: 27 },
+  5: { img: 'img/decor-tour.webp', pos: '50% 30%', x: 51, y: 16 },
+  6: { img: 'img/decor-forteresse.webp', pos: '50% 30%', x: 53, y: 5 }
 };
 /* Décor des dialogues */
 export const DIALOGUE_ART = {
-  'd1-intro': 'img/titre.webp', 'd1-day': 'img/titre.webp', 'd2-cafe': 'img/cafe.webp', 'd3-archives': 'img/explorateur.webp',
-  'd4-network': 'img/technicien.webp', 'd5-tower': 'img/stratege.webp', 'd6-fortress': 'img/boss-6.webp'
+  'd1-intro': 'img/titre.webp', 'd1-day': 'img/decor-maple.webp', 'd2-cafe': 'img/cafe.webp', 'd3-archives': 'img/decor-archives.webp',
+  'd4-network': 'img/decor-gare.webp', 'd5-tower': 'img/decor-tour.webp', 'd6-fortress': 'img/decor-forteresse.webp'
 };
 /* Les boss partagent l’illustration de l’Ombre ; chacun a sa teinte */
 export const BOSS_HUE = { 1: 0, 2: 40, 3: 200, 4: 120, 5: 280, 6: 330 };

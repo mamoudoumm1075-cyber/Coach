@@ -1,6 +1,6 @@
 /* Lingua Quest hors ligne. Réseau d’abord (pour recevoir les mises à jour), cache si hors ligne.
    Change VERSION à chaque mise à jour des fichiers. Ne touche qu’aux caches « lingua-quest- ». */
-const VERSION = 'lingua-quest-v8';
+const VERSION = 'lingua-quest-v9';
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'js/app.js', 'js/logic.js', 'js/ctx.js', 'js/ui.js', 'js/audio.js', 'js/content.js', 'js/play.js', 'js/codexview.js',
@@ -8,7 +8,9 @@ const FILES = [
   'sons/son-juste.mp3', 'sons/son-faux.mp3', 'sons/son-combo.mp3', 'sons/son-victoire.mp3', 'sons/son-temps.mp3', 'sons/son-micro.mp3',
   'img/titre.webp', 'img/carte.webp', 'img/heros-toi.webp', 'img/combattant.webp', 'img/stratege.webp', 'img/explorateur.webp', 'img/technicien.webp', 'img/cafe.webp',
   'img/boss-1.webp', 'img/boss-2.webp', 'img/boss-3.webp', 'img/boss-4.webp', 'img/boss-5.webp', 'img/boss-6.webp',
-  'img/photo-bureau.webp', 'img/photo-livraison.webp', 'img/photo-restaurant.webp'
+  'img/photo-bureau.webp', 'img/photo-livraison.webp', 'img/photo-restaurant.webp', 'img/photo-chantier.webp',
+  'img/decor-maple.webp', 'img/decor-marche.webp', 'img/decor-archives.webp', 'img/decor-gare.webp', 'img/decor-tour.webp', 'img/decor-forteresse.webp',
+  'img/perso-nora.webp', 'img/perso-leo.webp', 'img/perso-priya.webp', 'img/perso-marcus.webp'
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

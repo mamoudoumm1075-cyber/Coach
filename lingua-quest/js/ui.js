@@ -58,6 +58,7 @@ export function heroMedal(hero, equipped = {}, size = 64, cosmeticsList = [], sk
 
 /* Portrait des personnages du jeu (pastille + initiales) */
 export function portrait(ch, size = 44) {
+  if (ch.img) return `<span class="portrait has-img" style="--pc:${ch.color};width:${size}px;height:${size}px" aria-hidden="true"><img src="${ch.img}" alt="" decoding="async"></span>`;
   return `<span class="portrait" style="--pc:${ch.color};width:${size}px;height:${size}px" aria-hidden="true">${esc(ch.initials || '?')}</span>`;
 }
 
