@@ -6,7 +6,7 @@ import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
 import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
-import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES, SKINS, SKIN_BY_ID } from '../data/world.js';
+import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES, SKINS, SKIN_BY_ID, ARENA, ARENA_QUESTIONS } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
 import { VOCAB_BY_ID, PREP_ITEMS, CATEGORIES } from '../data/codex.js';
@@ -297,6 +297,56 @@ function runToeicTest(kind = 'mini') {
     }
   });
 }
+/* ---------- Tour des examens ---------- */
+function arenaFloor(s) {
+  if (!s.arena.floor) { s.arena.floor = L.arenaStart(s); save(); }
+  return Math.min(s.arena.floor, ARENA.length);
+}
+function runArena(n) {
+  const s = S(), f = ARENA.find(x => x.floor === n);
+  if (!f) return;
+  const pass = L.arenaPass(n, s.settings.toeicGoal, ARENA.length);
+  const items = C.arenaItems(s, f, ARENA_QUESTIONS);
+  s.arena.last = items.map(i => i.id);
+  const needed = Math.ceil(items.length * pass);
+  startRun(items.map(item => ({ kind: 'item', item })), {
+    mode: 'arena', title: 'Tour · étage ' + n + ' · test blanc', bg: BOSS_ART[f.boss], seconds: f.seconds,
+    boss: { name: f.name, pass, needed },
+    onDone(sum) {
+      const rec = testRecord(sum, 'blanc');
+      rec.total = items.length; rec.arena = n;
+      s.toeic.tests.push(rec);
+      const pct = Math.round((sum.okN / items.length) * 100);
+      s.arena.best[n] = Math.max(s.arena.best[n] || 0, pct);
+      const win = sum.bossDown && sum.reason !== 'quit';
+      const rewards = [];
+      if (win) {
+        const first = !s.arena.beaten.includes(n);
+        if (first) {
+          s.arena.beaten.push(n);
+          const xp = 100 + 40 * n;
+          s.xp += xp;
+          rewards.push('Premier triomphe à cet étage : +' + xp + ' XP');
+        }
+        if (n < ARENA.length && s.arena.floor <= n) { s.arena.floor = n + 1; rewards.push('Étage ' + (n + 1) + ' ouvert : ' + ARENA[n].name + ' (plus difficile)'); }
+        if (n === ARENA.length) rewards.push('La Tour des examens est conquise.');
+      }
+      const lost = L.mostLostPart(rec.parts);
+      return {
+        win,
+        title: win ? f.name + ' est vaincu !' : 'L’Ombre tient encore',
+        text: (win ? `Test blanc validé : ${sum.okN}/${items.length} bonnes réponses (il en fallait ${needed}).` : `${sum.okN}/${items.length} bonnes réponses : il en fallait ${needed} (${Math.round(pass * 100)} %).`)
+          + (lost ? ` Partie où tu as perdu le plus de points : ${PARTS[lost.part].name}.` : ''),
+        rewards,
+        retry: () => runArena(win && n < ARENA.length ? n + 1 : n),
+        reinforce: lost ? () => drillPart(lost.part) : null,
+        reinforceLabel: lost ? 'Enchaîner : ' + PARTS[lost.part].name.split(' · ')[0] : '',
+        next: { label: 'La Tour des examens', route: 'arene' }
+      };
+    }
+  });
+}
+
 function drillPart(p) {
   S().toeic.drills = (S().toeic.drills || 0) + 1;
   save();
@@ -600,6 +650,7 @@ V.learn = () => {
     ${tile('review', 'repeat', 'Révisions', pl(due, 'élément dû', 'éléments dus'))}
     ${tile('oral', 'mic', 'Entraînement oral', 'Écouter, répéter, répondre')}
     ${tile('toeic', 'target', 'Progression TOEIC', 'Méthode, tests blancs, 7 parties')}
+    ${tile('arene', 'sword', 'La Tour des examens', 'Tests blancs en combat')}
     ${tile('progres', 'chart', 'Mes progrès', 'Forces, difficultés, travail ciblé')}
     ${tile('metier', 'tree', 'Mon métier en anglais', 'CVC, VMC, BTP, data center')}
     ${tile('carnet', 'codex', 'Mon carnet', pl(S().carnet.length, 'mot noté', 'mots notés'))}
@@ -759,6 +810,7 @@ V.toeic = () => {
   const s = S(), w = L.weakestPart(s, PART_IDS);
   return `<section class="page"><h1 class="display sm">Progression TOEIC</h1>
     <div class="notice">Les questions sont des entraînements originaux au format du TOEIC Listening & Reading, pas des questions officielles. Lingua Quest ne calcule pas de score TOEIC : seul le test officiel en donne un. Tu vois ici ta réussite réelle par partie.</div>
+    <a class="card arena-link" href="#/arene">${icon('sword', 22)}<div><b>La Tour des examens</b><small>Tests blancs en combat · étage ${arenaFloor(s)}/${ARENA.length}</small></div>${icon('chevron', 18)}</a>
     ${readinessHTML(s)}
     ${examHTML(s)}
     ${planHTML(s)}
@@ -815,6 +867,28 @@ V.metier = () => {
     ${C.METIER_CATS.map(cat => { const words = C.metierWords(cat), seen = words.filter(v => s.srs['v:' + v.id]).length; return `<section class="card"><div class="card-head"><h3>${esc(CATEGORIES[cat].replace('Métier · ', ''))}</h3><small>${seen}/${words.length} mots vus</small></div>${bar(Math.round((seen / words.length) * 100), 'violet')}
       <button class="btn primary" data-act="metierRun" data-c="${cat}">${seen < words.length ? 'Apprendre et s’entraîner' : 'S’entraîner'}</button>
       <details class="alt"><summary>Voir les ${words.length} mots</summary><div class="list">${words.map(v => `<button class="list-item" data-act="word" data-id="${v.id}"><span class="en">${esc(v.en)}</span><small>${esc(v.senses[0][0])}</small></button>`).join('')}</div></details></section>`; }).join('')}
+  </section>`;
+};
+
+V.arene = () => {
+  const s = S(), cur = arenaFloor(s), goal = s.settings.toeicGoal;
+  const f = ARENA[cur - 1], pass = L.arenaPass(cur, goal, ARENA.length), needed = Math.ceil(ARENA_QUESTIONS * pass);
+  const conquered = s.arena.beaten.includes(ARENA.length);
+  return `<section class="page arena"><h1 class="display sm">La Tour des examens</h1>
+    <p class="lead">Chaque étage est un test blanc en direct : chaque bonne réponse frappe l’Ombre. Atteins le seuil et elle tombe, l’étage suivant s’ouvre. Les questions deviennent plus difficiles à chaque étage.</p>
+    <article class="arena-boss" style="--img:url(${BOSS_ART[f.boss]})">
+      <div class="arena-info"><span class="chip ${conquered ? 'gold' : 'red'}">Étage ${cur}/${ARENA.length} · ${esc(f.level)}</span>
+        <h2>${esc(f.name)}</h2>
+        <ul class="arena-stats"><li><b>${ARENA_QUESTIONS}</b><small>questions</small></li><li><b>${Math.round(f.seconds / 60)} min</b><small>chrono</small></li><li><b>${needed}</b><small>coups pour vaincre</small></li></ul>
+        <p class="hint">Seuil : ${Math.round(pass * 100)} % de bonnes réponses. ${ARENA_QUESTIONS - needed + 1} erreurs et l’Ombre gagne. Questions dans l’ordre du vrai test : écoute, puis lecture.</p>
+        <button class="btn danger big glow-red" data-act="arena" data-n="${cur}">${icon('sword', 18)} ${s.arena.beaten.includes(cur) ? 'Rejouer le combat' : 'Affronter'}</button></div>
+    </article>
+    <section class="card"><h3>Les étages</h3><div class="floors">${ARENA.slice().reverse().map(x => {
+      const beaten = s.arena.beaten.includes(x.floor), open = x.floor <= cur, best = s.arena.best[x.floor];
+      return `<div class="floor ${beaten ? 'beaten' : open ? 'open' : 'locked'} ${x.floor === cur ? 'current' : ''}"><span class="fnum">${x.floor}</span><div><b>${esc(x.name)}</b><small>${esc(x.level)} · seuil ${Math.round(L.arenaPass(x.floor, goal, ARENA.length) * 100)} %${best !== undefined ? ' · meilleur : ' + best + ' %' : ''}</small></div>${open ? `<button class="btn ${beaten ? 'ghost' : 'primary'} sm" data-act="arena" data-n="${x.floor}">${beaten ? 'Rejouer' : 'Combattre'}</button>` : icon('lock', 18)}</div>`;
+    }).join('')}</div>
+      <p class="hint">Tu as commencé à l’étage ${Math.min(L.arenaStart(s), ARENA.length)}, d’après ton niveau. Le dernier seuil suit ton objectif (${esc(String(goal))} → ${Math.round(L.arenaPass(ARENA.length, goal, ARENA.length) * 100)} %). Chaque combat compte comme un test blanc dans ta jauge « Prêt pour le TOEIC ».</p></section>
+    <p class="hint">Questions originales au format du TOEIC (${C.TOEIC_COUNT} au total) : certaines reviennent d’un test à l’autre. Un vrai TOEIC fait 200 questions en 2 heures, et seul le test officiel donne un score.</p>
   </section>`;
 };
 
@@ -902,7 +976,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', inventory: 'hero', appearance: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', arene: 'learn', inventory: 'hero', appearance: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -973,6 +1047,7 @@ function onAction(act, b) {
     case 'toeicPart': { const p = +b.dataset.p; return simpleRun(C.toeicItems(s, [p], 5).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic'); }
     case 'toeicTest': return runToeicTest(b.dataset.k || 'mini');
     case 'drill': return drillPart(+b.dataset.p);
+    case 'arena': return runArena(+b.dataset.n);
     case 'prepRun': return simpleRun(L.shuffle(PREP_ITEMS.map(id => TOEIC_BY_ID[id]).filter(Boolean)).slice(0, 8).map(item => ({ kind: 'item', item })), 'Prépositions', 'toeic');
     case 'openPrep': codexState = { tab: 'prep', q: '', cat: '' }; return ctx.go('codex');
     case 'examSave': {

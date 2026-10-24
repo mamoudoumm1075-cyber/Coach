@@ -653,3 +653,30 @@ ul.reqs .tag { font-size: .68rem; padding: 1px 6px; border-radius: 6px; backgrou
 .skin-maitre.skin-fx { background: radial-gradient(ellipse 48% 58% at 50% 40%, rgba(201,168,255,.65), transparent 72%); box-shadow: inset 0 0 40px rgba(255,209,102,.5), inset 0 0 110px rgba(168,148,255,.6); }
 .skin-maitre.skin-fx::before { background: conic-gradient(from 0deg at 50% 45%, rgba(255,209,102,.38), rgba(255,107,154,.38), rgba(168,148,255,.42), rgba(47,128,237,.38), rgba(46,204,113,.34), rgba(255,209,102,.38)); }
 .home-screen .home-stage { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+
+/* ---------- Tour des examens ---------- */
+.arena-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; border-color: rgba(255,91,110,.45); background: linear-gradient(100deg, rgba(60,10,25,.7), var(--surface)); }
+.arena-link div { flex: 1; display: flex; flex-direction: column; }
+.arena-link small { color: var(--muted); }
+.arena-boss { position: relative; min-height: 440px; border-radius: 22px; overflow: hidden; border: 1px solid rgba(255,91,110,.5); display: flex; align-items: flex-end; margin: 6px 0 16px; background: var(--img) center 10% / cover no-repeat; box-shadow: 0 0 30px rgba(255,91,110,.2); }
+.arena-boss::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,11,24,0) 25%, rgba(14,11,24,.85) 62%, #0E0B18 100%); }
+.arena-info { position: relative; padding: 16px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.arena-info h2 { font-family: var(--display); font-size: 2rem; margin: 0; color: #FFE1E6; text-shadow: 0 0 22px rgba(255,91,110,.6); }
+.arena-stats { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0; margin: 0; }
+.arena-stats li { background: rgba(20,17,32,.75); border: 1px solid var(--line-2); border-radius: 12px; padding: 8px; text-align: center; }
+.arena-stats b { display: block; font-size: 1.15rem; }
+.arena-stats small { color: var(--muted); font-size: .72rem; }
+.chip.red { background: rgba(255,91,110,.2); color: #FFB3BD; border-color: rgba(255,91,110,.5); }
+.floors { display: flex; flex-direction: column; }
+.floor { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.floor:first-child { border-top: 0; }
+.floor small { display: block; color: var(--muted); font-size: .78rem; }
+.fnum { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; background: var(--surface-2); }
+.floor.beaten .fnum { background: #FFD166; color: #1E1B2E; }
+.floor.current .fnum { background: var(--red); color: #fff; box-shadow: 0 0 12px rgba(255,91,110,.7); }
+.floor.locked { opacity: .5; }
+.boss-bar.down { border-color: #FFD166; background: rgba(60,45,10,.75); }
+.boss-bar.down b { color: #FFD166; }
+.fx-flash.boss-down { background: radial-gradient(circle at 50% 22%, rgba(255,209,102,.7), transparent 60%); animation-duration: 1s; }
+.fx-float.boss-down { color: #FFD166; font-size: 2.6rem; letter-spacing: .1em; }
+.hearts.compact { align-items: center; gap: 4px; color: #FFC2CA; font-weight: 800; font-size: 1.05rem; }

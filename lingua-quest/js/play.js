@@ -24,7 +24,9 @@ export function startRun(cards, opts) {
   };
   if (opts.boss) {
     const n = R.cards.length;
-    R.allowed = n - Math.ceil(n * opts.boss.pass);
+    /* needed : bonnes réponses pour abattre le boss (Tour des examens) ; sinon le seuil de réussite */
+    R.needed = opts.boss.needed || Math.ceil(n * opts.boss.pass);
+    R.allowed = n - R.needed;
     R.hearts = R.allowed + 1;
   }
   if (opts.seconds) {
@@ -57,6 +59,16 @@ function closeRun() {
 }
 
 /* ---------- Rendu ---------- */
+/* Vies : des cœurs, ou un cœur et un nombre quand il y en a beaucoup (tests blancs) */
+function heartsHTML(cls) {
+  const max = R.allowed + 1;
+  if (max > 6) return `<div class="hearts compact ${cls}" aria-label="${R.hearts} vies restantes"><span class="on">${icon('heart', 18)}</span><b>${R.hearts}</b></div>`;
+  return `<div class="hearts ${cls}" aria-label="${R.hearts} vies restantes">${Array.from({ length: max }, (_, k) => `<span class="${k < R.hearts ? 'on' : ''}">${icon('heart', 18)}</span>`).join('')}</div>`;
+}
+function bossHp() {
+  const tot = R.opts.boss.needed || R.cards.length;
+  return Math.max(0, 100 - (R.results.filter(r => r.ok).length / tot) * 100);
+}
 function header() {
   const n = R.cards.length, pct = n ? (R.i / n) * 100 : 0;
   const boss = R.opts.boss;
@@ -66,8 +78,8 @@ function header() {
     ${R.opts.seconds ? `<span id="runTimer" class="timer">${icon('clock', 16)} --:--</span>` : ''}
     ${R.opts.noHelp ? '' : `<button class="icon-btn" data-act="codex" aria-label="Ouvrir le Codex">${icon('codex')}</button>`}
   </header>
-  ${boss ? `<div class="boss-bar"><div><b>${esc(boss.name)}</b>${bar(100 - ((R.results.filter(r => r.ok).length) / n) * 100, 'danger')}</div>
-    <div class="hearts" aria-label="${R.hearts} vies restantes">${Array.from({ length: R.allowed + 1 }, (_, k) => `<span class="${k < R.hearts ? 'on' : ''}">${icon('heart', 18)}</span>`).join('')}</div></div>` : ''}`;
+  ${boss ? `<div class="boss-bar ${R.bossDown ? 'down' : ''}"><div><b>${esc(boss.name)}${R.bossDown ? ' · vaincu' : ''}</b>${bar(bossHp(), 'danger')}</div>
+    ${heartsHTML('')}</div>` : ''}`;
 }
 
 function render() {
@@ -285,6 +297,8 @@ function handle(act, b, card) {
   const it = card.item;
   switch (act) {
     case 'quit':
+      /* boss déjà abattu : quitter garde la victoire */
+      if (R.bossDown) return finish('done');
       if (R.results.length && !confirm('Quitter ? Les réponses données sont gardées, mais la quête ne sera pas validée.')) return;
       ctx.save(); closeRun(); ctx.refresh(); return;
     case 'codex': return openCodexSheet();
@@ -426,14 +440,22 @@ function answer(meta, ok, given, expected) {
     const dmg = Math.round(100 / R.cards.length);
     fx(ok ? 'boss-hit' : 'player-hit', ok ? '−' + dmg + ' %' : '−1 vie', 'boss');
   } else fx(ok ? 'ok' : 'ko', ok ? (gain ? '+' + gain + ' XP' : 'Bien joué') + (R.combo >= 3 ? ' · combo ×' + R.combo : '') : null);
-  if (R.opts.boss && !ok) {
+  if (R.opts.boss && !ok && !R.bossDown) {
     R.hearts--;
     const bb = layer().querySelector('.hearts');
-    if (bb) bb.outerHTML = `<div class="hearts shake" aria-label="${R.hearts} vies restantes">${Array.from({ length: R.allowed + 1 }, (_, k) => `<span class="${k < R.hearts ? 'on' : ''}">${icon('heart', 18)}</span>`).join('')}</div>`;
+    if (bb) bb.outerHTML = heartsHTML('shake');
   }
   if (R.opts.boss && ok) {
     const bar0 = layer().querySelector('.boss-bar .bar span');
-    if (bar0) bar0.style.width = (100 - (R.results.filter(r => r.ok).length / R.cards.length) * 100) + '%';
+    if (bar0) bar0.style.width = bossHp() + '%';
+    /* Tour des examens : le boss tombe dès que le seuil est atteint, le test continue pour l’analyse */
+    if (R.opts.boss.needed && !R.bossDown && R.results.filter(r => r.ok).length >= R.opts.boss.needed) {
+      R.bossDown = true;
+      const bb = layer().querySelector('.boss-bar');
+      if (bb) { bb.classList.add('down'); const nm = bb.querySelector('b'); if (nm) nm.textContent = R.opts.boss.name + ' · vaincu'; }
+      setTimeout(() => fx('boss-down', 'VAINCU !', 'boss'), 350);
+      toast('Boss vaincu ! Termine le test pour ton analyse complète, ou quitte : la victoire est acquise.');
+    }
     const bossBox = layer().querySelector('.boss-bar');
     if (bossBox) { bossBox.classList.remove('hit'); void bossBox.offsetWidth; bossBox.classList.add('hit'); }
   }
@@ -530,7 +552,7 @@ function finish(reason) {
   const d = today();
   const day = S.days[d] || (S.days[d] = { mins: 0, xp: 0, done: false });
   day.mins += mins;
-  const summary = { reason, okN, total: graded.length, pct: graded.length ? okN / graded.length : 0, results: graded, mins, seconds: Math.round((Date.now() - R.t0) / 1000), learned: R.learned, reviewed: R.reviewed, heartsLeft: R.hearts };
+  const summary = { reason, okN, total: graded.length, pct: graded.length ? okN / graded.length : 0, results: graded, mins, seconds: Math.round((Date.now() - R.t0) / 1000), learned: R.learned, reviewed: R.reviewed, heartsLeft: R.hearts, bossDown: !!R.bossDown, planned: R.cards.length };
   const info = (R.opts.onDone && R.opts.onDone(summary)) || {};
   day.xp += S.xp - R.xp0;
   ctx.afterRun();
