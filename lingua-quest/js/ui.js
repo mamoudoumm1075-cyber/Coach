@@ -47,13 +47,13 @@ export function heroPortrait(hero, cosmeticsList = []) {
   return PORTRAIT_BY_ID[hero && hero.portrait] || PORTRAITS.find(p => p.cls === (hero && hero.cls)) || PORTRAITS[0];
 }
 /* Médaillon rond : visage + aura et compagnon équipés (purement visuels) */
-export function heroMedal(hero, equipped = {}, size = 64, cosmeticsList = []) {
+export function heroMedal(hero, equipped = {}, size = 64, cosmeticsList = [], skin = null) {
   const p = heroPortrait(hero);
   const aura = cosmeticsList.find(c => c.id === equipped.aura);
   const form = equipped.form === 'form-lantern';
-  const ring = form ? 'conic-gradient(#FFD166,#FF6B9A,#A894FF,#FFD166)' : aura ? aura.color : (CLASS_INFO[hero.cls] || {}).color || '#6C4CF1';
+  const ring = form ? 'conic-gradient(#FFD166,#FF6B9A,#A894FF,#FFD166)' : skin && skin.ring ? skin.ring : aura ? aura.color : (CLASS_INFO[hero.cls] || {}).color || '#6C4CF1';
   const comp = equipped.companion ? `<span class="medal-comp" title="${esc((cosmeticsList.find(c => c.id === equipped.companion) || {}).name || '')}">${icon(equipped.companion === 'comp-drone' ? 'target' : 'heart', 12)}</span>` : '';
-  return `<span class="medal ${aura || form ? 'aura' : ''}" style="--ring:${ring};width:${size}px;height:${size}px"><img src="${p.img}" alt="" style="object-position:${p.face}">${comp}</span>`;
+  return `<span class="medal ${aura || form ? 'aura' : ''} ${skin ? 'skin-' + skin.id : ''}" style="--ring:${ring};--glow:${(aura && aura.color) || (skin && skin.glow) || 'transparent'};width:${size}px;height:${size}px"><img src="${p.img}" alt="" style="object-position:${p.face}">${comp}</span>`;
 }
 
 /* Portrait des personnages du jeu (pastille + initiales) */

@@ -588,3 +588,67 @@ ul.todo li { margin: 4px 0; }
 .target-card p { margin: 4px 0 10px; }
 .bar.green span { background: linear-gradient(90deg, #1FA65A, var(--green)); box-shadow: 0 0 10px rgba(46,204,113,.5); }
 .row > b { white-space: nowrap; }
+
+/* ---------- Skins évolutifs ---------- */
+.skin-fx { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; mix-blend-mode: screen; }
+.skin-fx::before, .skin-fx::after { content: ""; position: absolute; inset: 0; }
+.skin-recrue.skin-fx { display: none; }
+.skin-eveil.skin-fx { background: radial-gradient(ellipse 42% 52% at 50% 40%, rgba(139,108,255,.42), transparent 70%); animation: skin-pulse 4s ease-in-out infinite; }
+.scene.skin-eveil { filter: saturate(1.12); }
+.skin-agent.skin-fx { background: radial-gradient(ellipse 40% 55% at 50% 42%, rgba(255,209,102,.26), transparent 70%), linear-gradient(180deg, transparent 55%, rgba(255,209,102,.14)); }
+.skin-agent.skin-fx::before { background: linear-gradient(90deg, transparent 0 46%, rgba(255,226,150,.18) 50%, transparent 54%); animation: skin-sweep 6s ease-in-out infinite; }
+.scene.skin-agent { filter: contrast(1.06) saturate(1.1) sepia(.12); }
+.skin-archiviste.skin-fx { background: radial-gradient(ellipse 45% 58% at 50% 42%, rgba(47,128,237,.42), transparent 72%); }
+.skin-archiviste.skin-fx::before { background: repeating-linear-gradient(0deg, rgba(142,193,255,.12) 0 2px, transparent 2px 10px); animation: skin-scan 7s linear infinite; }
+.skin-archiviste.skin-fx::after { inset: 18% 22% 30%; border-radius: 50%; border: 1px dashed rgba(142,193,255,.45); animation: skin-spin 24s linear infinite; }
+.scene.skin-archiviste { filter: hue-rotate(-12deg) saturate(1.1); }
+.skin-voyageur.skin-fx { background: radial-gradient(ellipse 45% 58% at 50% 42%, rgba(46,204,113,.36), transparent 72%); }
+.skin-voyageur.skin-fx::before { background: linear-gradient(115deg, transparent 38%, rgba(126,226,168,.28) 48%, transparent 58%); background-size: 260% 100%; animation: skin-train 4.5s linear infinite; }
+.scene.skin-voyageur { filter: saturate(1.15) hue-rotate(8deg); }
+.skin-lanterne.skin-fx { background: radial-gradient(ellipse 40% 50% at 50% 38%, rgba(255,209,102,.55), transparent 70%); animation: skin-pulse 3.5s ease-in-out infinite; }
+.skin-lanterne.skin-fx::before { inset: -40%; background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(255,226,150,.16) 0 6deg, transparent 6deg 30deg); animation: skin-spin 40s linear infinite; }
+.scene.skin-lanterne { filter: brightness(1.08) saturate(1.15) sepia(.18); }
+.skin-maitre.skin-fx { background: radial-gradient(ellipse 45% 55% at 50% 40%, rgba(201,168,255,.5), transparent 70%); }
+.skin-maitre.skin-fx::before { inset: -50%; background: conic-gradient(from 0deg at 50% 45%, rgba(255,209,102,.22), rgba(255,107,154,.22), rgba(168,148,255,.26), rgba(47,128,237,.22), rgba(46,204,113,.2), rgba(255,209,102,.22)); animation: skin-spin 14s linear infinite; }
+.skin-maitre.skin-fx::after { background: radial-gradient(circle at 50% 18%, rgba(255,255,255,.35), transparent 18%); animation: skin-pulse 3s ease-in-out infinite; }
+.scene.skin-maitre { filter: contrast(1.08) saturate(1.25); }
+.medal[class*="skin-"]:not(.skin-recrue) { box-shadow: 0 0 16px var(--glow); }
+.medal.skin-maitre, .medal.skin-lanterne { animation: aura 3s ease-in-out infinite; }
+/* menu Apparence */
+.skin-stage { position: relative; height: 420px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line); margin: 6px 0 14px; display: flex; align-items: flex-end; }
+.skin-stage .scene { animation: none; }
+.skin-stage .scene::after { background: linear-gradient(180deg, rgba(14,11,24,0) 40%, rgba(14,11,24,.92) 82%); }
+.skin-stage-info { position: relative; z-index: 1; padding: 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.skin-stage-info h2 { font-family: var(--display); font-size: 1.9rem; margin: 0; }
+.skin-stage-info p { margin: 0; color: #E2DDEE; }
+.skin-stage.unlocked { animation: unlock 1.2s ease; }
+.skin-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+.skin-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); text-align: center; }
+.skin-card.on { border-color: var(--violet-t); box-shadow: 0 0 14px rgba(108,76,241,.4); }
+.skin-card.ready { border-color: #FFD166; }
+.skin-card.locked .skin-thumb { filter: grayscale(.85) brightness(.6); }
+.skin-card b { font-size: .82rem; line-height: 1.15; }
+.skin-card small { font-size: .72rem; color: var(--muted); }
+.skin-card.ready small { color: #FFD166; }
+.skin-thumb { position: relative; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; display: block; border: 2px solid var(--line); }
+.skin-thumb .scene { animation: none; background-size: cover; }
+.skin-thumb .scene::after { display: none; }
+ul.reqs { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+ul.reqs li { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+ul.reqs li.ok { color: var(--green-t); }
+ul.reqs small { margin-left: auto; font-variant-numeric: tabular-nums; }
+ul.reqs .tag { font-size: .68rem; padding: 1px 6px; border-radius: 6px; background: var(--violet-soft); color: var(--violet-t); }
+@keyframes skin-pulse { 50% { opacity: .65; } }
+@keyframes skin-sweep { 0%, 100% { transform: translateX(-40%); } 50% { transform: translateX(40%); } }
+@keyframes skin-scan { from { transform: translateY(0); } to { transform: translateY(20px); } }
+@keyframes skin-spin { to { transform: rotate(360deg); } }
+@keyframes skin-train { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+@keyframes unlock { 0% { box-shadow: 0 0 0 0 rgba(255,209,102,.9); transform: scale(.98); } 40% { box-shadow: 0 0 60px 10px rgba(255,209,102,.6); transform: scale(1.01); } 100% { box-shadow: none; transform: none; } }
+/* renfort : chaque évolution colore le contour de la scène */
+.skin-eveil.skin-fx { background: radial-gradient(ellipse 45% 55% at 50% 40%, rgba(139,108,255,.6), transparent 72%); box-shadow: inset 0 0 70px rgba(139,108,255,.55); }
+.skin-agent.skin-fx { box-shadow: inset 0 0 60px rgba(255,209,102,.4); }
+.skin-archiviste.skin-fx { box-shadow: inset 0 0 70px rgba(47,128,237,.55); }
+.skin-voyageur.skin-fx { box-shadow: inset 0 0 70px rgba(46,204,113,.5); }
+.skin-lanterne.skin-fx { box-shadow: inset 0 0 80px rgba(255,209,102,.6); }
+.skin-maitre.skin-fx { background: radial-gradient(ellipse 48% 58% at 50% 40%, rgba(201,168,255,.65), transparent 72%); box-shadow: inset 0 0 40px rgba(255,209,102,.5), inset 0 0 110px rgba(168,148,255,.6); }
+.skin-maitre.skin-fx::before { background: conic-gradient(from 0deg at 50% 45%, rgba(255,209,102,.38), rgba(255,107,154,.38), rgba(168,148,255,.42), rgba(47,128,237,.38), rgba(46,204,113,.34), rgba(255,209,102,.38)); }

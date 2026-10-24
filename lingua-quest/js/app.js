@@ -6,7 +6,7 @@ import { startRun, isRunning, currentCard } from './play.js';
 import { codexHTML, wordListHTML, tenseHTML, handleCodexAct, openWordSheet, closeSheet } from './codexview.js';
 import * as C from './content.js';
 import { ttsAvailable, sttAvailable, setSound, speak, voiceCount, setVoiceServer, pingServer, voiceMode, lastServerError, SERVER_ERRORS } from './audio.js';
-import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES } from '../data/world.js';
+import { CHAPTERS, CLASS_INFO, COSMETICS, BADGES, QUEST_CATS, PLACEMENT_AREAS, PORTRAITS, PORTRAIT_BY_ID, CHAPTER_ART, DIALOGUE_ART, BOSS_HUE, BOSS_ART, DIALOGUES, SKINS, SKIN_BY_ID } from '../data/world.js';
 import { TENSES, TENSE_BY_ID } from '../data/tenses.js';
 import { PARTS, PART_IDS, TOEIC_BY_ID } from '../data/toeic.js';
 import { VOCAB_BY_ID, PREP_ITEMS, CATEGORIES } from '../data/codex.js';
@@ -59,6 +59,37 @@ function applyTheme() {
 /* ---------- Déblocages : objets et badges (cosmétiques uniquement) ---------- */
 function own(id) { const inv = S().inventory; if (!inv.owned.includes(id)) { inv.owned.push(id); return true; } return false; }
 function badge(id) { if (!S().badges.includes(id)) { S().badges.push(id); toast('Badge : ' + BADGES[id]); } }
+/* ---------- Skins évolutifs ---------- */
+function masteryMetrics(s) {
+  return {
+    level: L.levelInfo(s.xp).level,
+    quests: Object.values(s.quests).filter(q => q.done).length,
+    bosses: CHAPTERS.filter(c => s.chapters[c.n] && s.chapters[c.n].bossBeaten).map(c => c.n),
+    tenses: TENSES.filter(t => s.tenses[t.id] && s.tenses[t.id].mastered).length,
+    words: L.srsRetained(s),
+    talk: L.talkLevel(s, TENSES.length).score,
+    toeic: L.toeicReadiness(s).pct,
+    carnet: s.carnet.length
+  };
+}
+const skinOf = s => SKIN_BY_ID[s.skins.equipped] || SKINS[0];
+function reqLabel(r) {
+  const boss = CHAPTERS.find(c => c.n === r.n);
+  return {
+    level: `Niveau ${r.n}`, quests: `${r.n} quêtes réussies`, boss: `Vaincre ${boss ? boss.boss.name : 'le boss ' + r.n}`,
+    tenses: `${r.n} temps maîtrisés (85 % sans aide)`, words: `${r.n} mots et verbes retenus`,
+    talk: `Niveau de discussion ${r.n}/100`, toeic: `Jauge « Prêt pour le TOEIC » à ${r.n} %`, carnet: `${r.n} mots dans ton carnet`
+  }[r.t] || r.t;
+}
+let skinsNotified = null;
+function notifySkins(s) {
+  const m = masteryMetrics(s);
+  const ready = SKINS.filter(k => L.skinState(s, k, m).ready).map(k => k.id);
+  if (skinsNotified) for (const id of ready) if (!skinsNotified.includes(id)) toast('Nouvelle évolution disponible : ' + SKIN_BY_ID[id].name + ' (Héros → Apparence)');
+  skinsNotified = ready;
+  return ready;
+}
+
 function checkUnlocks() {
   const s = S(), lvl = L.levelInfo(s.xp).level;
   for (const c of COSMETICS) {
@@ -75,6 +106,7 @@ function checkUnlocks() {
   for (const n of L.CARNET_GOALS) if (s.carnet.length >= n) badge('carnet-' + n);
   if (Object.values(s.tenses).some(t => t.mastered)) badge('tense-master');
   L.adaptDifficulty(s);
+  notifySkins(s);
 }
 
 /* ---------- Mission conseillée ---------- */
@@ -373,7 +405,7 @@ function tierOf(level) { let t = TIERS[0]; for (const x of TIERS) if (level >= x
 function hud(s) {
   const lvl = L.levelInfo(s.xp);
   return `<header class="hud">
-    <a href="#/hero" class="hud-hero" aria-label="Fiche du héros">${heroMedal(s.hero, s.inventory.equipped, 52, COSMETICS)}<span class="lvl">${lvl.level}</span></a>
+    <a href="#/hero" class="hud-hero" aria-label="Fiche du héros">${heroMedal(s.hero, s.inventory.equipped, 52, COSMETICS, skinOf(s))}<span class="lvl">${lvl.level}</span></a>
     <div class="hud-who"><b>${esc(s.hero.name)}</b><small>${esc(CLASS_INFO[s.hero.cls].name)} · ${tierOf(lvl.level)}</small>${bar(lvl.pct, 'gold thin')}<small class="xp">${lvl.into} / ${lvl.need} XP</small></div>
     <span class="pill gold" title="Série">${icon('flame', 15)} ${L.streakNow(s)}</span>
     <a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a>
@@ -436,7 +468,8 @@ V.home = () => {
   const acc = sk => { let a = 0, b = 0; for (const q of PART_IDS) if (PARTS[q].skill === sk && tl[q]) { a += tl[q].correct; b += tl[q].attempts; } return b ? Math.round((a / b) * 100) + ' %' : '—'; };
   const quick = [['world', 'map', 'Monde'], ['hero', 'user', 'Héros'], ['dialogues', 'heart', 'Dialogues'], ['toeic', 'target', 'TOEIC'], ['codex', 'codex', 'Codex']];
   return `<section class="screen home-screen">
-    <div class="scene" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="scene skin-${skinOf(s).id}" style="--img:url(${p.img});--pos:${p.full}"></div>
+    <div class="skin-fx skin-${skinOf(s).id}" aria-hidden="true"></div>
     <div class="embers" aria-hidden="true">${'<i></i>'.repeat(10)}</div>
     ${hud(s)}
     <div class="home-stage">
@@ -602,11 +635,45 @@ V.skills = () => {
   </section>`;
 };
 
+function evolutionCardHTML(s) {
+  const m = masteryMetrics(s), cur = skinOf(s);
+  const next = SKINS.find(k => !s.skins.owned.includes(k.id));
+  const ready = SKINS.filter(k => L.skinState(s, k, m).ready);
+  let body = '';
+  if (ready.length) body = `<p class="ok-t">${icon('star', 16)} ${pl(ready.length, 'évolution prête', 'évolutions prêtes')} à débloquer : ${ready.map(k => esc(k.name)).join(', ')}.</p>`;
+  else if (next) { const st = L.skinState(s, next, m); body = `<p>Prochaine évolution : <b>${esc(next.name)}</b></p>${bar(st.pct, 'gold')}<ul class="reqs">${st.reqs.map(r => `<li class="${r.ok ? 'ok' : ''}">${icon(r.ok ? 'check' : 'lock', 14)} ${esc(reqLabel(r))}${r.ok || r.t === 'boss' ? '' : ` <small>${r.cur}/${r.need}</small>`}</li>`).join('')}</ul>`; }
+  else body = `<p>Toutes les évolutions sont débloquées.</p>`;
+  return `<section class="card evolution"><div class="card-head"><h3>Évolution · ${esc(cur.name)}</h3><a href="#/appearance">Apparence</a></div>${body}</section>`;
+}
+
+/* Menu Apparence : prévisualiser, débloquer, équiper */
+let skinPreview = null;
+V.appearance = () => {
+  const s = S(), m = masteryMetrics(s), p = heroPortrait(s.hero);
+  const sel = SKIN_BY_ID[skinPreview] || skinOf(s), st = L.skinState(s, sel, m);
+  const action = st.equipped ? `<button class="btn ghost" disabled>Équipée</button>`
+    : st.owned ? `<button class="btn primary" data-act="skinEquip" data-id="${sel.id}">Équiper</button>`
+    : st.ready ? `<button class="btn primary glow" data-act="skinUnlock" data-id="${sel.id}">${icon('star', 18)} Débloquer</button>`
+    : `<button class="btn ghost" disabled>${icon('lock', 16)} Verrouillée</button>`;
+  return `<section class="page appearance"><a class="back" href="#/hero">${icon('back', 18)} Héros</a><h1 class="display sm">Apparence</h1>
+    <div class="skin-stage">
+      <div class="scene skin-${sel.id}" style="--img:url(${p.img});--pos:${p.full}"></div><div class="skin-fx skin-${sel.id}"></div>
+      <div class="skin-stage-info"><span class="chip ${st.owned ? 'gold' : ''}">Évolution ${sel.tier}/${SKINS.length}${st.owned ? '' : ' · aperçu'}</span><h2>${esc(sel.name)}</h2><p>${esc(sel.desc)}</p>${action}</div>
+    </div>
+    ${st.owned ? '' : `<section class="card"><h3>Conditions</h3><ul class="reqs">${st.reqs.map(r => `<li class="${r.ok ? 'ok' : ''}">${icon(r.ok ? 'check' : 'lock', 14)} ${esc(reqLabel(r))}${r.t === 'boss' ? '' : ` <small>${r.cur}/${r.need}</small>`}${r.mastery ? ' <span class="tag">anglais</span>' : ''}</li>`).join('')}</ul>
+      <p class="hint">Les conditions marquées « anglais » se gagnent en progressant vraiment (temps maîtrisés, mots retenus, jauges, carnet) : l’XP seule ne suffit pas.</p></section>`}
+    <div class="skin-list">${SKINS.map(k => { const ks = L.skinState(s, k, m); return `<button class="skin-card ${k.id === sel.id ? 'on' : ''} ${ks.owned ? 'owned' : ks.ready ? 'ready' : 'locked'}" data-act="skinPreview" data-id="${k.id}" aria-pressed="${k.id === sel.id}">
+      <span class="skin-thumb"><span class="scene skin-${k.id}" style="--img:url(${p.img});--pos:${p.face}"></span><span class="skin-fx skin-${k.id}"></span></span>
+      <b>${esc(k.name)}</b><small>${ks.equipped ? 'Équipée' : ks.owned ? 'Débloquée' : ks.ready ? 'Prête à débloquer' : ks.pct + ' %'}</small></button>`; }).join('')}</div>
+  </section>`;
+};
+
 V.hero = () => {
   const s = S(), h = s.hero, c = CLASS_INFO[h.cls], lvl = L.levelInfo(s.xp), ch = C.currentChapter(s), p = heroPortrait(h);
   const eq = s.inventory.equipped, aura = COSMETICS.find(x => x.id === eq.aura), form = eq.form === 'form-lantern';
   return `<section class="screen hero-screen">
-    <div class="scene tall ${aura || form ? 'aura' : ''}" style="--img:url(${p.img});--pos:${p.full};--glow:${form ? '#FFD166' : aura ? aura.color : c.color}"></div>
+    <div class="scene tall skin-${skinOf(s).id} ${aura || form ? 'aura' : ''}" style="--img:url(${p.img});--pos:${p.full};--glow:${form ? '#FFD166' : aura ? aura.color : c.color}"></div>
+    <div class="skin-fx skin-${skinOf(s).id}" aria-hidden="true"></div>
     <div class="hero-head"><a class="back glass" href="#/home">${icon('back', 18)} Accueil</a><a href="#/profile" class="icon-btn glass" aria-label="Profil et paramètres">${icon('gear', 20)}</a></div>
     <div class="hero-id">
       <span class="power" style="--cc:${c.color}">${esc(c.name)} · ${tierOf(lvl.level)} · niveau ${lvl.level}</span>
@@ -617,11 +684,12 @@ V.hero = () => {
   <section class="page below">
     <div class="card"><div class="row"><span>Niveau ${lvl.level}</span><b>${lvl.into} / ${lvl.need} XP</b></div>${bar(lvl.pct, 'gold')}
       <div class="row"><span>Chapitre</span><b>${ch.n} · ${esc(ch.title)}</b></div><div class="row"><span>Meilleure série</span><b>${pl(s.streak.best || 0, 'jour')}</b></div></div>
-    <h2>Évolution</h2>
+    ${evolutionCardHTML(s)}
+    <h2>Rangs</h2>
     <div class="tiers">${TIERS.map(([n, name]) => `<div class="tier ${lvl.level >= n ? 'on' : ''}">${heroMedal(h, lvl.level >= n ? eq : {}, 64, COSMETICS)}<b>${name}</b><small>Niveau ${n}+</small></div>`).join('')}</div>
     <p class="hint">Le niveau du héros récompense ta participation. Il ne mesure pas ton anglais : pour ça, regarde l’arbre de compétences.</p>
     <h2>Badges</h2><div class="badges">${Object.entries(BADGES).map(([k, v]) => `<span class="badge ${s.badges.includes(k) ? 'on' : ''}">${icon(s.badges.includes(k) ? 'star' : 'lock', 16)} ${esc(v)}</span>`).join('')}</div>
-    <div class="actions"><a class="btn primary" href="#/inventory">${icon('bag', 18)} Inventaire</a><a class="btn ghost" href="#/skills">${icon('tree', 18)} Compétences</a><button class="btn ghost" data-act="go" data-r="create">Changer de héros</button></div>
+    <div class="actions"><a class="btn primary" href="#/appearance">${icon('star', 18)} Apparence</a><a class="btn ghost" href="#/inventory">${icon('bag', 18)} Inventaire</a><a class="btn ghost" href="#/skills">${icon('tree', 18)} Compétences</a><button class="btn ghost" data-act="go" data-r="create">Changer de héros</button></div>
   </section>`;
 };
 
@@ -629,7 +697,7 @@ V.inventory = () => {
   const s = S(), inv = s.inventory;
   const kinds = { outfit: 'Tenues', aura: 'Auras', companion: 'Compagnons', form: 'Formes évoluées' };
   return `<section class="page"><a class="back" href="#/hero">${icon('back', 18)} Héros</a><h1 class="display sm">Inventaire</h1>
-    <div class="center">${heroMedal(s.hero, inv.equipped, 140, COSMETICS)}</div>
+    <div class="center">${heroMedal(s.hero, inv.equipped, 140, COSMETICS, skinOf(s))}</div>
     ${Object.entries(kinds).map(([k, label]) => `<h2>${label}</h2><div class="list">${COSMETICS.filter(c => c.kind === k).map(c => {
       const has = inv.owned.includes(c.id) || c.id === 'outfit-start', on = inv.equipped[k] === c.id;
       return `<div class="list-item inv ${has ? '' : 'locked'}"><span>${esc(c.name)}</span><small>${has ? (on ? 'Équipé' : 'Disponible') : 'À débloquer : ' + esc(c.unlock)}</small>
@@ -834,7 +902,7 @@ V.profile = () => {
 /* ---------- Routeur ---------- */
 const NAV = [['home', 'home', 'Accueil'], ['world', 'map', 'Monde'], ['learn', 'learn', 'Apprendre'], ['codex', 'codex', 'Codex'], ['hero', 'user', 'Héros']];
 const FULL = ['welcome', 'create', 'home', 'world', 'chapter', 'hero'];
-const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', inventory: 'hero', profile: 'hero', dialogues: 'home' };
+const NAV_OF = { chapter: 'world', quests: 'learn', academy: 'learn', tense: 'learn', skills: 'learn', stats: 'learn', toeic: 'learn', oral: 'learn', review: 'learn', carnet: 'learn', metier: 'learn', progres: 'learn', inventory: 'hero', appearance: 'hero', profile: 'hero', dialogues: 'home' };
 function parse() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   return { name: parts[0] || '', arg: parts[1] };
@@ -923,6 +991,18 @@ function onAction(act, b) {
       if (!c || !confirm('Retirer « ' + c.en + ' » de ton carnet ?')) return;
       L.carnetRemove(s, c.id); save(); return render();
     }
+    case 'skinPreview': skinPreview = b.dataset.id; render(); return window.scrollTo(0, 0);
+    case 'skinUnlock': {
+      const k = SKIN_BY_ID[b.dataset.id];
+      if (!k || !L.unlockSkin(s, k, masteryMetrics(s))) return toast('Conditions pas encore remplies.');
+      L.equipSkin(s, k.id); save(); notifySkins(s);
+      toast('Évolution débloquée et équipée : ' + k.name);
+      render();
+      const stage = document.querySelector('.skin-stage');
+      if (stage) stage.classList.add('unlocked');
+      return;
+    }
+    case 'skinEquip': if (L.equipSkin(s, b.dataset.id)) { save(); toast('Apparence équipée'); } return render();
     case 'notionRun': { const k = b.dataset.k; return simpleRun(C.notionCards(s, k, 6), C.notionInfo(k).label, 'cible'); }
     case 'targeted': return runTargeted();
     case 'metierRun': return simpleRun(C.metierCards(s, b.dataset.c), 'Métier · ' + CATEGORIES[b.dataset.c].replace('Métier · ', ''), 'metier');

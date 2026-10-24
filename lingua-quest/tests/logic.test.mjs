@@ -227,3 +227,23 @@ test('mots retenus : les exercices en révision ne comptent pas comme des mots',
   s.srs['q:t5-1'] = { box: 4, due: '2026-01-01' };
   assert.equal(L.srsRetained(s), 1);
 });
+
+test('skins : conditions de jeu ET d’anglais, déblocage, équipement, sauvegarde', async () => {
+  const { SKINS, SKIN_BY_ID } = await import('../data/world.js');
+  for (const k of SKINS.slice(1)) assert.ok(k.req.some(r => L.MASTERY_REQS.includes(r.t)), k.id + ' : demande une vraie progression en anglais');
+  const s = L.newState();
+  const m = { level: 3, quests: 3, bosses: [], tenses: 0, words: 9, talk: 0, toeic: 0, carnet: 0 };
+  let st = L.skinState(s, SKIN_BY_ID.eveil, m);
+  assert.equal(st.ready, false, 'il manque un mot retenu');
+  assert.equal(L.unlockSkin(s, SKIN_BY_ID.eveil, m), false);
+  assert.equal(L.equipSkin(s, 'eveil'), false, 'impossible d’équiper sans débloquer');
+  m.words = 10;
+  assert.equal(L.skinState(s, SKIN_BY_ID.eveil, m).ready, true);
+  assert.ok(L.unlockSkin(s, SKIN_BY_ID.eveil, m));
+  assert.ok(L.equipSkin(s, 'eveil'));
+  const back = L.sanitize(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(back.skins, { owned: ['recrue', 'eveil'], equipped: 'eveil' });
+  assert.deepEqual(L.sanitize({ xp: 0, skills: {}, skins: { owned: 'x', equipped: 'maitre' } }).skins, { owned: ['recrue'], equipped: 'recrue' });
+  st = L.skinState(s, SKIN_BY_ID.agent, { ...m, bosses: [1] });
+  assert.equal(st.reqs.find(r => r.t === 'boss').ok, true);
+});

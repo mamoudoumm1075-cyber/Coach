@@ -272,6 +272,30 @@ const noOverflow = async (page, label) => {
   check(await playRun(page, n => n % 3 !== 0), 'entraînement ciblé joué jusqu’au bilan');
   await page.click('#play [data-act="close"]');
 
+  /* Skins évolutifs : verrouillé → prêt → débloqué → équipé → gardé après rechargement */
+  await page.goto(BASE + '#/appearance');
+  await page.waitForSelector('.skin-list');
+  await page.click('[data-act="skinPreview"][data-id="maitre"]');
+  check(await page.locator('.skin-stage .btn:has-text("Verrouillée")').count() === 1 && await page.locator('ul.reqs li').count() >= 5, 'skin final verrouillé, conditions affichées');
+  await page.evaluate(() => { const S = window.__LQ.ctx.S; ['busy', 'tired', 'job', 'task', 'staff', 'hire', 'late', 'early', 'weekend', 'manager', 'colleague'].forEach(id => { S.srs['v:' + id] = { box: 3, due: '2099-01-01', seen: 3, ok: 3, ko: 0 }; }); ['q1-2', 'q1-3', 'q1-4'].forEach(id => { S.quests[id] = { done: true, best: 90, attempts: 1 }; }); });
+  await page.click('[data-act="skinPreview"][data-id="eveil"]');
+  await shot('46-apparence-pret');
+  check(await page.locator('[data-act="skinUnlock"][data-id="eveil"]').count() === 1, 'évolution « Éveil » prête à débloquer');
+  await page.click('[data-act="skinUnlock"][data-id="eveil"]');
+  await page.reload();
+  await page.waitForSelector('#app');
+  const sk = await page.evaluate(() => window.__LQ.ctx.S.skins);
+  check(sk.owned.includes('eveil') && sk.equipped === 'eveil', 'skin débloqué et équipé, gardé après rechargement');
+  await page.goto(BASE + '#/home');
+  check(await page.locator('.home-screen .scene.skin-eveil').count() === 1 && await page.locator('.hud .medal.skin-eveil').count() === 1, 'skin visible sur l’accueil et le médaillon');
+  await page.goto(BASE + '#/appearance');
+  await page.click('[data-act="skinPreview"][data-id="recrue"]');
+  await page.click('[data-act="skinEquip"][data-id="recrue"]');
+  check(await page.evaluate(() => window.__LQ.ctx.S.skins.equipped) === 'recrue', 'changement de skin équipé');
+  await page.click('[data-act="skinPreview"][data-id="eveil"]');
+  await page.click('[data-act="skinEquip"][data-id="eveil"]');
+  await shot('47-apparence');
+
   /* Vocabulaire du métier */
   await page.goto(BASE + '#/metier');
   await page.waitForSelector('[data-act="metierRun"]');

@@ -62,6 +62,7 @@ export function newState() {
     badges: [],
     carnet: [],
     notions: {},
+    skins: { owned: ['recrue'], equipped: 'recrue' },
     settings: { theme: 'dark', rate: 0.9, sound: true, fr: 'beaucoup', weeklyGoal: 5, voiceUrl: '', voiceCode: '', examDate: '', toeicGoal: 850 }
   };
 }
@@ -116,6 +117,9 @@ export function sanitize(o) {
   s.sessions = s.sessions.filter(isObj);
   s.badges = s.badges.filter(b => typeof b === 'string');
   s.carnet = s.carnet.filter(c => isObj(c) && typeof c.en === 'string' && c.id);
+  const sk = isObj(o.skins) ? o.skins : {};
+  const owned = ['recrue', ...(Array.isArray(sk.owned) ? sk.owned.filter(x => typeof x === 'string' && x !== 'recrue') : [])];
+  s.skins = { owned: [...new Set(owned)], equipped: owned.includes(sk.equipped) ? sk.equipped : 'recrue' };
   if (!s.chapters[1]) s.chapters[1] = { bossBeaten: false, bossTries: 0 };
   if (s.hero && !(isObj(s.hero) && typeof s.hero.name === 'string')) s.hero = null;
   if (s.placement && !isObj(s.placement)) s.placement = null;
@@ -291,6 +295,33 @@ export function talkLevel(S, tenseCount = 9) {
   const next = TALK_LEVELS[i + 1] || null;
   const tips = parts.slice().sort((a, b) => a.v - b.v).slice(0, 2).map(x => x.tip);
   return { score, name, cefr, desc, next: next ? { name: next[1], at: next[0] } : null, parts, tips };
+}
+
+/* ---------- Skins évolutifs : état de chaque condition ----------
+   m : mesures du joueur { level, quests, bosses: [n…], tenses, words, talk, toeic, carnet } */
+export const MASTERY_REQS = ['tenses', 'words', 'talk', 'toeic', 'carnet'];
+export function skinReqs(skin, m) {
+  return skin.req.map(r => {
+    const cur = r.t === 'boss' ? ((m.bosses || []).includes(r.n) ? 1 : 0) : num(m[r.t]);
+    const need = r.t === 'boss' ? 1 : r.n;
+    return { ...r, cur: Math.min(cur, need), need, ok: cur >= need, mastery: MASTERY_REQS.includes(r.t) };
+  });
+}
+export function skinState(S, skin, m) {
+  const reqs = skinReqs(skin, m), owned = S.skins.owned.includes(skin.id);
+  const done = reqs.filter(r => r.ok).length;
+  return { owned, ready: !owned && reqs.every(r => r.ok), equipped: S.skins.equipped === skin.id, reqs, pct: reqs.length ? Math.round((done / reqs.length) * 100) : 100 };
+}
+export function unlockSkin(S, skin, m) {
+  const st = skinState(S, skin, m);
+  if (!st.ready) return false;
+  S.skins.owned.push(skin.id);
+  return true;
+}
+export function equipSkin(S, id) {
+  if (!S.skins.owned.includes(id)) return false;
+  S.skins.equipped = id;
+  return true;
 }
 
 /* ---------- Plan d’examen : sprint de 4 semaines avant la date du TOEIC ---------- */
