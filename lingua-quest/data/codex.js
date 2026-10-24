@@ -1,0 +1,265 @@
+/* Codex anglais : dictionnaire, marqueurs, auxiliaires, verbes irréguliers, phrases décodées.
+   Prononciation écrite : approximation pour un francophone, syllabe accentuée en MAJUSCULES.
+   Contenu original, à enrichir au fil des chapitres. */
+
+export const CATEGORIES = {
+  quotidien: 'Vie quotidienne', travail: 'Travail et entreprise', reunions: 'Réunions', emails: 'E-mails professionnels',
+  voyages: 'Voyages', transports: 'Transports', achats: 'Achats', conversation: 'Conversations', toeic: 'TOEIC', expressions: 'Expressions courantes'
+};
+export const REGISTRES = { courant: 'courant', pro: 'professionnel', familier: 'familier' };
+
+/* [id, anglais, sens [[traduction, contexte]], prononciation, exemple, traduction, synonymes, registre, catégorie, formes] */
+const V = [
+  ['wake-up', 'wake up', [['se réveiller', '']], 'ouéik ap', 'I usually wake up at seven.', 'Je me réveille généralement à sept heures.', 'get up (se lever)', 'courant', 'quotidien', ['wakes up', 'woke up', 'waking up']],
+  ['commute', 'commute', [['trajet domicile-travail', 'nom'], ['faire la navette', 'verbe']], 'keu-MIOUT', 'My commute takes forty minutes.', 'Mon trajet prend quarante minutes.', 'journey', 'courant', 'quotidien', ['commutes', 'commuting']],
+  ['busy', 'busy', [['occupé', 'une personne'], ['animé, fréquenté', 'un lieu']], 'BI-zi', 'Sorry, I’m busy right now.', 'Désolé, je suis occupé en ce moment.', 'occupied', 'courant', 'quotidien', ['busier']],
+  ['tired', 'tired', [['fatigué', '']], 'TAÏ-eurd', 'She is tired after work.', 'Elle est fatiguée après le travail.', 'exhausted (épuisé)', 'courant', 'quotidien', []],
+  ['neighbour', 'neighbour', [['voisin, voisine', '']], 'NÉÏ-beur', 'My neighbour has a dog.', 'Mon voisin a un chien.', 'neighbor (orthographe US)', 'courant', 'quotidien', ['neighbours', 'neighbor', 'neighbors']],
+  ['groceries', 'groceries', [['les courses (alimentaires)', '']], 'GRÔ-seu-riz', 'I buy groceries on Saturday.', 'Je fais les courses le samedi.', 'shopping', 'courant', 'quotidien', ['grocery']],
+  ['weekend', 'weekend', [['week-end', '']], 'ouik-ÈND', 'What did you do last weekend?', 'Qu’as-tu fait le week-end dernier ?', '', 'courant', 'quotidien', ['weekends']],
+  ['early', 'early', [['tôt', 'adverbe'], ['en avance', 'arriver']], 'EUR-li', 'I arrived early.', 'Je suis arrivé en avance.', 'ahead of time', 'courant', 'quotidien', ['earlier']],
+  ['late', 'late', [['en retard', 'arriver'], ['tard', 'heure']], 'léït', 'Sorry I’m late.', 'Désolé, je suis en retard.', 'delayed', 'courant', 'quotidien', ['later']],
+  ['job', 'job', [['travail, emploi', '']], 'djob', 'I like my job.', 'J’aime mon travail.', 'work, position', 'courant', 'travail', ['jobs']],
+  ['colleague', 'colleague', [['collègue', '']], 'KO-lig', 'My colleague is very helpful.', 'Mon collègue est très serviable.', 'coworker', 'pro', 'travail', ['colleagues']],
+  ['manager', 'manager', [['responsable, chef', '']], 'MA-ni-djeur', 'I need to ask my manager.', 'Je dois demander à mon responsable.', 'supervisor', 'pro', 'travail', ['managers']],
+  ['task', 'task', [['tâche', '']], 'task (a long)', 'I have three tasks to finish today.', 'J’ai trois tâches à finir aujourd’hui.', 'assignment', 'courant', 'travail', ['tasks']],
+  ['deadline', 'deadline', [['date limite, échéance', '']], 'DÈD-laïn', 'The deadline is Friday.', 'La date limite est vendredi.', 'due date', 'pro', 'travail', ['deadlines']],
+  ['hire', 'hire', [['embaucher', 'une personne'], ['louer', 'un objet (UK)']], 'HAÏ-eur', 'The company hired ten people.', 'L’entreprise a embauché dix personnes.', 'recruit, employ', 'pro', 'travail', ['hired', 'hiring', 'hires']],
+  ['staff', 'staff', [['personnel, équipe', '']], 'staf', 'All staff must attend the training.', 'Tout le personnel doit assister à la formation.', 'employees, personnel', 'pro', 'travail', []],
+  ['department', 'department', [['service, département', 'entreprise']], 'di-PART-meunt', 'She works in the sales department.', 'Elle travaille au service commercial.', 'division', 'pro', 'travail', ['departments']],
+  ['customer', 'customer', [['client', '']], 'KAS-teu-meur', 'The customer wants a refund.', 'Le client veut un remboursement.', 'client', 'pro', 'travail', ['customers']],
+  ['supplier', 'supplier', [['fournisseur', '']], 'seu-PLAÏ-eur', 'We changed our supplier.', 'Nous avons changé de fournisseur.', 'vendor', 'pro', 'travail', ['suppliers']],
+  ['revenue', 'revenue', [['chiffre d’affaires, recettes', '']], 'RÈ-vè-niou', 'Revenue increased by ten percent.', 'Le chiffre d’affaires a augmenté de dix pour cent.', 'income, turnover', 'pro', 'toeic', []],
+  ['increase', 'increase', [['augmenter', 'verbe'], ['augmentation', 'nom']], 'in-KRIZ (verbe) / IN-kriz (nom)', 'Prices increased last year.', 'Les prix ont augmenté l’an dernier.', 'rise, grow', 'pro', 'toeic', ['increased', 'increases', 'increasing']],
+  ['decrease', 'decrease', [['diminuer', 'verbe'], ['baisse', 'nom']], 'di-KRIZ', 'Sales decreased in March.', 'Les ventes ont baissé en mars.', 'drop, fall', 'pro', 'toeic', ['decreased', 'decreases']],
+  ['meeting', 'meeting', [['réunion', '']], 'MI-tinng', 'The meeting starts at ten.', 'La réunion commence à dix heures.', '', 'pro', 'reunions', ['meetings']],
+  ['schedule', 'schedule', [['planning, emploi du temps', 'nom'], ['programmer, planifier', 'verbe']], 'SKÈ-djoul (US) / CHÈ-djoul (UK)', 'Let’s schedule a meeting for Monday.', 'Programmons une réunion lundi.', 'plan, timetable', 'pro', 'reunions', ['scheduled', 'schedules', 'scheduling']],
+  ['agenda', 'agenda', [['ordre du jour', 'réunion'], ['programme, objectifs cachés', 'sens figuré']], 'eu-DJÈN-deu', 'The first item on the agenda is the budget.', 'Le premier point à l’ordre du jour est le budget.', '', 'pro', 'reunions', ['agendas']],
+  ['postpone', 'postpone', [['reporter (à plus tard)', '']], 'pôst-PÔNE', 'They postponed the meeting.', 'Ils ont reporté la réunion.', 'put off, delay', 'pro', 'reunions', ['postponed', 'postpones']],
+  ['attend', 'attend', [['assister à, participer à', 'réunion, cours']], 'eu-TÈND', 'Will you attend the conference?', 'Vas-tu assister à la conférence ?', 'go to, take part in', 'pro', 'reunions', ['attended', 'attends', 'attending']],
+  ['agree', 'agree', [['être d’accord', '']], 'eu-GRI', 'I agree with you.', 'Je suis d’accord avec toi.', '', 'courant', 'reunions', ['agreed', 'agrees']],
+  ['suggest', 'suggest', [['proposer, suggérer', '']], 'seug-DJÈST', 'I suggest a short break.', 'Je propose une courte pause.', 'propose', 'courant', 'reunions', ['suggested', 'suggests']],
+  ['proposal', 'proposal', [['proposition', 'surtout pro']], 'preu-PÔ-zeul', 'We accepted their proposal.', 'Nous avons accepté leur proposition.', 'offer, plan', 'pro', 'reunions', ['proposals']],
+  ['attach', 'attach', [['joindre (un fichier)', 'e-mail'], ['attacher', 'objet']], 'eu-TATCH', 'I attached the report.', 'J’ai joint le rapport.', '', 'pro', 'emails', ['attached', 'attachment']],
+  ['regarding', 'regarding', [['concernant, au sujet de', '']], 'ri-GAR-dinng', 'I’m writing regarding your order.', 'Je vous écris au sujet de votre commande.', 'about, concerning', 'pro', 'emails', []],
+  ['reply', 'reply', [['répondre', 'verbe'], ['réponse', 'nom']], 'ri-PLAÏ', 'Please reply by Friday.', 'Merci de répondre d’ici vendredi.', 'answer, respond', 'courant', 'emails', ['replied', 'replies']],
+  ['available', 'available', [['disponible', '']], 'eu-VÉÏ-leu-beul', 'Are you available tomorrow?', 'Es-tu disponible demain ?', 'free', 'courant', 'emails', ['availability']],
+  ['confirm', 'confirm', [['confirmer', '']], 'keun-FEURM', 'Can you confirm your booking?', 'Pouvez-vous confirmer votre réservation ?', '', 'pro', 'emails', ['confirmed', 'confirmation']],
+  ['request', 'request', [['demande', 'nom'], ['demander (formellement)', 'verbe']], 'ri-KOUÈST', 'We received your request.', 'Nous avons reçu votre demande.', 'ask for', 'pro', 'emails', ['requested', 'requests']],
+  ['look-forward', 'look forward to', [['avoir hâte de, attendre avec plaisir', 'suivi de -ing ou d’un nom']], 'louk FOR-oueurd tou', 'I look forward to meeting you.', 'J’ai hâte de vous rencontrer.', '', 'pro', 'emails', ['looking forward to']],
+  ['booking', 'booking', [['réservation', '']], 'BOU-kinng', 'I made a booking for two nights.', 'J’ai fait une réservation pour deux nuits.', 'reservation', 'courant', 'voyages', ['book', 'booked', 'bookings']],
+  ['flight', 'flight', [['vol', 'avion']], 'flaït', 'Our flight is delayed.', 'Notre vol est retardé.', '', 'courant', 'voyages', ['flights']],
+  ['delay', 'delay', [['retard', 'nom'], ['retarder', 'verbe']], 'di-LÉÏ', 'There is a two-hour delay.', 'Il y a deux heures de retard.', '', 'courant', 'voyages', ['delayed', 'delays']],
+  ['luggage', 'luggage', [['bagages (indénombrable)', '']], 'LA-guidj', 'Where can I leave my luggage?', 'Où puis-je laisser mes bagages ?', 'baggage', 'courant', 'voyages', []],
+  ['abroad', 'abroad', [['à l’étranger', '']], 'eu-BROD', 'Have you ever lived abroad?', 'As-tu déjà vécu à l’étranger ?', 'overseas', 'courant', 'voyages', []],
+  ['check-in', 'check in', [['s’enregistrer', 'hôtel, aéroport']], 'tchèk IN', 'You can check in from 3 p.m.', 'Vous pouvez vous enregistrer à partir de 15 h.', 'register', 'courant', 'voyages', ['checked in', 'check-in']],
+  ['ticket', 'ticket', [['billet, ticket', '']], 'TI-kit', 'I bought a return ticket.', 'J’ai acheté un billet aller-retour.', '', 'courant', 'transports', ['tickets']],
+  ['platform', 'platform', [['quai', 'gare']], 'PLAT-form', 'The train leaves from platform 4.', 'Le train part du quai 4.', '', 'courant', 'transports', ['platforms']],
+  ['miss', 'miss', [['rater', 'un train, un bus'], ['regretter l’absence de', 'une personne']], 'miss', 'I missed the bus.', 'J’ai raté le bus.', '', 'courant', 'transports', ['missed', 'misses']],
+  ['get-off', 'get off', [['descendre (d’un transport)', '']], 'guèt OF', 'Get off at the next stop.', 'Descends au prochain arrêt.', '', 'courant', 'transports', ['got off']],
+  ['straight', 'straight ahead', [['tout droit', 'direction']], 'stréït eu-HÈD', 'Go straight ahead, then turn left.', 'Va tout droit, puis tourne à gauche.', '', 'courant', 'transports', ['straight']],
+  ['turn', 'turn', [['tourner', 'direction'], ['tour (à qui le tour)', 'nom']], 'teurn', 'Turn right at the bank.', 'Tourne à droite à la banque.', '', 'courant', 'transports', ['turned', 'turns']],
+  ['price', 'price', [['prix', '']], 'praïss', 'What’s the price of this jacket?', 'Quel est le prix de cette veste ?', 'cost', 'courant', 'achats', ['prices']],
+  ['afford', 'afford', [['avoir les moyens de', '']], 'eu-FORD', 'I can’t afford a new car.', 'Je n’ai pas les moyens d’acheter une voiture neuve.', '', 'courant', 'achats', ['afforded', 'affordable']],
+  ['receipt', 'receipt', [['ticket de caisse, reçu', '']], 'ri-SIT (le p est muet)', 'Keep your receipt.', 'Garde ton ticket de caisse.', '', 'courant', 'achats', ['receipts']],
+  ['refund', 'refund', [['remboursement', 'nom'], ['rembourser', 'verbe']], 'RI-fand (nom) / ri-FAND (verbe)', 'Can I get a refund?', 'Puis-je être remboursé ?', 'reimburse', 'courant', 'achats', ['refunded', 'refunds']],
+  ['discount', 'discount', [['réduction, remise', '']], 'DIS-kaount', 'There is a 20% discount today.', 'Il y a 20 % de réduction aujourd’hui.', 'reduction, sale', 'courant', 'achats', ['discounts']],
+  ['size', 'size', [['taille, pointure', '']], 'saïz', 'Do you have this in a smaller size?', 'L’avez-vous dans une taille plus petite ?', '', 'courant', 'achats', ['sizes']],
+  ['order', 'order', [['commander', 'restaurant, magasin'], ['commande', 'nom'], ['ordre', 'rangement']], 'OR-deur', 'Are you ready to order?', 'Êtes-vous prêts à commander ?', '', 'courant', 'achats', ['ordered', 'orders']],
+  ['how-about', 'how about…?', [['et si…?, que dirais-tu de…?', 'proposer']], 'haou eu-BAOUT', 'How about a coffee?', 'Et si on prenait un café ?', 'what about…?', 'courant', 'conversation', []],
+  ['actually', 'actually', [['en fait, en réalité', 'faux ami : pas « actuellement »']], 'AK-tchou-eu-li', 'Actually, I’m from Lyon.', 'En fait, je viens de Lyon.', 'in fact', 'courant', 'conversation', []],
+  ['eventually', 'eventually', [['finalement, au bout du compte', 'faux ami : pas « éventuellement »']], 'i-VÈN-tchou-eu-li', 'Eventually, we found the hotel.', 'Finalement, nous avons trouvé l’hôtel.', 'in the end', 'courant', 'conversation', []],
+  ['nice-to-meet', 'nice to meet you', [['enchanté', 'première rencontre']], 'naïss tou MIT you', 'Hi, I’m Sam. Nice to meet you.', 'Salut, je suis Sam. Enchanté.', 'pleased to meet you', 'courant', 'conversation', []],
+  ['what-do-you-do', 'what do you do?', [['que fais-tu dans la vie ?', 'métier']], 'ouot dou you DOU', 'So, what do you do?', 'Alors, que fais-tu dans la vie ?', 'what’s your job?', 'courant', 'conversation', []],
+  ['i-mean', 'I mean', [['je veux dire', 'reformuler']], 'aï MIN', 'It’s far. I mean, it’s an hour by bus.', 'C’est loin. Je veux dire, c’est à une heure en bus.', '', 'familier', 'conversation', []],
+  ['by-the-way', 'by the way', [['au fait, d’ailleurs', '']], 'baï ze OUÉÏ', 'By the way, are you free tonight?', 'Au fait, tu es libre ce soir ?', 'incidentally', 'courant', 'conversation', []],
+  ['sounds-good', 'sounds good', [['ça me va, ça marche', 'accepter']], 'saoundz GOUD', '“Lunch at noon?” “Sounds good.”', '« Déjeuner à midi ? » « Ça marche. »', 'great, perfect', 'familier', 'expressions', []],
+  ['no-worries', 'no worries', [['pas de souci', '']], 'nô OUA-riz', '“Sorry!” “No worries.”', '« Désolé ! » « Pas de souci. »', 'no problem', 'familier', 'expressions', []],
+  ['make-sure', 'make sure', [['s’assurer, vérifier', '']], 'méïk CHOUR', 'Make sure the door is locked.', 'Assure-toi que la porte est fermée à clé.', 'ensure, check', 'courant', 'expressions', ['made sure']],
+  ['figure-out', 'figure out', [['comprendre, trouver (une solution)', '']], 'FI-gueur aout', 'I can’t figure out this problem.', 'Je n’arrive pas à résoudre ce problème.', 'work out, solve', 'courant', 'expressions', ['figured out']],
+  ['find-out', 'find out', [['découvrir, apprendre (une information)', '']], 'faïnd AOUT', 'I found out the truth yesterday.', 'J’ai découvert la vérité hier.', 'discover, learn', 'courant', 'expressions', ['found out']],
+  ['run-out', 'run out of', [['ne plus avoir de, manquer de', '']], 'ran AOUT ov', 'We ran out of coffee.', 'Nous n’avons plus de café.', '', 'courant', 'expressions', ['ran out of']],
+  ['in-charge', 'in charge of', [['responsable de', '']], 'inn TCHARDJ ov', 'Who is in charge of the project?', 'Qui est responsable du projet ?', 'responsible for', 'pro', 'toeic', []],
+  ['due', 'due', [['prévu, attendu', 'date'], ['à payer', 'facture']], 'diou', 'The report is due tomorrow.', 'Le rapport doit être rendu demain.', 'expected', 'pro', 'toeic', []],
+  ['invoice', 'invoice', [['facture', '']], 'IN-voïss', 'Please send the invoice by e-mail.', 'Merci d’envoyer la facture par e-mail.', 'bill', 'pro', 'toeic', ['invoices']],
+  ['warehouse', 'warehouse', [['entrepôt', '']], 'OUÈR-haouss', 'The boxes are in the warehouse.', 'Les cartons sont dans l’entrepôt.', 'storehouse', 'pro', 'toeic', ['warehouses']],
+  ['shipment', 'shipment', [['livraison, envoi', '']], 'CHIP-meunt', 'The shipment will arrive on Monday.', 'La livraison arrivera lundi.', 'delivery', 'pro', 'toeic', ['shipments', 'ship', 'shipped']],
+  ['branch', 'branch', [['agence, succursale', 'entreprise'], ['branche', 'arbre']], 'branntch', 'The bank opened a new branch.', 'La banque a ouvert une nouvelle agence.', 'office', 'pro', 'toeic', ['branches']],
+  ['maintenance', 'maintenance', [['entretien, maintenance', '']], 'MÉÏN-teu-neunss', 'The elevator is under maintenance.', 'L’ascenseur est en maintenance.', 'repair', 'pro', 'toeic', []],
+  ['inquiry', 'inquiry', [['demande de renseignements', '']], 'inn-KOUAÏ-ri (UK) / INN-kweu-ri (US)', 'Thank you for your inquiry.', 'Merci pour votre demande de renseignements.', 'question, enquiry', 'pro', 'toeic', ['inquiries', 'enquiry']],
+  ['brochure', 'brochure', [['brochure, dépliant', '']], 'BRÔ-cheur', 'Take a brochure at the front desk.', 'Prenez une brochure à l’accueil.', 'leaflet', 'pro', 'toeic', ['brochures']],
+  ['front-desk', 'front desk', [['accueil, réception', '']], 'frant DÈSK', 'Ask at the front desk.', 'Demande à l’accueil.', 'reception', 'courant', 'toeic', []],
+  ['employee', 'employee', [['employé, salarié', '']], 'èm-ploï-I', 'The company has 200 employees.', 'L’entreprise compte 200 salariés.', 'worker, staff member', 'pro', 'toeic', ['employees']],
+  ['applicant', 'applicant', [['candidat (à un poste)', '']], 'A-pli-keunt', 'We interviewed five applicants.', 'Nous avons reçu cinq candidats en entretien.', 'candidate', 'pro', 'toeic', ['applicants', 'apply', 'application']],
+  ['launch', 'launch', [['lancer', 'produit'], ['lancement', 'nom']], 'lonntch', 'They will launch the product in May.', 'Ils lanceront le produit en mai.', 'release', 'pro', 'toeic', ['launched']],
+  ['purchase', 'purchase', [['acheter', 'verbe, formel'], ['achat', 'nom']], 'PEUR-tcheuss', 'You can purchase tickets online.', 'Vous pouvez acheter les billets en ligne.', 'buy', 'pro', 'toeic', ['purchased', 'purchases']],
+  ['replace', 'replace', [['remplacer', '']], 'ri-PLÉÏSS', 'We need to replace the printer.', 'Nous devons remplacer l’imprimante.', 'change', 'courant', 'toeic', ['replaced', 'replacement']],
+  ['remind', 'remind', [['rappeler (à quelqu’un de faire)', '']], 'ri-MAÏND', 'Remind me to call him.', 'Rappelle-moi de l’appeler.', '', 'courant', 'toeic', ['reminded', 'reminder']],
+  ['shadow', 'shadow', [['ombre', '']], 'CHA-dô', 'The shadow moved across the wall.', 'L’ombre a traversé le mur.', 'shade', 'courant', 'expressions', ['shadows']],
+  ['lantern', 'lantern', [['lanterne', '']], 'LAN-teurn', 'She lit the lantern.', 'Elle a allumé la lanterne.', 'lamp', 'courant', 'expressions', ['lanterns']],
+  ['clue', 'clue', [['indice', '']], 'klou', 'We found a clue in the library.', 'Nous avons trouvé un indice dans la bibliothèque.', 'hint', 'courant', 'expressions', ['clues']],
+  ['help', 'help', [['aider', 'verbe'], ['aide', 'nom']], 'hèlp', 'Can you help me?', 'Peux-tu m’aider ?', 'assist', 'courant', 'conversation', ['helped', 'helps', 'helpful']],
+  ['need', 'need', [['avoir besoin de', '']], 'nid', 'I need your help.', 'J’ai besoin de ton aide.', '', 'courant', 'conversation', ['needed', 'needs']],
+  ['want', 'want', [['vouloir', '']], 'ouonnt', 'I want to learn English.', 'Je veux apprendre l’anglais.', 'would like (plus poli)', 'courant', 'conversation', ['wanted', 'wants']],
+  ['would-like', 'would like', [['aimerais, voudrais (poli)', '']], 'woud LAÏK', 'I would like a coffee, please.', 'Je voudrais un café, s’il vous plaît.', 'want', 'courant', 'conversation', ["i'd like"]],
+  ['live', 'live', [['habiter, vivre', '']], 'liv', 'I live in Paris.', 'J’habite à Paris.', '', 'courant', 'quotidien', ['lived', 'lives', 'living']],
+  ['work', 'work', [['travailler', 'verbe'], ['travail', 'nom indénombrable'], ['fonctionner', 'machine']], 'oueurk', 'I work in a bank.', 'Je travaille dans une banque.', '', 'courant', 'travail', ['worked', 'works', 'working']],
+  ['learn', 'learn', [['apprendre (pour soi)', 'faux ami partiel : « apprendre à quelqu’un » = teach']], 'leurn', 'I am learning English.', 'J’apprends l’anglais.', 'study', 'courant', 'quotidien', ['learned', 'learnt', 'learning', 'learns']],
+  ['talk', 'talk', [['parler, discuter', '']], 'tok', 'Can we talk later?', 'On peut en parler plus tard ?', 'speak, chat', 'courant', 'conversation', ['talked', 'talking', 'talks']],
+  ['ready', 'ready', [['prêt', '']], 'RÈ-di', 'Are you ready?', 'Tu es prêt ?', 'prepared', 'courant', 'conversation', []],
+  ['today', 'today', [['aujourd’hui', '']], 'teu-DÉÏ', 'She is working today.', 'Elle travaille aujourd’hui.', '', 'courant', 'quotidien', []]
+];
+
+export const VOCAB = V.map(([id, en, senses, pron, ex, exFr, syn, reg, cat, forms]) => ({ id, en, senses, pron, ex, exFr, syn, reg, cat, forms: forms || [] }));
+export const VOCAB_BY_ID = Object.fromEntries(VOCAB.map(v => [v.id, v]));
+
+/* ---------- Marqueurs temporels et mots de fréquence ---------- */
+export const MARKERS = [
+  { id: 'always', en: 'always', fr: 'toujours', usage: 'Une habitude constante. Souvent avec le present simple, mais pas uniquement.', ex: [['I always drink tea in the morning.', 'Je bois toujours du thé le matin.'], ['You are always complaining!', 'Tu te plains tout le temps ! (agacement : present continuous)']] },
+  { id: 'usually', en: 'usually', fr: 'd’habitude, généralement', usage: 'Ce qui arrive la plupart du temps.', ex: [['I usually take the bus.', 'D’habitude, je prends le bus.'], ['I usually took the bus when I lived there.', 'D’habitude je prenais le bus quand j’habitais là-bas (habitude passée).']] },
+  { id: 'sometimes', en: 'sometimes', fr: 'parfois', usage: 'De temps en temps. Se place souvent avant le verbe ou en début de phrase.', ex: [['Sometimes I work from home.', 'Parfois je travaille de chez moi.']] },
+  { id: 'never', en: 'never', fr: 'jamais', usage: 'Jamais. Il porte déjà la négation : on ne dit pas « I don’t never ».', ex: [['I never eat meat.', 'Je ne mange jamais de viande.'], ['I have never been to London.', 'Je ne suis jamais allé à Londres (expérience : present perfect).']] },
+  { id: 'now', en: 'now', fr: 'maintenant', usage: 'Le moment présent. Souvent avec le present continuous, mais aussi avec d’autres temps.', ex: [['I’m cooking now.', 'Je suis en train de cuisiner.'], ['I live in Lyon now.', 'J’habite à Lyon maintenant (situation actuelle : present simple).']] },
+  { id: 'currently', en: 'currently', fr: 'actuellement, en ce moment', usage: 'Faux ami avec « actually » (= en fait). Indique une situation en cours.', ex: [['She is currently working on a new project.', 'Elle travaille actuellement sur un nouveau projet.']] },
+  { id: 'yesterday', en: 'yesterday', fr: 'hier', usage: 'Un moment passé terminé : très souvent le past simple. Mais le contexte compte.', ex: [['I called him yesterday.', 'Je l’ai appelé hier.'], ['Yesterday at 8, I was sleeping.', 'Hier à 8 h, je dormais (action en cours : past continuous).']] },
+  { id: 'last-week', en: 'last week', fr: 'la semaine dernière', usage: 'Une période passée terminée. « Last » = dernier (passé), « the last » peut aussi vouloir dire « les … derniers ».', ex: [['We met last week.', 'Nous nous sommes rencontrés la semaine dernière.']] },
+  { id: 'since', en: 'since', fr: 'depuis (un point de départ)', usage: 'Indique le point de départ : since 2020, since Monday. Souvent avec le present perfect pour une situation qui dure encore.', ex: [['I have lived here since 2020.', 'J’habite ici depuis 2020.']] },
+  { id: 'for', en: 'for', fr: 'pendant / depuis (une durée)', usage: 'Indique une durée : for two years. Le sens (« pendant » ou « depuis ») dépend du temps utilisé.', ex: [['I have worked here for two years.', 'Je travaille ici depuis deux ans (ça continue).'], ['I worked there for two years.', 'J’y ai travaillé pendant deux ans (c’est fini).']] },
+  { id: 'already', en: 'already', fr: 'déjà', usage: 'Plus tôt que prévu. Fréquent avec le present perfect, mais en anglais américain on l’entend aussi avec le past simple.', ex: [['I have already finished.', 'J’ai déjà fini.'], ['I already ate. (US)', 'J’ai déjà mangé (usage américain courant).']] },
+  { id: 'yet', en: 'yet', fr: 'déjà (question) / pas encore (négation)', usage: 'Surtout dans les questions et les négations, en fin de phrase.', ex: [['Have you finished yet?', 'Tu as déjà fini ?'], ['I haven’t finished yet.', 'Je n’ai pas encore fini.']] },
+  { id: 'just', en: 'just', fr: 'venir de / juste', usage: 'Avec le present perfect : une action très récente. Peut aussi vouloir dire « juste, seulement ».', ex: [['She has just left.', 'Elle vient de partir.'], ['I just want a coffee.', 'Je veux juste un café.']] },
+  { id: 'ever', en: 'ever', fr: 'déjà (au cours de la vie)', usage: 'Dans les questions sur l’expérience : « Have you ever…? ».', ex: [['Have you ever eaten sushi?', 'As-tu déjà mangé des sushis ?']] },
+  { id: 'tomorrow', en: 'tomorrow', fr: 'demain', usage: 'Le futur proche. Plusieurs constructions possibles selon le sens : will, be going to, present continuous (rendez-vous fixé).', ex: [['I’m meeting Tom tomorrow.', 'Je vois Tom demain (c’est prévu).'], ['It will rain tomorrow.', 'Il pleuvra demain (prévision).']] },
+  { id: 'next-week', en: 'next week', fr: 'la semaine prochaine', usage: 'Une période future. La construction dépend de ce que tu veux dire (décision, plan, prévision).', ex: [['We are going to visit Rome next week.', 'Nous allons visiter Rome la semaine prochaine (projet).']] }
+];
+
+/* ---------- Auxiliaires et modaux ---------- */
+export const AUX = [
+  { id: 'be', en: 'be', role: 'Être. Sert aussi d’auxiliaire pour les temps en -ing (continuous) et le passif.', forms: 'am / is / are (présent) · was / were (passé) · been (participe)', ex: [['She is working.', 'Elle est en train de travailler.'], ['The room was cleaned.', 'La pièce a été nettoyée (passif).']], q: 'On inverse : Is she working?', neg: 'On ajoute not : She isn’t working.' },
+  { id: 'do', en: 'do', role: 'Auxiliaire des questions et négations au present simple et au past simple. Aussi verbe « faire ».', forms: 'do / does (présent) · did (passé)', ex: [['Do you speak English?', 'Parles-tu anglais ?'], ['He didn’t call.', 'Il n’a pas appelé.']], q: 'Do/Does/Did + sujet + verbe à la base : Does she work?', neg: 'don’t / doesn’t / didn’t + verbe à la base.' },
+  { id: 'have', en: 'have', role: 'Auxiliaire des temps « perfect » (have + participe passé). Aussi verbe « avoir ».', forms: 'have / has · had', ex: [['I have finished.', 'J’ai fini.'], ['They had left.', 'Ils étaient partis.']], q: 'Have you finished?', neg: 'I haven’t finished.' },
+  { id: 'will', en: 'will', role: 'Futur : décision immédiate, prévision, promesse.', forms: 'will / ’ll · won’t (négation)', ex: [['I’ll help you.', 'Je vais t’aider (décision sur le moment).']], q: 'Will you come?', neg: 'I won’t come.' },
+  { id: 'can', en: 'can', role: 'Capacité (savoir, pouvoir), permission, possibilité.', forms: 'can · can’t / cannot', ex: [['I can swim.', 'Je sais nager.'], ['Can I sit here?', 'Puis-je m’asseoir ici ?']], q: 'Can you help me?', neg: 'I can’t come.' },
+  { id: 'could', en: 'could', role: 'Capacité passée, demande polie, possibilité.', forms: 'could · couldn’t', ex: [['Could you repeat, please?', 'Pourriez-vous répéter, s’il vous plaît ?'], ['I couldn’t sleep.', 'Je n’ai pas pu dormir.']], q: 'Could you help me?', neg: 'I couldn’t find it.' },
+  { id: 'should', en: 'should', role: 'Conseil, recommandation : « devrais ».', forms: 'should · shouldn’t', ex: [['You should rest.', 'Tu devrais te reposer.']], q: 'Should I call him?', neg: 'You shouldn’t worry.' },
+  { id: 'must', en: 'must', role: 'Obligation forte ou déduction logique. « mustn’t » = interdiction (pas « pas obligé »).', forms: 'must · mustn’t', ex: [['You must wear a badge.', 'Vous devez porter un badge.'], ['You mustn’t smoke here.', 'Il est interdit de fumer ici.']], q: 'Must I sign here? (rare, on dit plutôt Do I have to…?)', neg: 'You mustn’t… (interdiction) ≠ You don’t have to… (pas obligé).' },
+  { id: 'may', en: 'may', role: 'Permission polie ou possibilité.', forms: 'may · may not', ex: [['May I come in?', 'Puis-je entrer ?'], ['It may rain.', 'Il se peut qu’il pleuve.']], q: 'May I ask a question?', neg: 'It may not work.' },
+  { id: 'might', en: 'might', role: 'Possibilité plus faible que may.', forms: 'might · might not', ex: [['I might be late.', 'Il se pourrait que je sois en retard.']], q: 'Rare en question.', neg: 'She might not come.' }
+];
+
+/* ---------- Verbes irréguliers : [infinitif, prétérit, participe passé, traduction, exemple, traduction] ---------- */
+const IRR = [
+  ['be', 'was / were', 'been', 'être', 'I was tired yesterday.', 'J’étais fatigué hier.'],
+  ['have', 'had', 'had', 'avoir', 'We had a meeting.', 'Nous avons eu une réunion.'],
+  ['do', 'did', 'done', 'faire', 'Have you done your homework?', 'As-tu fait tes devoirs ?'],
+  ['go', 'went', 'gone', 'aller', 'She went to London last year.', 'Elle est allée à Londres l’an dernier.'],
+  ['get', 'got', 'got (UK) / gotten (US)', 'obtenir, devenir, arriver', 'I got your message.', 'J’ai reçu ton message.'],
+  ['make', 'made', 'made', 'fabriquer, faire', 'He made a mistake.', 'Il a fait une erreur.'],
+  ['say', 'said', 'said', 'dire', 'She said hello.', 'Elle a dit bonjour.'],
+  ['tell', 'told', 'told', 'dire à, raconter', 'He told me the truth.', 'Il m’a dit la vérité.'],
+  ['see', 'saw', 'seen', 'voir', 'I saw a strange light.', 'J’ai vu une lumière étrange.'],
+  ['come', 'came', 'come', 'venir', 'They came early.', 'Ils sont venus tôt.'],
+  ['take', 'took', 'taken', 'prendre', 'I took the train.', 'J’ai pris le train.'],
+  ['give', 'gave', 'given', 'donner', 'She gave me a key.', 'Elle m’a donné une clé.'],
+  ['know', 'knew', 'known', 'savoir, connaître', 'I knew the answer.', 'Je connaissais la réponse.'],
+  ['think', 'thought', 'thought', 'penser', 'I thought you were busy.', 'Je pensais que tu étais occupé.'],
+  ['find', 'found', 'found', 'trouver', 'We found a clue.', 'Nous avons trouvé un indice.'],
+  ['leave', 'left', 'left', 'partir, quitter, laisser', 'The train left at six.', 'Le train est parti à six heures.'],
+  ['feel', 'felt', 'felt', 'ressentir, se sentir', 'I felt better.', 'Je me suis senti mieux.'],
+  ['keep', 'kept', 'kept', 'garder', 'Keep the receipt.', 'Garde le reçu.'],
+  ['begin', 'began', 'begun', 'commencer', 'The meeting began late.', 'La réunion a commencé en retard.'],
+  ['bring', 'brought', 'brought', 'apporter', 'She brought coffee.', 'Elle a apporté du café.'],
+  ['buy', 'bought', 'bought', 'acheter', 'I bought a ticket.', 'J’ai acheté un billet.'],
+  ['send', 'sent', 'sent', 'envoyer', 'I sent the e-mail.', 'J’ai envoyé l’e-mail.'],
+  ['spend', 'spent', 'spent', 'dépenser, passer (du temps)', 'We spent a week in Rome.', 'Nous avons passé une semaine à Rome.'],
+  ['pay', 'paid', 'paid', 'payer', 'He paid by card.', 'Il a payé par carte.'],
+  ['meet', 'met', 'met', 'rencontrer, retrouver', 'We met at the café.', 'Nous nous sommes retrouvés au café.'],
+  ['write', 'wrote', 'written', 'écrire', 'I wrote a report.', 'J’ai écrit un rapport.'],
+  ['read', 'read (prononcé « rèd »)', 'read (« rèd »)', 'lire', 'I read the letter.', 'J’ai lu la lettre.'],
+  ['speak', 'spoke', 'spoken', 'parler', 'Have you spoken to her?', 'Lui as-tu parlé ?'],
+  ['understand', 'understood', 'understood', 'comprendre', 'I understood everything.', 'J’ai tout compris.'],
+  ['forget', 'forgot', 'forgotten', 'oublier', 'I forgot my password.', 'J’ai oublié mon mot de passe.'],
+  ['lose', 'lost', 'lost', 'perdre', 'I lost my keys.', 'J’ai perdu mes clés.'],
+  ['win', 'won', 'won', 'gagner', 'We won the match.', 'Nous avons gagné le match.'],
+  ['run', 'ran', 'run', 'courir, diriger', 'She runs a small company.', 'Elle dirige une petite entreprise.'],
+  ['sit', 'sat', 'sat', 's’asseoir', 'He sat next to me.', 'Il s’est assis à côté de moi.'],
+  ['stand', 'stood', 'stood', 'être debout', 'They stood in line.', 'Ils ont fait la queue.'],
+  ['eat', 'ate', 'eaten', 'manger', 'Have you eaten?', 'As-tu mangé ?'],
+  ['drink', 'drank', 'drunk', 'boire', 'I drank too much coffee.', 'J’ai bu trop de café.'],
+  ['sleep', 'slept', 'slept', 'dormir', 'I slept badly.', 'J’ai mal dormi.'],
+  ['drive', 'drove', 'driven', 'conduire', 'She drove to work.', 'Elle est allée au travail en voiture.'],
+  ['fly', 'flew', 'flown', 'voler (en avion)', 'We flew to New York.', 'Nous sommes allés à New York en avion.'],
+  ['choose', 'chose', 'chosen', 'choisir', 'You chose the right path.', 'Tu as choisi le bon chemin.'],
+  ['break', 'broke', 'broken', 'casser', 'Someone broke the window.', 'Quelqu’un a cassé la fenêtre.'],
+  ['build', 'built', 'built', 'construire', 'They built a tower.', 'Ils ont construit une tour.'],
+  ['grow', 'grew', 'grown', 'grandir, pousser', 'The company grew quickly.', 'L’entreprise a grandi rapidement.'],
+  ['hear', 'heard', 'heard', 'entendre', 'Did you hear that?', 'Tu as entendu ça ?'],
+  ['hold', 'held', 'held', 'tenir', 'The meeting will be held on Monday.', 'La réunion aura lieu lundi.'],
+  ['put', 'put', 'put', 'mettre, poser', 'Put your bag here.', 'Pose ton sac ici.'],
+  ['set', 'set', 'set', 'régler, fixer', 'We set a date.', 'Nous avons fixé une date.'],
+  ['teach', 'taught', 'taught', 'enseigner', 'She taught me English.', 'Elle m’a appris l’anglais.'],
+  ['become', 'became', 'become', 'devenir', 'He became a manager.', 'Il est devenu responsable.']
+];
+export const IRREGULAR = IRR.map(([inf, past, pp, fr, ex, exFr]) => ({ id: 'irr-' + inf, inf, past, pp, fr, ex, exFr }));
+
+/* ---------- Phrases décodées ---------- */
+/* role : sujet, auxiliaire, verbe, complement, temps (marqueur), negation, question */
+export const DECODE = [
+  { id: 'd-she-working', en: 'She is working today.', tense: 'present-continuous', fr: 'Elle travaille aujourd’hui.',
+    parts: [['She', 'sujet', 'elle'], ['is', 'auxiliaire', 'be au présent (avec she → is)'], ['working', 'verbe', 'work + -ing'], ['today', 'temps', 'aujourd’hui']],
+    explain: 'be + verbe en -ing = present continuous. Ici, une action en cours ou une situation temporaire (aujourd’hui, pas forcément tous les jours). Le contexte précise lequel des deux.' },
+  { id: 'd-i-live', en: 'I live in Lyon.', tense: 'present-simple', fr: 'J’habite à Lyon.',
+    parts: [['I', 'sujet', 'je'], ['live', 'verbe', 'live à la base (pas de -s avec I)'], ['in Lyon', 'complement', 'à Lyon']],
+    explain: 'Present simple : une situation stable, un fait. Pas d’auxiliaire à la forme affirmative.' },
+  { id: 'd-does-he-work', en: 'Does he work on Saturdays?', tense: 'present-simple', fr: 'Est-ce qu’il travaille le samedi ?',
+    parts: [['Does', 'question', 'auxiliaire do (does avec he)'], ['he', 'sujet', 'il'], ['work', 'verbe', 'base verbale : le -s est déjà sur does'], ['on Saturdays', 'temps', 'le samedi (habitude)']],
+    explain: 'Question au present simple : Do/Does + sujet + verbe à la base. Erreur fréquente : « Does he works » (le -s ne se met qu’une fois).' },
+  { id: 'd-didnt-call', en: 'I didn’t call him yesterday.', tense: 'past-simple', fr: 'Je ne l’ai pas appelé hier.',
+    parts: [['I', 'sujet', 'je'], ['didn’t', 'negation', 'did + not : négation au passé'], ['call', 'verbe', 'base verbale (pas called)'], ['him', 'complement', 'le / lui'], ['yesterday', 'temps', 'hier']],
+    explain: 'Négation au past simple : didn’t + verbe à la base. La marque du passé est portée par did.' },
+  { id: 'd-was-sleeping', en: 'I was sleeping when you called.', tense: 'past-continuous', fr: 'Je dormais quand tu as appelé.',
+    parts: [['I', 'sujet', 'je'], ['was', 'auxiliaire', 'be au passé'], ['sleeping', 'verbe', 'sleep + -ing'], ['when', 'temps', 'quand'], ['you called', 'complement', 'past simple : l’action courte qui interrompt']],
+    explain: 'Past continuous (action en cours dans le passé) + past simple (action courte qui l’interrompt).' },
+  { id: 'd-have-lived', en: 'I have lived here since 2020.', tense: 'present-perfect', fr: 'J’habite ici depuis 2020.',
+    parts: [['I', 'sujet', 'je'], ['have', 'auxiliaire', 'have au présent'], ['lived', 'verbe', 'participe passé de live'], ['here', 'complement', 'ici'], ['since 2020', 'temps', 'depuis 2020 (point de départ)']],
+    explain: 'Present perfect : une situation commencée dans le passé qui continue aujourd’hui. Le français utilise le présent (« j’habite »), l’anglais non.' },
+  { id: 'd-have-you-ever', en: 'Have you ever been to London?', tense: 'present-perfect', fr: 'Es-tu déjà allé à Londres ?',
+    parts: [['Have', 'question', 'auxiliaire have en tête'], ['you', 'sujet', 'tu'], ['ever', 'temps', 'déjà, au cours de ta vie'], ['been', 'verbe', 'participe passé de be'], ['to London', 'complement', 'à Londres']],
+    explain: 'Question sur l’expérience : Have + sujet + (ever) + participe passé. On ne précise pas quand.' },
+  { id: 'd-been-waiting', en: 'She has been waiting for an hour.', tense: 'present-perfect-continuous', fr: 'Elle attend depuis une heure.',
+    parts: [['She', 'sujet', 'elle'], ['has been', 'auxiliaire', 'have + been'], ['waiting', 'verbe', 'wait + -ing'], ['for an hour', 'temps', 'depuis une heure (durée)']],
+    explain: 'Present perfect continuous : une action qui dure depuis un certain temps et continue (ou vient de s’arrêter). On insiste sur la durée.' },
+  { id: 'd-will-help', en: 'Don’t worry, I’ll help you.', tense: 'future-will', fr: 'Ne t’inquiète pas, je vais t’aider.',
+    parts: [['Don’t worry', 'negation', 'impératif négatif'], ['I', 'sujet', 'je'], ['’ll', 'auxiliaire', 'will contracté'], ['help', 'verbe', 'base verbale'], ['you', 'complement', 'te / toi']],
+    explain: 'will : décision prise au moment où l’on parle, ou promesse.' },
+  { id: 'd-going-to', en: 'We are going to visit Rome next week.', tense: 'future-going-to', fr: 'Nous allons visiter Rome la semaine prochaine.',
+    parts: [['We', 'sujet', 'nous'], ['are going to', 'auxiliaire', 'be + going to'], ['visit', 'verbe', 'base verbale'], ['Rome', 'complement', 'Rome'], ['next week', 'temps', 'la semaine prochaine']],
+    explain: 'be going to : un projet déjà décidé avant de parler.' },
+  { id: 'd-not-finished-yet', en: 'They haven’t finished yet.', tense: 'present-perfect', fr: 'Ils n’ont pas encore fini.',
+    parts: [['They', 'sujet', 'ils'], ['haven’t', 'negation', 'have + not'], ['finished', 'verbe', 'participe passé'], ['yet', 'temps', 'pas encore (en négation)']],
+    explain: 'Present perfect négatif avec yet : l’action est attendue mais n’est pas encore faite.' },
+  { id: 'd-could-you', en: 'Could you send me the report?', tense: null, fr: 'Pourrais-tu m’envoyer le rapport ?',
+    parts: [['Could', 'question', 'modal de demande polie'], ['you', 'sujet', 'tu / vous'], ['send', 'verbe', 'base verbale'], ['me', 'complement', 'me'], ['the report', 'complement', 'le rapport']],
+    explain: 'Could + sujet + verbe à la base : une demande polie. Après un modal, jamais de « to » ni de -s.' }
+];
+export const DECODE_BY_ID = Object.fromEntries(DECODE.map(d => [d.id, d]));
+export const ROLE_LABEL = { sujet: 'Sujet', auxiliaire: 'Auxiliaire', verbe: 'Verbe', complement: 'Complément', temps: 'Marqueur de temps', negation: 'Négation', question: 'Structure de question' };
+
+/* Recherche d’un mot dans le Codex (forme exacte, formes fléchies, verbes irréguliers) */
+export function lookupWord(raw) {
+  const w = String(raw || '').toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z' -]/g, '').trim();
+  if (!w) return null;
+  for (const v of VOCAB) if (v.en.toLowerCase() === w || v.forms.includes(w)) return { kind: 'vocab', item: v };
+  for (const v of VOCAB) if (v.en.toLowerCase().split(' ')[0] === w && !v.en.includes(' ')) return { kind: 'vocab', item: v };
+  for (const r of IRREGULAR) {
+    const forms = [r.inf, ...r.past.split(/[ /()«»]+/), ...r.pp.split(/[ /()«»]+/)].filter(Boolean);
+    if (forms.includes(w)) return { kind: 'irregular', item: r };
+  }
+  for (const m of MARKERS) if (m.en === w) return { kind: 'marker', item: m };
+  const AUXF = { is: 'be', am: 'be', are: 'be', was: 'be', were: 'be', been: 'be', does: 'do', did: 'do', has: 'have', had: 'have', won: 'will', "won't": 'will', "can't": 'can', cannot: 'can', "couldn't": 'could', "shouldn't": 'should', "mustn't": 'must' };
+  const base = AUXF[w] || w;
+  for (const a of AUX) if (a.en === base) return { kind: 'aux', item: a };
+  const stem = w.replace(/(ing|ed|es|s)$/, '');
+  if (stem !== w && stem.length > 2) for (const v of VOCAB) if (v.en.toLowerCase() === stem || v.en.toLowerCase() === stem + 'e') return { kind: 'vocab', item: v };
+  return null;
+}
