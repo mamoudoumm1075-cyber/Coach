@@ -85,7 +85,9 @@ function header() {
 function render() {
   if (!R) return;
   if (R.i >= R.cards.length) return finish('done');
-  const card = R.cards[R.i];
+  let card = R.cards[R.i];
+  /* filet de sécurité : un exercice raté arrivé comme carte de révision est rejoué comme exercice */
+  if (card.kind === 'recall' && card.id.startsWith('q:') && ITEMS[card.id.slice(2)]) card = R.cards[R.i] = { kind: 'item', item: ITEMS[card.id.slice(2)] };
   R.cur = { card, answered: false };
   /* décor : illustration du dialogue, sinon celle de la mission ou du boss */
   const bg = card.kind === 'dialogue' ? (DIALOGUE_ART[card.id] || R.opts.bg) : R.opts.bg;

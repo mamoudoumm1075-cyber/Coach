@@ -161,3 +161,21 @@ test('Tour des examens : 30 questions, ordre du vrai test, difficulté qui monte
   const again = C.arenaItems(s, ARENA[2], 30);
   assert.ok(again.filter(i => s.arena.last.includes(i.id)).length < 30, 'le test suivant change de questions');
 });
+
+test('session du jour : un exercice raté n’apparaît jamais comme une carte de vocabulaire', async () => {
+  const C = await import('../js/content.js');
+  const { newState } = await import('../js/logic.js');
+  const s = newState();
+  s.srs['q:t5-1'] = { box: 1, due: '2000-01-01' };
+  s.srs['q:t2-3'] = { box: 1, due: '2000-01-01' };
+  s.srs['v:busy'] = { box: 1, due: '2000-01-01' };
+  s.srs['i:irr-go'] = { box: 1, due: '2000-01-01' };
+  for (const cards of [C.recallCards(s), C.dailyCards(s), C.reviewCards(s), C.targetedCards(s).cards]) {
+    for (const c of cards) {
+      if (c.kind !== 'recall') continue;
+      assert.ok(!c.id.startsWith('q:'), 'carte de révision sur un exercice : ' + c.id);
+      assert.ok(C.srsKnown(s, c.id), 'carte de révision introuvable : ' + c.id);
+    }
+  }
+  assert.ok(C.recallCards(s).some(c => c.kind === 'item' && c.item.id === 't5-1'), 'l’exercice raté est rejoué comme exercice');
+});

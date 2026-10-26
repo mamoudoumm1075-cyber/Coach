@@ -179,8 +179,10 @@ export function srsKnown(S, id) {
   return id.startsWith('v:') ? !!VOCAB_BY_ID[k] : id.startsWith('i:') ? !!IRR_BY_ID[k] : id.startsWith('c:') ? S.carnet.some(c => c.id === k) : id.startsWith('q:') ? !!ITEMS[k] : false;
 }
 export function recallCards(S, max = 5, min = 3) {
-  const due = srsDue(S, today()).filter(id => srsKnown(S, id)).slice(0, max);
-  const cards = due.map(id => ({ kind: 'recall', id }));
+  const all = srsDue(S, today()).filter(id => srsKnown(S, id));
+  /* mots, verbes et carnet en cartes « Tu le savais ? » ; les exercices ratés (q:) se rejouent comme des exercices */
+  const cards = all.filter(id => !id.startsWith('q:')).slice(0, max).map(id => ({ kind: 'recall', id }));
+  for (const id of all.filter(x => x.startsWith('q:')).slice(0, 2)) cards.push({ kind: 'item', item: ITEMS[id.slice(2)] });
   if (cards.length < min) {
     const ch = currentChapter(S);
     const cats = ch.n <= 1 ? ['quotidien', 'conversation'] : ch.n === 2 ? ['achats', 'transports', 'conversation'] : ch.n === 4 ? ['voyages', 'transports'] : ['travail', 'toeic', 'reunions', 'emails'];
