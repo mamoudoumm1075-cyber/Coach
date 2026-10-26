@@ -47,9 +47,15 @@ function audioCtx() {
   if (!actx) { const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext); if (AC) try { actx = new AC(); } catch (e) { actx = null; } }
   return actx;
 }
-function setPlayback() {
-  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) { /* non pris en charge */ }
+/* Mode « lecture » (son malgré le mode silencieux) ; pendant le micro, mode « lecture et enregistrement »,
+   sinon iOS refuse le micro (« Aucun micro détecté ») */
+let micActive = false;
+function setSession(type) {
+  try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch (e) { /* non pris en charge */ }
 }
+function setPlayback() { if (!micActive) setSession('playback'); }
+function micStart(type = 'play-and-record') { micActive = true; setSession(type); }
+function micEnd() { micActive = false; setPlayback(); }
 export function unlockAudio() {
   setPlayback();
   const c = audioCtx();
@@ -216,10 +222,14 @@ export function listen({ lang = 'en-US', maxMs = 15000, onPhase } = {}) {
       throw e;
     });
   }
-  return browserListen(lang, maxMs);
+  /* iOS : « audio-capture » si la session audio n’a pas encore basculé ; on réessaie une fois en mode automatique */
+  return browserListen(lang, maxMs).catch(e => {
+    if (e.message !== 'audio-capture') throw e;
+    return new Promise(r => setTimeout(r, 300)).then(() => browserListen(lang, maxMs, 'auto'));
+  });
 }
 
-function browserListen(lang, maxMs) {
+function browserListen(lang, maxMs, session = 'play-and-record') {
   return new Promise((resolve, reject) => {
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!R) return reject(new Error('unavailable'));
@@ -229,20 +239,30 @@ function browserListen(lang, maxMs) {
     rec.maxAlternatives = 1;
     rec.continuous = false;
     let text = '', done = false;
-    const finish = (err) => { if (done) return; done = true; clearTimeout(timer); current = null; setPlayback(); err ? reject(err) : resolve(text.trim()); };
+    const finish = (err) => { if (done) return; done = true; clearTimeout(timer); current = null; micEnd(); err ? reject(err) : resolve(text.trim()); };
     rec.onresult = e => { for (const r of e.results) text += ' ' + r[0].transcript; };
     rec.onerror = e => finish(new Error(e.error || 'error'));
     rec.onend = () => finish(text.trim() ? null : new Error('no-speech'));
     const timer = setTimeout(() => { try { rec.stop(); } catch (e) { /* rien */ } }, maxMs);
     current = () => rec.stop();
+    micStart(session);
     try { rec.start(); } catch (e) { finish(e); }
   });
 }
 
 async function record({ maxMs, onPhase }) {
   let stream;
+  micStart();
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch (e) { throw new Error(e && e.name === 'NotAllowedError' ? 'not-allowed' : 'audio-capture'); }
+  catch (e) {
+    /* deuxième essai : iOS peut refuser tant que la session audio n’a pas basculé */
+    try { await new Promise(r => setTimeout(r, 300)); setSession('auto'); stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e2) {
+      micEnd();
+      const n = (e2 && e2.name) || (e && e.name);
+      throw new Error(n === 'NotAllowedError' || n === 'SecurityError' ? 'not-allowed' : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'audio-capture' : 'mic-busy');
+    }
+  }
   const rec = new MediaRecorder(stream);
   const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -280,7 +300,7 @@ async function record({ maxMs, onPhase }) {
   current = null;
   stream.getTracks().forEach(tr => tr.stop());
   /* iPhone : après le micro, le son repasserait par l’écouteur du haut ; on revient en mode lecture */
-  setPlayback();
+  micEnd();
   try { if (node) node.disconnect(); } catch (e) { /* rien */ }
   /* arrêt manuel : on envoie quand même, la transcription dira s’il y avait des mots */
   if (an && !heard && !manual) throw new Error('no-speech');
@@ -300,6 +320,7 @@ export const STT_ERRORS = {
   'no-speech': 'Je n’ai rien entendu. Rapproche-toi du micro et réessaie.',
   'network': 'La reconnaissance vocale a besoin d’internet. Réponds par écrit.',
   'audio-capture': 'Aucun micro détecté. Réponds par écrit.',
+  'mic-busy': 'Le micro n’a pas pu démarrer (il est peut-être utilisé par une autre appli). Réessaie, ou réponds par écrit.',
   'unavailable': 'La reconnaissance vocale n’existe pas dans ce navigateur. Réponds par écrit.',
   'server': 'Le serveur voix n’a pas répondu (ou la limite du jour est atteinte). Réessaie : l’appli repasse sur le micro du navigateur s’il existe, sinon réponds par écrit.'
 };

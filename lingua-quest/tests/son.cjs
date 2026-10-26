@@ -22,6 +22,22 @@ const INIT = () => {
       setTimeout(() => { u.onstart && u.onstart(); setTimeout(() => u.onend && u.onend(), 30); }, 10);
     } };
   Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+  /* micro façon iPhone : refusé (« audio-capture ») tant que la session audio est en mode « playback » */
+  const session = { type: 'auto' };
+  Object.defineProperty(navigator, 'audioSession', { value: session, configurable: true });
+  window.__son.mic = [];
+  class Rec {
+    start() {
+      const t = session.type; window.__son.mic.push(t);
+      setTimeout(() => {
+        if (t === 'playback') { this.onerror && this.onerror({ error: 'audio-capture' }); this.onend && this.onend(); return; }
+        this.onresult && this.onresult({ results: [[{ transcript: window.__son.say || 'hello' }]] });
+        this.onend && this.onend();
+      }, 50);
+    }
+    stop() {}
+  }
+  window.SpeechRecognition = window.webkitSpeechRecognition = Rec;
 };
 
 (async () => {
@@ -99,6 +115,32 @@ const INIT = () => {
   for (let k = 0; k < 2; k++) { await page.click('#play [data-act="dlgNext"]'); await page.waitForTimeout(400); }
   check((await son()).said.length >= 3, 'dialogue : les répliques sont lues (' + (await son()).said.length + ')');
   await page.click('#play [data-act="quit"]');
+
+  /* micro : la session audio bascule en enregistrement, la phrase est reconnue, puis retour en lecture */
+  await page.goto((SINGLE ? 'file://' + SINGLE : BASE) + '#/oral');
+  await page.click('[data-act="oralRun"]');
+  let speak = null;
+  for (let k = 0; k < 20 && !speak; k++) {
+    const c = await page.evaluate(() => { const c = window.__LQ.current(); return c ? JSON.parse(JSON.stringify(c)) : null; });
+    if (c && c.kind === 'item' && c.item.type === 'speak') { speak = c.item; break; }
+    const b = page.locator('#play [data-act="next"], #play [data-act="continue"]').first();
+    if (await b.count()) { await b.click(); continue; }
+    const opt = page.locator('#play [data-act="pick"]').first();
+    if (await opt.count()) { await opt.click(); continue; }
+    await page.waitForTimeout(100);
+  }
+  check(!!speak, 'séance orale : un exercice de prononciation apparaît');
+  if (speak) {
+    await page.evaluate(t => { window.__son.say = t; }, speak.target || speak.model.split(' / ')[0]);
+    await page.tap('#play [data-act="mic"]');
+    await page.waitForTimeout(800);
+    const s1 = await son();
+    const msg = await page.textContent('#micState');
+    check(s1.mic[0] === 'play-and-record', 'micro : la session audio passe en enregistrement avant d’écouter (' + s1.mic.join(', ') + ')');
+    check(!/Aucun micro/.test(msg) && await page.locator('#play [data-act="continue"], #play [data-act="endNow"]').count() > 0, 'micro : la phrase est reconnue et corrigée' + (msg ? ' (' + msg + ')' : ''));
+    check(await page.evaluate(() => navigator.audioSession.type) === 'playback', 'micro : retour au mode lecture après l’écoute');
+  }
+  await page.click('#play [data-act="quit"]').catch(() => {});
 
   /* bouton « Tester le son » du profil */
   await page.goto((SINGLE ? 'file://' + SINGLE : BASE) + '#/profile');
