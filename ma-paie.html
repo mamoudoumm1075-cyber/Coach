@@ -1111,16 +1111,17 @@ function applyTheme(){
 applyTheme();
 
 /* ---------- Paie ----------
-   Paramètres relevés sur la fiche de septembre 2026 (apprenti BTP). Ils ne sont PAS modifiés ici :
-   ce sont des hypothèses à confirmer sur une vraie fiche (voir PAIE_HYP). Estimation, pas de l'argent reçu. */
-const PAIE={base:1493.65,panierSoumis:1.45,trajet:2.13,panierNet:10.40,tauxAbs:9.699,hJour:7,cotisRef:172.70,brutRef:1382.92,tauxMarg:0.217,marge:0.03};
+   Paramètres relevés sur les fiches de septembre et octobre 2026 (apprenti BTP, ISERBA).
+   Octobre (20 j, 0 absence) : brut 1 565,25 €, cotisations 212,60 €, paniers 208 €, prime de transport 16,39 € → net 1 577,04 €.
+   Cotisations : droite passant par septembre (1 382,92 → 172,70) et octobre (1 565,25 → 212,60). Estimation, pas de l'argent reçu. */
+const PAIE={base:1493.65,panierSoumis:1.45,trajet:2.13,panierNet:10.40,transport:16.39,tauxAbs:9.699,hJour:7,cotisRef:212.60,brutRef:1565.25,tauxMarg:0.2188,marge:0.03};
 function estimeNet(j,abs){
   j=Math.max(0,num(j));abs=Math.max(0,num(abs));
   const brut=Math.max(0,PAIE.base+j*(PAIE.panierSoumis+PAIE.trajet)-abs*PAIE.hJour*PAIE.tauxAbs);
   const cotis=Math.max(0,PAIE.cotisRef+PAIE.tauxMarg*(brut-PAIE.brutRef));
   const paniers=j*PAIE.panierNet;
-  const net=Math.max(0,Math.round((brut-cotis+paniers)*100)/100);
-  return{brut,cotis,paniers,net,min:Math.round(net*(1-PAIE.marge)),max:Math.round(net*(1+PAIE.marge))};
+  const net=Math.max(0,Math.round((brut-cotis+paniers+PAIE.transport)*100)/100);
+  return{brut,cotis,paniers,transport:PAIE.transport,net,min:Math.round(net*(1-PAIE.marge)),max:Math.round(net*(1+PAIE.marge))};
 }
 const fr=(v,d)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d??3});
 const PAIE_HYP=[
@@ -1129,7 +1130,8 @@ const PAIE_HYP=[
   `Par jour en entreprise : panier non soumis ${eur(PAIE.panierNet)}, ajouté au net sans cotisations.`,
   `Absence : retenue de ${PAIE.hJour} h × ${fr(PAIE.tauxAbs)} €/h = ${eur(PAIE.hJour*PAIE.tauxAbs)} par jour. Ce taux est différent du salaire de base ÷ 151,67 h (${fr(PAIE.base/151.67)} €/h) : vérifie la méthode de retenue sur ta fiche.`,
   `Cotisations : ${eur(PAIE.cotisRef)} pour un brut de ${eur(PAIE.brutRef)}, puis ${fr(PAIE.tauxMarg*100,1)} % de chaque euro de brut en plus ou en moins. C’est une approximation linéaire : les exonérations des apprentis (seuils liés au SMIC) rendent le vrai calcul non linéaire.`,
-  `Le brut de référence (${eur(PAIE.brutRef)}) est plus bas que le salaire de base (${eur(PAIE.base)}) : la fiche de septembre comportait sans doute une absence ou un prorata. À confirmer.`,
+  `Chaque mois : prime de transport ${eur(PAIE.transport)}, ajoutée au net sans cotisations (50 % de ton abonnement Imagine R).`,
+  `Calé sur ta fiche d’octobre 2026 (20 jours, aucune absence) : estimation à 33 centimes près du net payé (1 577,04 €).`,
   'Pas de prélèvement à la source déduit (souvent nul pour un apprenti sous le plafond d’exonération, à vérifier).',
   'Jours ouvrés = du lundi au vendredi, sans les jours fériés : c’est un plafond, pas ton planning réel (jours d’école compris).',
   `Fourchette affichée : ±${fr(PAIE.marge*100,0)} %. C’est une marge choisie arbitrairement, pas une garantie.`
@@ -1647,7 +1649,7 @@ function renderMonth(m,c){
   $('fJours').classList.toggle('bad',!!fieldErr.fJours||c.joursKo);$('fAbs').classList.toggle('bad',!!fieldErr.fAbs||c.joursKo);$('fRecu').classList.toggle('bad',!!fieldErr.fRecu);
   const ecart=c.recu?r2(m.netRecu-c.est.net):0;
   $('estCalc').innerHTML=`<b>Salaire estimé : ${eur(c.est.net)}</b> (entre ${eur(c.est.min)} et ${eur(c.est.max)})<br>`
-    +`Brut ${eur(c.est.brut)} − cotisations ${eur(c.est.cotis)} + paniers non soumis ${eur(c.est.paniers)}<br>`
+    +`Brut ${eur(c.est.brut)} − cotisations ${eur(c.est.cotis)} + paniers non soumis ${eur(c.est.paniers)} + prime de transport ${eur(c.est.transport)}<br>`
     +`Pour ${fr(c.jEff,1)} j en entreprise et ${fr(c.absEff,1)} j d’absence (${c.wd} jours ouvrés dans le mois).<br>`
     +(c.recu?`<b>Salaire reçu : ${eur(m.netRecu)}</b>, écart ${ecart>=0?'+':'−'}${eur(Math.abs(ecart))} avec l’estimation`+(c.est.net>0?` (${ecart>=0?'+':'−'}${fr(Math.abs(ecart/c.est.net*100),1)} %)`:'')+'. C’est le montant reçu qui est utilisé partout.'
       :'<b>Salaire reçu : pas encore saisi.</b> L’estimation est utilisée en attendant, signalée par « ≈ ».')
@@ -2491,8 +2493,8 @@ function buildXlsx(){
     ['Épargne déjà constituée avant le suivi',S.epInitial,XS.inEur,null,'Compte dans l’épargne totale.'],
     ['Objectif d’épargne par mois',S.objMensuel,XS.inEur,null,'Valeur par défaut des nouveaux mois.'],
     ['Début de l’épargne (AAAA-MM)',S.epStart,XS.in,null,'Texte au format 2026-11.'],
-    ['— Paie (fiche de septembre 2026, à vérifier) —','',XS.b,null,''],
-    ['Salaire de base brut',PAIE.base,XS.inEur,null,'Fiche de paie de septembre 2026.'],
+    ['— Paie (fiches de septembre et octobre 2026) —','',XS.b,null,''],
+    ['Salaire de base brut',PAIE.base,XS.inEur,null,'Fiches de paie de septembre et octobre 2026.'],
     ['Part soumise du panier / jour',PAIE.panierSoumis,XS.inEur,null,'À confirmer.'],
     ['Indemnité de trajet / jour',PAIE.trajet,XS.inEur,null,'À confirmer.'],
     ['Panier non soumis / jour',PAIE.panierNet,XS.inEur,null,'Ajouté au net, sans cotisations.'],
@@ -2500,7 +2502,8 @@ function buildXlsx(){
     ['Heures par jour d’absence',PAIE.hJour,XS.inNum,null,''],
     ['Cotisations de référence',PAIE.cotisRef,XS.inEur,null,'Pour le brut de référence ci-dessous.'],
     ['Brut de référence',PAIE.brutRef,XS.inEur,null,'Plus bas que le salaire de base : à confirmer.'],
-    ['Taux marginal de cotisations',PAIE.tauxMarg,XS.pct,null,'Approximation linéaire.']];
+    ['Taux marginal de cotisations',PAIE.tauxMarg,XS.pct,null,'Approximation linéaire.'],
+    ['Prime de transport (net / mois)',PAIE.transport,XS.inEur,null,'50 % de l’abonnement Imagine R, sans cotisations.']];
   prm.forEach(([l,v,s,f,n],i)=>{const r=4+i;Pa.set('A'+r,l,i===4?XS.b:0);Pa.set('B'+r,v,s,f);Pa.set('C'+r,n,XS.note)});
   Pa.set('A20','Catégories de dépenses',XS.sec);Pa.header(21,['Catégorie','Budget / mois']);
   cats.slice(0,17).forEach((k,i)=>{Pa.set('A'+(22+i),k.n,XS.in);Pa.set('B'+(22+i),S.budgets[k.id]||'',XS.inEur)});
@@ -2562,7 +2565,7 @@ function buildXlsx(){
     Mo.set('A'+r,m.id,XS.in);Mo.set('B'+r,c.recu?m.netRecu:'',XS.inEur);Mo.set('C'+r,c.jEff,XS.inNum);Mo.set('D'+r,c.absEff,XS.inNum);Mo.set('E'+r,m.epPrevue,XS.inEur);
     Mo.set('F'+r,xnum(c.est.brut),XS.eur,g(`MAX(0,${PR(9)}+C${r}*(${PR(10)}+${PR(11)})-D${r}*${PR(14)}*${PR(13)})`));
     Mo.set('G'+r,xnum(c.est.cotis),XS.eur,g(`MAX(0,${PR(15)}+${PR(17)}*(F${r}-${PR(16)}))`));
-    Mo.set('H'+r,c.est.net,XS.eur,g(`MAX(0,ROUND(F${r}-G${r}+C${r}*${PR(12)},2))`));
+    Mo.set('H'+r,c.est.net,XS.eur,g(`MAX(0,ROUND(F${r}-G${r}+C${r}*${PR(12)}+${PR(18)},2))`));
     Mo.set('I'+r,c.net,XS.eur,g(`IF(B${r}="",H${r},B${r})`));
     Mo.set('J'+r,c.recu?'reçu':'≈ estimé',0,g(`IF(B${r}="","≈ estimé","reçu")`));
     Mo.set('K'+r,c.chTot,XS.eur,g(`SUMIFS(${CR('C')},${CR('A')},A${r})`));
