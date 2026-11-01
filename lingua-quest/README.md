@@ -35,12 +35,13 @@ Mise à jour des fichiers : changer `VERSION` dans `sw.js`, et ajouter tout nouv
 
 ```
 cd lingua-quest
-npm test                                   # règles du jeu, contenu, serveur voix (36 tests)
+npm test                                   # règles du jeu, contenu, serveur voix (40 tests)
 python3 -m http.server 8765 &              # puis, avec Playwright installé :
 node tests/e2e.cjs                         # parcours complet en taille téléphone, captures dans .captures/
 node tests/audit.cjs                       # sauvegarde abîmée, campagne des 6 chapitres, interruptions, export/import
 node tests/horsligne.cjs                   # service worker : fichiers en cache, appli jouable sans réseau
-node tests/son.cjs [fichier-unique.html]   # bruitages, voix, dialogues, son bloqué
+node tests/son.cjs [fichier-unique.html]   # bruitages, voix, dialogues, son bloqué, micro façon iPhone
+node tests/robustesse.cjs                  # double appui, voix qui se superposent, serveur muet, son suspendu, veille, micro bloqué, deux onglets, import
 ```
 
 Fichier unique : `python3 outils/fichier_unique.py` (après chaque modification) fabrique `lingua-quest-complet.html` et refuse de l’écrire s’il manque une image.

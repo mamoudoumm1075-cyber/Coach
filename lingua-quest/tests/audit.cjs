@@ -61,6 +61,7 @@ const ROUTES = ['home', 'world', 'chapter/1', 'chapter/6', 'quests', 'learn', 'a
 (async () => {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, acceptDownloads: true });
+  await context.addInitScript(() => { window.__LQ_GUARD_MS = 0; }); /* clics de test très rapides : pas d’anti double appui */
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message + ' | ' + (e.stack || '').split('\n').slice(1, 3).join(' ')));

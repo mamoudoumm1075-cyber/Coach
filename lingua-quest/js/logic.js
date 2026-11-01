@@ -137,6 +137,16 @@ export function sanitize(o) {
   return s;
 }
 
+/* Stockage plein : allège le détail de l’historique (anciennes erreurs, détail des vieux tests).
+   Rien de ce qui est compté ou affiché comme progression n’est retiré (XP, quêtes, révisions, carnet, jours, séances).
+   Renvoie true si quelque chose a été allégé. */
+export function compactState(s) {
+  let changed = false;
+  if (s.errors.length > 60) { s.errors.splice(0, s.errors.length - 60); changed = true; }
+  for (const t of s.toeic.tests.slice(0, -10)) if (t.parts && Object.keys(t.parts).length) { t.parts = {}; changed = true; }
+  return changed;
+}
+
 /* ---------- Niveaux RPG (indépendants des compétences réelles) ---------- */
 export function xpForLevel(n) { return n <= 1 ? 0 : Math.round(80 * Math.pow(n - 1, 1.5)); }
 export function levelInfo(xp) {

@@ -13,12 +13,13 @@ import { VOCAB_BY_ID, PREP_ITEMS, CATEGORIES } from '../data/codex.js';
 
 /* ---------- Sauvegarde (jamais d’écrasement d’une donnée illisible) ---------- */
 const KEY = 'lingua-quest-v1', KEY_BAD = 'lingua-quest-illisible';
-let lockSave = false;
+let lockSave = false, lastSaved = null;
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
 function load() {
   const raw = lsGet(KEY);
   if (raw == null) return L.newState();
+  lastSaved = raw;
   try { return L.sanitize(JSON.parse(raw)); }
   catch (e) {
     lockSave = true;
@@ -29,7 +30,13 @@ function load() {
 let saveWarned = false;
 function save() {
   if (lockSave) return;
-  if (!lsSet(KEY, JSON.stringify(ctx.S)) && !saveWarned) { saveWarned = true; toast('Enregistrement impossible sur cet appareil (mode privé ?). Exporte une sauvegarde dans Profil.'); }
+  const str = JSON.stringify(ctx.S);
+  /* rien n’a changé depuis le dernier enregistrement : on n’écrit pas */
+  if (str === lastSaved) return;
+  if (lsSet(KEY, str)) { lastSaved = str; return; }
+  /* stockage plein : on allège l’historique détaillé (jamais l’XP, les quêtes, les révisions ni le carnet) et on réessaie */
+  if (L.compactState(ctx.S)) { const s2 = JSON.stringify(ctx.S); if (lsSet(KEY, s2)) { lastSaved = s2; return; } }
+  if (!saveWarned) { saveWarned = true; toast('Enregistrement impossible sur cet appareil (mode privé ou stockage plein ?). Exporte une sauvegarde dans Profil.'); }
 }
 
 ctx.S = load();
@@ -1045,7 +1052,7 @@ function onAction(act, b) {
     }
     case 'replayDialogue': return startRun([{ kind: 'dialogue', id: b.dataset.id }], { mode: 'replay', title: 'Dialogue', onDone: () => ({ title: 'Scène rejouée', next: { label: 'Autres dialogues', route: 'dialogues' } }) });
     case 'oralRun': return simpleRun(C.oralItems(s, 6).map(item => ({ kind: 'item', item })), 'Séance orale', 'oral');
-    case 'testVoice': sfx('ok'); return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate }).then(ok => toast(ok === true ? 'Son : OK, la voix a bien été lue.' : SOUND_HELP));
+    case 'testVoice': sfx('ok'); return speak('Hello! Welcome to Halden City.', { rate: s.settings.rate }).then(ok => { if (ok !== null) toast(ok === true ? 'Son : OK, la voix a bien été lue.' : SOUND_HELP); });
     case 'toeicPart': { const p = +b.dataset.p; return simpleRun(C.toeicItems(s, [p], 5).map(item => ({ kind: 'item', item })), PARTS[p].name, 'toeic'); }
     case 'toeicTest': return runToeicTest(b.dataset.k || 'mini');
     case 'drill': return drillPart(+b.dataset.p);
@@ -1144,8 +1151,9 @@ function importFile(input) {
     try { n = L.sanitize(JSON.parse(String(r.result || ''))); } catch (e) { toast('Ce fichier n’est pas une sauvegarde Lingua Quest. Rien n’a changé.'); return; }
     if (!n.hero) { toast('Cette sauvegarde ne contient pas de héros. Rien n’a changé.'); return; }
     if (S().hero && !confirm('Remplacer ta progression actuelle par cette sauvegarde (' + n.hero.name + ', ' + n.xp + ' XP) ?')) return;
-    /* le code secret n’est pas exporté : on garde celui de cet appareil */
-    if (!n.settings.voiceCode && S().settings.voiceCode) { n.settings.voiceUrl = n.settings.voiceUrl || S().settings.voiceUrl; n.settings.voiceCode = S().settings.voiceCode; }
+    /* le code secret n’est pas exporté : on garde le serveur de cet appareil (adresse ET code ensemble,
+       pour ne jamais envoyer ce code à une adresse venue d’un fichier) */
+    if (!n.settings.voiceCode) { n.settings.voiceUrl = S().settings.voiceUrl; n.settings.voiceCode = S().settings.voiceCode; }
     ctx.S = n; lockSave = false; save(); applyTheme(); toast('Sauvegarde restaurée.'); ctx.go('home'); render();
   };
   r.onerror = () => toast('Impossible de lire ce fichier.');
@@ -1166,7 +1174,19 @@ document.getElementById('app').addEventListener('click', e => {
 document.addEventListener('change', e => { if (e.target.matches('input[data-act="importFile"]')) importFile(e.target); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('sheet').hidden) closeSheet(); });
 window.addEventListener('hashchange', () => { closeSheet(); render(); });
-matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyTheme);
+/* anciens Safari (iOS 13) : addListener au lieu d’addEventListener */
+try { const mq = matchMedia('(prefers-color-scheme: light)'); mq.addEventListener ? mq.addEventListener('change', applyTheme) : mq.addListener(applyTheme); } catch (e) { /* rien */ }
+/* appli fermée brutalement ou mise en arrière-plan : dernier enregistrement */
+window.addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+/* appli ouverte dans deux onglets : on recharge la progression enregistrée par l’autre, au lieu de l’écraser */
+window.addEventListener('storage', e => {
+  if (e.key !== KEY || e.newValue == null || lockSave) return;
+  let n;
+  try { n = L.sanitize(JSON.parse(e.newValue)); } catch (x) { return; }
+  if (isRunning()) { toast('Ta progression a changé dans un autre onglet : termine cette partie ici, ou ferme l’un des deux.'); return; }
+  ctx.S = n; lastSaved = JSON.stringify(n); applyTheme(); render();
+});
 applyTheme();
 checkUnlocks();
 render();

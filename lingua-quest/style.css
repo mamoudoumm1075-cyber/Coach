@@ -94,7 +94,7 @@ p { margin: 0; }
 .btn.file { cursor: pointer; }
 .icon-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); display: inline-flex; align-items: center; justify-content: center; flex: none; text-decoration: none; -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 .icon-btn.glass { background: rgba(14,11,24,.55); border-color: rgba(255,255,255,.16); color: #F8F4EF; }
-.mini { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: .84rem; font-weight: 600; }
+.mini { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: .84rem; font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 999px; font-size: .84rem; font-weight: 700; background: rgba(14,11,24,.6); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 .pill.gold { color: #FFD166; border-color: rgba(255,209,102,.45); }

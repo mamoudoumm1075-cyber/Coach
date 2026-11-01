@@ -73,6 +73,7 @@ const noOverflow = async (page, label) => {
 (async () => {
   const browser = await chromium.launch();
   const ctxB = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  await ctxB.addInitScript(() => { window.__LQ_GUARD_MS = 0; }); /* clics de test très rapides : pas d’anti double appui */
   const page = await ctxB.newPage();
   page.on('pageerror', e => problems.push('Erreur JS : ' + e.message + ' @ ' + (e.stack || '').split('\n').slice(0, 3).join(' | ')));
   page.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_|net::/.test(m.text())) problems.push('Console : ' + m.text()); });
