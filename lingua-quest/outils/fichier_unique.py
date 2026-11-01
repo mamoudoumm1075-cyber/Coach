@@ -37,6 +37,11 @@ html = html.replace('<script type="module" src="js/app.js"></script>', '<script>
 left = sorted(set(re.findall(r'img/[a-z0-9-]+\.webp', html)))
 if left:
     sys.exit('Images non intégrées : ' + ', '.join(left))
+# le fichier doit s’ouvrir sans serveur : aucun script, style ou son local ne doit rester appelé
+tags = re.sub(r'<script>.*?</script>|<style>.*?</style>', '', html, flags=re.S)
+local = re.findall(r'<(?:script|link|img|audio|source)\b[^>]*\b(?:src|href)="(?!https?:|data:)([^"]+)"', tags)
+if local or len(sons) != len(os.listdir(os.path.join(ROOT, 'sons'))):
+    sys.exit('Ressources locales non intégrées : ' + ', '.join(local or ['sons']))
 with open(OUT, 'w', encoding='utf8') as f:
     f.write(html)
 print('%s : %d Ko' % (os.path.basename(OUT), os.path.getsize(OUT) // 1024))

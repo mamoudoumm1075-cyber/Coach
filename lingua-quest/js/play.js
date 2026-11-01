@@ -286,10 +286,10 @@ function bindCard(card) {
     handle(b.dataset.act, b, card);
   };
   const inp = el.querySelector('#typeIn');
-  /* clavier : Entrée valide, puis Entrée passe à la suite */
-  if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') handle(R.cur.answered ? 'continue' : 'checkType', null, card); }); setTimeout(() => inp.focus(), 50); }
+  /* clavier : Entrée valide (sans activer aussi le bouton qui reçoit le focus) ; Entrée suivante : passe à la suite */
+  if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !R.cur.answered) { e.preventDefault(); R.cur.kb = true; handle('checkType', null, card); } }); setTimeout(() => inp.focus(), 50); }
   const sIn = el.querySelector('#speakIn');
-  if (sIn) sIn.addEventListener('keydown', e => { if (e.key === 'Enter') handle(R.cur.answered ? 'continue' : 'speakText', null, card); });
+  if (sIn) sIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !R.cur.answered) { e.preventDefault(); R.cur.kb = true; handle('speakText', null, card); } });
   if (card.kind === 'item' && card.item.type === 'listen' && !R.cur.textMode) {
     const cur = R.cur;
     /* lecture automatique, seulement si la question est toujours affichée et sans réponse */
@@ -496,6 +496,8 @@ function resolveItem(it, ok, given, expected, extra = {}) {
   const isLast = R.i >= R.cards.length - 1;
   const bossDead = R.opts.boss && R.hearts <= 0;
   document.getElementById('runFoot').innerHTML = bossDead ? `<button class="btn primary" data-act="endNow">Voir le bilan</button>` : `<button class="btn primary" data-act="continue">${isLast ? 'Terminer' : 'Continuer'}</button>`;
+  /* réponse validée au clavier : le champ est désactivé, Entrée doit pouvoir passer à la suite */
+  if (R.cur.kb) document.querySelector('#runFoot .btn').focus({ preventScroll: true });
   document.getElementById('fb').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
