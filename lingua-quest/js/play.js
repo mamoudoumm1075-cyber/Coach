@@ -88,7 +88,7 @@ function render() {
   let card = R.cards[R.i];
   /* filet de sécurité : un exercice raté arrivé comme carte de révision est rejoué comme exercice */
   if (card.kind === 'recall' && card.id.startsWith('q:') && ITEMS[card.id.slice(2)]) card = R.cards[R.i] = { kind: 'item', item: ITEMS[card.id.slice(2)] };
-  R.cur = { card, answered: false };
+  R.cur = { card, answered: false, at: Date.now() };
   /* décor : illustration du dialogue, sinon celle de la mission ou du boss */
   const bg = card.kind === 'dialogue' ? (DIALOGUE_ART[card.id] || R.opts.bg) : R.opts.bg;
   const el = layer();
@@ -286,7 +286,10 @@ function bindCard(card) {
     handle(b.dataset.act, b, card);
   };
   const inp = el.querySelector('#typeIn');
-  if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') handle('checkType', null, card); }); setTimeout(() => inp.focus(), 50); }
+  /* clavier : Entrée valide, puis Entrée passe à la suite */
+  if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') handle(R.cur.answered ? 'continue' : 'checkType', null, card); }); setTimeout(() => inp.focus(), 50); }
+  const sIn = el.querySelector('#speakIn');
+  if (sIn) sIn.addEventListener('keydown', e => { if (e.key === 'Enter') handle(R.cur.answered ? 'continue' : 'speakText', null, card); });
   if (card.kind === 'item' && card.item.type === 'listen' && !R.cur.textMode) {
     const cur = R.cur;
     /* lecture automatique, seulement si la question est toujours affichée et sans réponse */
@@ -300,8 +303,15 @@ function bindCard(card) {
   }
 }
 
+/* Boutons qui font avancer : un double appui (fréquent au doigt) ne doit pas sauter la carte suivante */
+const ADVANCE = ['next', 'continue', 'dlgNext', 'endNow'];
 function handle(act, b, card) {
   const it = card.item;
+  if (ADVANCE.includes(act)) {
+    /* (les tests automatisés, qui cliquent très vite, peuvent régler ce délai via window.__LQ_GUARD_MS) */
+    if (Date.now() - (R.cur.at || 0) < (window.__LQ_GUARD_MS ?? 350)) return;
+    R.cur.at = Date.now();
+  }
   switch (act) {
     case 'quit':
       /* boss déjà abattu : quitter garde la victoire */
@@ -337,6 +347,7 @@ function handle(act, b, card) {
       return resolveItem(it, ok, v, it.answer[0]);
     }
     case 'orderAdd': {
+      if (R.cur.answered || b.disabled) return;
       const k = +b.dataset.k;
       R.cur.built.push(k);
       b.disabled = true;

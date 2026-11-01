@@ -264,3 +264,25 @@ test('Tour des examens : seuils croissants jusqu’à l’objectif, départ selo
   const back = L.sanitize(JSON.parse(JSON.stringify({ ...s, arena: { floor: 3, beaten: [1, 2, 'x'], best: { 1: 80, 2: 'a' }, last: ['t5-1'] } })));
   assert.deepEqual(back.arena, { floor: 3, beaten: [1, 2], best: { 1: 80 }, last: ['t5-1'] });
 });
+
+test('stockage plein : on allège le détail sans toucher à la progression', () => {
+  const s = L.newState();
+  s.xp = 1234; s.quests = { 'q1-1': { done: true, best: 90, attempts: 2 } }; s.srs = { 'v:x': { box: 3, due: '2030-01-01' } };
+  s.days = { '2026-01-01': { mins: 30, xp: 50, done: true } };
+  s.sessions = Array.from({ length: 300 }, () => ({ d: '2026-01-01', ok: 5, total: 6, mins: 20 }));
+  s.errors = Array.from({ length: 200 }, (_, k) => ({ id: 'e' + k, q: 'question longue '.repeat(10) }));
+  s.toeic.tests = Array.from({ length: 25 }, () => ({ kind: 'blanc', ok: 50, total: 100, seconds: 600, parts: { 5: [8, 10] } }));
+  const before = JSON.stringify(s).length;
+  assert.equal(L.compactState(s), true);
+  assert.ok(JSON.stringify(s).length < before);
+  assert.equal(s.xp, 1234);
+  assert.equal(s.quests['q1-1'].done, true);
+  assert.deepEqual(Object.keys(s.srs), ['v:x']);
+  assert.equal(s.sessions.length, 300);
+  assert.equal(s.toeic.tests.length, 25);
+  assert.equal(Object.keys(s.days).length, 1);
+  assert.equal(s.errors.length, 60);
+  assert.equal(s.errors[59].id, 'e199');
+  assert.deepEqual(s.toeic.tests[24].parts, { 5: [8, 10] });
+  assert.equal(L.compactState(s), false);
+});

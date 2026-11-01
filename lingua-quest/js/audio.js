@@ -16,10 +16,14 @@ function serverFailed(e) { serverDownUntil = Date.now() + 120000; lastServerErro
 /* 'elevenlabs' | 'secours' (serveur en panne, voix du navigateur) | 'navigateur' (aucun serveur) */
 export function voiceMode() { return server ? (serverOn() ? 'elevenlabs' : 'secours') : 'navigateur'; }
 
-async function call(srv, path, opts = {}) {
+/* Délai maximal : sur un réseau faible, une requête sans réponse bloquerait la lecture ou le micro */
+async function call(srv, path, opts = {}, ms = 12000) {
   let r;
-  try { r = await fetch(srv.url + path, { ...opts, headers: { ...(opts.headers || {}), 'X-LQ-Code': srv.code } }); }
+  const ab = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const t = ab ? setTimeout(() => ab.abort(), ms) : 0;
+  try { r = await fetch(srv.url + path, { ...opts, signal: ab ? ab.signal : undefined, headers: { ...(opts.headers || {}), 'X-LQ-Code': srv.code } }); }
   catch (e) { throw new Error('reseau'); }
+  finally { clearTimeout(t); }
   if (!r.ok) { let e = 'serveur'; try { e = (await r.json()).error || e; } catch (x) { /* rien */ } throw new Error(e); }
   return r;
 }
@@ -72,7 +76,12 @@ export function unlockAudio() {
 if (typeof window !== 'undefined') {
   setPlayback();
   for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, unlockAudio, true);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running') actx.resume().catch(() => {}); });
+  /* appli quittée ou téléphone verrouillé : on coupe la voix et le micro (sinon Safari les laisse bloqués au retour) */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopSpeaking(); stopListening(); return; }
+    if (actx && actx.state !== 'running') actx.resume().catch(() => {});
+    try { const sy = window.speechSynthesis; if (sy && (sy.speaking || sy.pending)) sy.cancel(); } catch (e) { /* rien */ }
+  });
 }
 /* Message honnête quand le son ne sort pas */
 export const SOUND_HELP = 'Pas de son ? Sur iPhone, coupe le mode silencieux (bouton sur le côté) et monte le volume, puis touche à nouveau « Écouter ».';
@@ -114,7 +123,9 @@ async function playBuffer(buf, g) {
     const s = c.createBufferSource();
     s.buffer = data;
     s.connect(c.destination);
-    s.onended = () => { if (src === s) src = null; res(g === gen ? true : null); };
+    /* filet : si le son est suspendu (téléphone verrouillé, appel), « onended » n’arrive jamais */
+    const guard = setTimeout(() => { if (s.onended) s.onended(); }, data.duration * 1000 + 1500);
+    s.onended = () => { clearTimeout(guard); s.onended = null; if (src === s) src = null; res(g === gen ? true : null); };
     src = s;
     s.start();
   });
@@ -138,11 +149,14 @@ export function ttsAvailable() { return serverOn() || browserTTS(); }
 export function voiceCount() { return voices.length; }
 
 /* Deux voix différentes pour les dialogues quand l’appareil en propose plusieurs */
+/* Voix les plus naturelles d’abord (voix améliorées d’Apple, voix Google, voix installées sur l’appareil) */
+const voiceRank = v => (/premium|enhanced|natural|neural/i.test(v.name) ? 0 : /google|samantha|daniel|karen|moira|serena|alex|aaron|nicky/i.test(v.name) ? 1 : v.localService ? 2 : 3);
 function pickVoice(slot) {
+  if (!voices.length) loadVoices();
   if (!voices.length) return null;
   const us = voices.filter(v => /en-US/i.test(v.lang)), gb = voices.filter(v => /en-GB/i.test(v.lang));
   const pool = slot % 2 === 0 ? (us.length ? us : voices) : (gb.length ? gb : voices.length > 1 ? [voices[1]] : voices);
-  return pool[0];
+  return pool.slice().sort((a, b) => voiceRank(a) - voiceRank(b))[0];
 }
 
 let cancelAt = 0;
@@ -180,7 +194,12 @@ async function browserSpeak(text, slot, rate, g) {
   });
 }
 
-export async function speak(text, { slot = 0, rate = 0.9 } = {}) {
+/* Une lecture demandée par un bouton remplace la précédente (plusieurs appuis rapides = une seule voix) */
+export function speak(text, opts) {
+  stopSpeaking();
+  return speakOne(text, opts);
+}
+async function speakOne(text, { slot = 0, rate = 0.9 } = {}) {
   const g = gen;
   if (serverOn()) {
     try { return await playBuffer(await voiceBuffer(text, slot, rate), g); }
@@ -199,7 +218,7 @@ export async function speakLines(lines, rate) {
   /* le serveur prépare toutes les répliques en même temps : pas d’attente entre deux voix */
   if (serverOn()) for (const [who, text] of lines) voiceBuffer(text, slots[who], rate).catch(() => {});
   for (const [who, text] of lines) {
-    const ok = await speak(text, { slot: slots[who], rate });
+    const ok = await speakOne(text, { slot: slots[who], rate });
     if (g !== gen) return null;
     if (ok !== true) return ok;
     await new Promise(r => setTimeout(r, 250));
@@ -243,8 +262,12 @@ function browserListen(lang, maxMs, session = 'play-and-record') {
     rec.onresult = e => { for (const r of e.results) text += ' ' + r[0].transcript; };
     rec.onerror = e => finish(new Error(e.error || 'error'));
     rec.onend = () => finish(text.trim() ? null : new Error('no-speech'));
-    const timer = setTimeout(() => { try { rec.stop(); } catch (e) { /* rien */ } }, maxMs);
-    current = () => rec.stop();
+    const timer = setTimeout(() => {
+      try { rec.stop(); } catch (e) { /* rien */ }
+      /* certains navigateurs n’annoncent jamais la fin : on libère le micro quoi qu’il arrive */
+      setTimeout(() => { try { rec.abort(); } catch (e) { /* rien */ } finish(text.trim() ? null : new Error('no-speech')); }, 3000);
+    }, maxMs);
+    current = () => { try { rec.stop(); } catch (e) { finish(text.trim() ? null : new Error('no-speech')); } };
     micStart(session);
     try { rec.start(); } catch (e) { finish(e); }
   });
@@ -263,7 +286,9 @@ async function record({ maxMs, onPhase }) {
       throw new Error(n === 'NotAllowedError' || n === 'SecurityError' ? 'not-allowed' : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'audio-capture' : 'mic-busy');
     }
   }
-  const rec = new MediaRecorder(stream);
+  let rec;
+  try { rec = new MediaRecorder(stream); }
+  catch (e) { stream.getTracks().forEach(tr => tr.stop()); micEnd(); throw new Error('unavailable'); }
   const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   const stopped = new Promise(r => { rec.onstop = r; });
@@ -307,7 +332,7 @@ async function record({ maxMs, onPhase }) {
   const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
   if (!blob.size) throw new Error('no-speech');
   if (onPhase) onPhase('transcription');
-  const r = await call(server, '/stt', { method: 'POST', headers: { 'Content-Type': blob.type.split(';')[0] }, body: blob });
+  const r = await call(server, '/stt', { method: 'POST', headers: { 'Content-Type': blob.type.split(';')[0] }, body: blob }, 25000);
   const { text } = await r.json();
   if (!text || !text.trim()) throw new Error('no-speech');
   return text.trim();

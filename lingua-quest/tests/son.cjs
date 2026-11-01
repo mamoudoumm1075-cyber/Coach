@@ -10,6 +10,7 @@ const check = (cond, msg) => { if (!cond) { problems.push(msg); console.log('ÉC
 
 /* Instrumentation chargée avant l’appli */
 const INIT = () => {
+  window.__LQ_GUARD_MS = 0; /* clics de test très rapides : pas d’anti double appui */
   window.__son = { sfx: 0, said: [], mode: 'ok' };
   const start = AudioBufferSourceNode.prototype.start;
   AudioBufferSourceNode.prototype.start = function (...a) { if (this.buffer && this.buffer.length > 1) window.__son.sfx++; return start.apply(this, a); };

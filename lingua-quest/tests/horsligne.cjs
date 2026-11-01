@@ -23,6 +23,7 @@ const check = (cond, msg) => { if (!cond) { problems.push(msg); console.log('ÉC
   /* 2. Première visite en ligne, puis tout hors connexion */
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await context.addInitScript(() => { window.__LQ_GUARD_MS = 0; }); /* clics de test très rapides : pas d’anti double appui */
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

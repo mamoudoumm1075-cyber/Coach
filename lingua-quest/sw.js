@@ -1,6 +1,6 @@
 /* Lingua Quest hors ligne. Réseau d’abord (pour recevoir les mises à jour), cache si hors ligne.
    Change VERSION à chaque mise à jour des fichiers. Ne touche qu’aux caches « lingua-quest- ». */
-const VERSION = 'lingua-quest-v12';
+const VERSION = 'lingua-quest-v13';
 const FILES = [
   './', 'index.html', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'js/app.js', 'js/logic.js', 'js/ctx.js', 'js/ui.js', 'js/audio.js', 'js/content.js', 'js/play.js', 'js/codexview.js',
@@ -29,8 +29,12 @@ self.addEventListener('fetch', e => {
     }
     return;
   }
-  e.respondWith(fetch(r).then(res => {
+  const fromCache = () => caches.match(r, { ignoreSearch: true }).then(m => m || (r.mode === 'navigate' ? caches.match('index.html') : undefined));
+  const net = fetch(r).then(res => {
     if (res.ok) { const cp = res.clone(); caches.open(VERSION).then(c => c.put(r, cp)); }
     return res;
-  }).catch(() => caches.match(r, { ignoreSearch: true }).then(m => m || (r.mode === 'navigate' ? caches.match('index.html') : undefined))));
+  });
+  /* réseau faible : au-delà de 4 s, on sert la copie du téléphone (si elle existe) au lieu de faire attendre */
+  const slow = new Promise(ok => setTimeout(ok, 4000)).then(fromCache).then(m => m || net);
+  e.respondWith(Promise.race([net, slow]).catch(() => fromCache().then(m => m || net)));
 });
