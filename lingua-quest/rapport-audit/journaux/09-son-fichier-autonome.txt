@@ -1,0 +1,16 @@
+ok : Web Audio disponible
+ok : bruitage joué après une réponse (Web Audio)
+ok : écoute : question et réponses lues automatiquement (4 phrases)
+ok : écoute : « Écouter » relit la question et les réponses
+ok : phrase sans fin annoncée : la lecture passe quand même à la suivante
+ok : son bloqué : l’appli explique quoi faire
+ok : dialogue : la première réplique est lue dès l’ouverture
+ok : dialogue : les répliques sont lues (3)
+ok : séance orale : un exercice de prononciation apparaît
+ok : micro : la session audio passe en enregistrement avant d’écouter (play-and-record)
+ok : micro : la phrase est reconnue et corrigée
+ok : micro : retour au mode lecture après l’écoute
+ok : profil : « Tester le son » confirme que le son sort
+ok : aucune erreur JavaScript
+
+Son : aucun problème.

@@ -1,0 +1,9 @@
+premier affichage (4G lente, processeur ×4 plus lent, cache vide) : écran titre visible en 4346 ms
+  premier rendu (FCP) 3492 ms · DOMContentLoaded 3399 ms · load 4208 ms · 578 Ko transférés
+changement d’écran (180 mesures, jusqu’à l’affichage) : moyenne 30.5 ms · médiane 30.8 ms · max 46.8 ms
+quêtes jouées jusqu’au bilan : 15/15
+mémoire JS (après ramasse-miettes) : 2.59 → 3.45 Mo
+nœuds DOM : 459 → 579 · documents : 1 → 2
+écouteurs d’événements (total) : 39 → 40
+écouteurs globaux (window, document, #app, #play) : ÉVOLUTION #play:click 0→1 · {"window:pointerdown":2,"window:touchend":2,"window:keydown":1,"window:mousemove":1,"window:pointerup":1,"window:touchstart":1,"window:touchcancel":1,"window:mousedown":1,"window:mouseup":1,"window:click":1,"window:auxclick":1,"window:dblclick":1,"window:contextmenu":1,"window:hashchange":1,"window:pagehide":1,"window:storage":1,"window:__playwright_global_listeners_check__":1,"document:visibilitychange":2,"document:change":1,"document:keydown":1,"#app:click":1,"#play:click":1}
+erreurs JavaScript : aucune

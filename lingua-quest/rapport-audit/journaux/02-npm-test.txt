@@ -1,0 +1,254 @@
+
+> test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: identifiants uniques
+ok 1 - identifiants uniques
+  ---
+  duration_ms: 1.147504
+  type: 'test'
+  ...
+# Subtest: chaque exercice est jouable
+ok 2 - chaque exercice est jouable
+  ---
+  duration_ms: 2.324669
+  type: 'test'
+  ...
+# Subtest: les modèles oraux passent leurs propres vérifications
+ok 3 - les modèles oraux passent leurs propres vérifications
+  ---
+  duration_ms: 4.494696
+  type: 'test'
+  ...
+# Subtest: fiches de temps complètes
+ok 4 - fiches de temps complètes
+  ---
+  duration_ms: 0.394684
+  type: 'test'
+  ...
+# Subtest: quêtes, dialogues et boss référencent des contenus existants
+ok 5 - quêtes, dialogues et boss référencent des contenus existants
+  ---
+  duration_ms: 0.701724
+  type: 'test'
+  ...
+# Subtest: Codex : fiches et recherche
+ok 6 - Codex : fiches et recherche
+  ---
+  duration_ms: 1.419427
+  type: 'test'
+  ...
+# Subtest: chaque boss a son illustration
+ok 7 - chaque boss a son illustration
+  ---
+  duration_ms: 0.433998
+  type: 'test'
+  ...
+# Subtest: prépositions : les questions d’entraînement existent
+ok 8 - prépositions : les questions d’entraînement existent
+  ---
+  duration_ms: 0.389531
+  type: 'test'
+  ...
+# Subtest: vocabulaire métier : 3 domaines, quiz jouable dans les deux sens
+ok 9 - vocabulaire métier : 3 domaines, quiz jouable dans les deux sens
+  ---
+  duration_ms: 3.797126
+  type: 'test'
+  ...
+# Subtest: apprentissage ciblé : chaque notion produit des exercices jouables
+ok 10 - apprentissage ciblé : chaque notion produit des exercices jouables
+  ---
+  duration_ms: 3.170946
+  type: 'test'
+  ...
+# Subtest: Tour des examens : 30 questions, ordre du vrai test, difficulté qui monte d’étage en étage
+ok 11 - Tour des examens : 30 questions, ordre du vrai test, difficulté qui monte d’étage en étage
+  ---
+  duration_ms: 17.929655
+  type: 'test'
+  ...
+# Subtest: session du jour : un exercice raté n’apparaît jamais comme une carte de vocabulaire
+ok 12 - session du jour : un exercice raté n’apparaît jamais comme une carte de vocabulaire
+  ---
+  duration_ms: 1.314523
+  type: 'test'
+  ...
+# Subtest: dates : jours, écarts et semaine ISO
+ok 13 - dates : jours, écarts et semaine ISO
+  ---
+  duration_ms: 1.618054
+  type: 'test'
+  ...
+# Subtest: niveaux : seuils croissants et progression
+ok 14 - niveaux : seuils croissants et progression
+  ---
+  duration_ms: 0.335783
+  type: 'test'
+  ...
+# Subtest: réponses : XP, compétences, erreurs, temps
+ok 15 - réponses : XP, compétences, erreurs, temps
+  ---
+  duration_ms: 0.64787
+  type: 'test'
+  ...
+# Subtest: maîtrise : critères vérifiables
+ok 16 - maîtrise : critères vérifiables
+  ---
+  duration_ms: 0.33823
+  type: 'test'
+  ...
+# Subtest: révision espacée : réussite espacée, échec rapproché
+ok 17 - révision espacée : réussite espacée, échec rapproché
+  ---
+  duration_ms: 1.093633
+  type: 'test'
+  ...
+# Subtest: série : continue, joker une fois par semaine, sinon repart
+ok 18 - série : continue, joker une fois par semaine, sinon repart
+  ---
+  duration_ms: 0.364601
+  type: 'test'
+  ...
+# Subtest: monde : un chapitre s’ouvre après le boss précédent
+ok 19 - monde : un chapitre s’ouvre après le boss précédent
+  ---
+  duration_ms: 0.166458
+  type: 'test'
+  ...
+# Subtest: difficulté adaptative
+ok 20 - difficulté adaptative
+  ---
+  duration_ms: 0.189348
+  type: 'test'
+  ...
+# Subtest: comparaison des réponses écrites et orales
+ok 21 - comparaison des réponses écrites et orales
+  ---
+  duration_ms: 0.73563
+  type: 'test'
+  ...
+# Subtest: sauvegarde : refuse un fichier étranger, complète un état ancien
+ok 22 - sauvegarde : refuse un fichier étranger, complète un état ancien
+  ---
+  duration_ms: 1.035133
+  type: 'test'
+  ...
+# Subtest: carnet : ajout sans doublon, nettoyage, révision, retrait
+ok 23 - carnet : ajout sans doublon, nettoyage, révision, retrait
+  ---
+  duration_ms: 2.2557
+  type: 'test'
+  ...
+# Subtest: carnet : une sauvegarde abîmée est nettoyée
+ok 24 - carnet : une sauvegarde abîmée est nettoyée
+  ---
+  duration_ms: 0.224287
+  type: 'test'
+  ...
+# Subtest: plan d’examen : sprint de 4 semaines
+ok 25 - plan d’examen : sprint de 4 semaines
+  ---
+  duration_ms: 0.505519
+  type: 'test'
+  ...
+# Subtest: analyse d’un test : la partie où l’on perd le plus de points
+ok 26 - analyse d’un test : la partie où l’on perd le plus de points
+  ---
+  duration_ms: 0.236067
+  type: 'test'
+  ...
+# Subtest: jauge TOEIC : 0 au départ, prête seulement avec toutes les parties et 2 tests blancs réussis
+ok 27 - jauge TOEIC : 0 au départ, prête seulement avec toutes les parties et 2 tests blancs réussis
+  ---
+  duration_ms: 0.784645
+  type: 'test'
+  ...
+# Subtest: jauge de discussion : progresse avec l’oral, les temps et les mots
+ok 28 - jauge de discussion : progresse avec l’oral, les temps et les mots
+  ---
+  duration_ms: 0.465466
+  type: 'test'
+  ...
+# Subtest: sauvegarde abîmée : chaque rubrique est nettoyée sans perdre ce qui est valable
+ok 29 - sauvegarde abîmée : chaque rubrique est nettoyée sans perdre ce qui est valable
+  ---
+  duration_ms: 0.740008
+  type: 'test'
+  ...
+# Subtest: suivi par notion : réponses comptées, forces et difficultés, reconstruction des anciennes sauvegardes
+ok 30 - suivi par notion : réponses comptées, forces et difficultés, reconstruction des anciennes sauvegardes
+  ---
+  duration_ms: 1.108234
+  type: 'test'
+  ...
+# Subtest: mots retenus : les exercices en révision ne comptent pas comme des mots
+ok 31 - mots retenus : les exercices en révision ne comptent pas comme des mots
+  ---
+  duration_ms: 0.189001
+  type: 'test'
+  ...
+# Subtest: skins : conditions de jeu ET d’anglais, déblocage, équipement, sauvegarde
+ok 32 - skins : conditions de jeu ET d’anglais, déblocage, équipement, sauvegarde
+  ---
+  duration_ms: 3.817929
+  type: 'test'
+  ...
+# Subtest: Tour des examens : seuils croissants jusqu’à l’objectif, départ selon le niveau, répartition du vrai TOEIC
+ok 33 - Tour des examens : seuils croissants jusqu’à l’objectif, départ selon le niveau, répartition du vrai TOEIC
+  ---
+  duration_ms: 0.611077
+  type: 'test'
+  ...
+# Subtest: stockage plein : on allège le détail sans toucher à la progression
+ok 34 - stockage plein : on allège le détail sans toucher à la progression
+  ---
+  duration_ms: 0.765189
+  type: 'test'
+  ...
+# Subtest: refuse sans le bon code, et sans secrets
+ok 35 - refuse sans le bon code, et sans secrets
+  ---
+  duration_ms: 29.185847
+  type: 'test'
+  ...
+# Subtest: CORS : la requête préalable passe
+ok 36 - CORS : la requête préalable passe
+  ---
+  duration_ms: 0.639995
+  type: 'test'
+  ...
+# Subtest: voix : appelle ElevenLabs avec la clé, compte les caractères, applique le plafond
+ok 37 - voix : appelle ElevenLabs avec la clé, compte les caractères, applique le plafond
+  ---
+  duration_ms: 11.354442
+  type: 'test'
+  ...
+# Subtest: voix : refuse un texte vide ou trop long
+ok 38 - voix : refuse un texte vide ou trop long
+  ---
+  duration_ms: 1.895647
+  type: 'test'
+  ...
+# Subtest: micro : transcrit et applique le plafond
+ok 39 - micro : transcrit et applique le plafond
+  ---
+  duration_ms: 4.437615
+  type: 'test'
+  ...
+# Subtest: micro : refuse ce qui n’est pas de l’audio
+ok 40 - micro : refuse ce qui n’est pas de l’audio
+  ---
+  duration_ms: 0.387223
+  type: 'test'
+  ...
+1..40
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.052383

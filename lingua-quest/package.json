@@ -4,6 +4,12 @@
   "type": "module",
   "description": "RPG pour apprendre l’anglais, préparer le TOEIC et parler couramment. Aucune dépendance : servi tel quel.",
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:navigateur": "node tests/e2e.cjs && node tests/audit.cjs && node tests/horsligne.cjs && node tests/son.cjs && node tests/robustesse.cjs && node tests/validation.cjs",
+    "build": "python3 outils/fichier_unique.py",
+    "perf": "node tests/perf.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }
