@@ -1,0 +1,19 @@
+ok : tous les fichiers du cache existent
+ok : chaque image, son et script est mis en cache
+ok : service worker installé et actif
+ok : fichiers en cache après la première visite (53/53)
+ok : hors connexion : l’appli s’ouvre
+ok : hors connexion : image img/titre.webp
+ok : hors connexion : image img/carte.webp
+ok : hors connexion : image img/boss-6.webp
+ok : hors connexion : image img/photo-bureau.webp
+ok : hors connexion : image img/heros-toi.webp
+ok : hors connexion : une quête se joue jusqu’au bilan
+ok : hors connexion : la progression est enregistrée
+ok : aucune erreur JavaScript hors connexion
+
+Hors connexion : aucun problème.
+
+real	0m3.844s
+user	0m1.532s
+sys	0m0.567s

@@ -1,0 +1,75 @@
+ok : pas de défilement horizontal (bienvenue) : 390px
+ok : le nom reste saisi après un choix de héros
+ok : la classe suit le héros choisi
+ok : pas de défilement horizontal (création) : 390px
+ok : évaluation initiale jouée jusqu’au bilan
+ok : pas de défilement horizontal (accueil) : 390px
+ok : chapitres 2 à 6 verrouillés au départ (5)
+ok : le Codex ne fait pas perdre l’exercice en cours
+ok : quête 1 terminée
+ok : quête 1 enregistrée comme réussie
+ok : session du jour terminée
+ok : série démarrée après la session (1)
+ok : défaite contre le boss affichée
+ok : quête de renforcement proposée après la défaite
+ok : boss 1 vaincu
+ok : chapitre 2 débloqué après le boss
+ok : pas de défilement horizontal (academy) : 390px
+ok : pas de défilement horizontal (tense/present-perfect) : 390px
+ok : pas de défilement horizontal (codex) : 390px
+ok : pas de défilement horizontal (skills) : 390px
+ok : pas de défilement horizontal (hero) : 390px
+ok : pas de défilement horizontal (inventory) : 390px
+ok : pas de défilement horizontal (dialogues) : 390px
+ok : pas de défilement horizontal (stats) : 390px
+ok : pas de défilement horizontal (toeic) : 390px
+ok : pas de défilement horizontal (oral) : 390px
+ok : pas de défilement horizontal (review) : 390px
+ok : pas de défilement horizontal (quests) : 390px
+ok : pas de défilement horizontal (learn) : 390px
+ok : pas de défilement horizontal (profile) : 390px
+ok : plan TOEIC en étapes affiché
+ok : sprint : semaine 3 à J-10
+ok : test blanc terminé
+ok : bilan par partie TOEIC
+ok : analyse de la partie la plus ratée
+ok : enchaînement des questions de la partie faible
+ok : test blanc enregistré
+ok : photo partie 1 : photo-bureau
+ok : photo partie 1 : photo-livraison
+ok : photo partie 1 : photo-restaurant
+ok : carnet : 2 mots notés
+ok : révision du carnet
+ok : deux jauges sur l’accueil
+ok : jauge « prêt pour le TOEIC »
+ok : objectif 900 → 90 % visé
+ok : jauge du niveau de discussion
+ok : suivi par notion alimenté (9 notions)
+ok : exercices ratés programmés en révision espacée (21)
+ok : entraînement ciblé joué jusqu’au bilan
+ok : skin final verrouillé, conditions affichées
+ok : évolution « Éveil » prête à débloquer
+ok : skin débloqué et équipé, gardé après rechargement
+ok : skin visible sur l’accueil et le médaillon
+ok : changement de skin équipé
+ok : Tour des examens : étage de départ fixé selon le niveau (2)
+ok : chaque bonne réponse frappe : l’Ombre tombe au seuil (19 coups)
+ok : quitter après la victoire garde la victoire
+ok : étage suivant ouvert après la victoire
+ok : le combat compte comme un test blanc
+ok : défaite : le combat s’arrête quand l’Ombre ne peut plus être vaincue
+ok : bilan de défaite affiché
+ok : une défaite ne fait pas reculer d’étage
+ok : séance vocabulaire CVC
+ok : mots du métier ajoutés aux révisions (6)
+ok : illustration du boss 1
+ok : illustration du boss 6
+ok : progression gardée après rechargement (1230 XP)
+ok : données illisibles conservées, pas écrasées
+ok : l’appli s’ouvre hors ligne
+
+Aucun problème.
+
+real	1m49.755s
+user	0m15.417s
+sys	0m3.072s

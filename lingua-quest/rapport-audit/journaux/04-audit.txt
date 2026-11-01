@@ -1,0 +1,31 @@
+ok : sauvegarde abîmée : tous les écrans s’ouvrent sans erreur
+ok : sauvegarde abîmée : révisions jouables (mots inconnus ignorés)
+ok : boss 1 joué jusqu’au bilan
+ok : boss 1 vaincu avec 100 % (quêtes jouées : 7)
+ok : boss 2 joué jusqu’au bilan
+ok : boss 2 vaincu avec 100 % (quêtes jouées : 5)
+ok : boss 3 joué jusqu’au bilan
+ok : boss 3 vaincu avec 100 % (quêtes jouées : 3)
+ok : boss 4 joué jusqu’au bilan
+ok : boss 4 vaincu avec 100 % (quêtes jouées : 3)
+ok : boss 5 joué jusqu’au bilan
+ok : boss 5 vaincu avec 100 % (quêtes jouées : 3)
+ok : boss 6 joué jusqu’au bilan
+ok : boss 6 vaincu avec 100 % (quêtes jouées : 1)
+ok : l’XP ne diminue jamais pendant la campagne
+ok : niveau cohérent avec l’XP (3872 XP → niveau 14)
+ok : campagne complète sans erreur JavaScript
+ok : sortie en pleine quête : pas de tentative comptée ni de récompense
+ok : chrono écoulé : le test se termine et affiche le bilan
+ok : chrono écoulé : les questions restantes sont comptées sans réponse
+ok : rechargement en pleine partie : l’appli repart proprement
+ok : interruptions sans erreur JavaScript
+ok : remise à zéro effective
+ok : import : XP, chapitres et révisions restaurés à l’identique
+ok : export / import sans erreur
+
+Audit : aucun problème.
+
+real	2m14.997s
+user	0m9.882s
+sys	0m3.225s

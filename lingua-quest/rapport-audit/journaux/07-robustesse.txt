@@ -1,0 +1,20 @@
+ok : double appui : on avance d’une seule carte (2/9)
+ok : appuis rapides sur Écouter : jamais deux voix en file (max 1)
+ok : appuis rapides sur Écouter : la voix est quand même lue
+ok : dialogue : réécouter pendant la lecture ne superpose pas les voix
+ok : arrière-plan : la voix est coupée
+ok : arrière-plan : la progression est enregistrée à l’instant
+ok : serveur voix muet : relais par la voix du navigateur en 12 s (avant : attente sans fin)
+ok : son suspendu : « Tester le son » répond au lieu de rester bloqué (Son : OK, la voix a bien été lue.)
+ok : micro bloqué : libéré après 18 s avec un message (Je n’ai rien entendu. Rapproche-toi du m)
+ok : micro : un nouvel essai fonctionne ensuite
+ok : deux onglets : le premier reprend la progression du second
+ok : deux onglets : un enregistrement du premier ne fait plus perdre les 500 XP
+ok : import : le code secret reste associé au serveur de l’appareil (https://mon-serveur.test)
+ok : aucune erreur JavaScript
+
+Robustesse : aucun problème.
+
+real	0m42.913s
+user	0m2.151s
+sys	0m0.786s

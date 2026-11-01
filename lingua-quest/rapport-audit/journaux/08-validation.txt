@@ -1,0 +1,39 @@
+ok : séance orale : exercice de prononciation trouvé
+ok : micro refusé : message « Le micro est refusé »
+ok : micro refusé : la réponse écrite s’ouvre
+ok : micro : nouvel essai réussi après le refus
+ok : micro serveur : consigne « appuie de nouveau quand tu as fini »
+ok : micro serveur : arrêt automatique après 1,5 s de silence, puis transcription (3.8 s)
+ok : micro serveur : la piste du micro est libérée (1 piste arrêtée)
+ok : micro serveur : un second appui termine la phrase et libère le micro
+ok : micro serveur refusé : message clair
+ok : micro serveur refusé : le bouton micro n’est pas resté bloqué
+ok : micro serveur : nouvel essai réussi après le refus
+ok : double validation : une seule réponse enregistrée
+ok : double validation : XP d’une seule réponse (+10)
+ok : XP : le bilan annonce exactement l’XP gagnée (+40, réel +40)
+ok : XP : récompense entière la 1re fois (+30), réduite ensuite (+10)
+ok : XP : tout est retrouvé après rechargement
+ok : fichier autonome : JavaScript et CSS intégrés (aucun fichier local appelé)
+ok : fichier autonome : s’ouvre sans serveur et sans réseau
+ok : fichier autonome : 6 bruitages intégrés et lisibles (6/6)
+ok : fichier autonome : 20 images affichées, toutes intégrées
+ok : fichier autonome : une quête démarre
+ok : fichier autonome : aucune ressource demandée au réseau, hors polices Google (1 requête(s) de police bloquée(s), police de secours utilisée)
+ok : fichier autonome : aucune erreur JavaScript
+ok : hors ligne : l’appli s’ouvre depuis le cache
+ok : retour du réseau : la page reçoit la version publiée en ligne (réseau d’abord)
+ok : mise à jour du cache : nouvelle version installée, ancienne supprimée (lingua-quest-v13-maj)
+ok : hors ligne après mise à jour : c’est la nouvelle version qui s’ouvre
+ok : hors ligne et mise à jour : aucune erreur JavaScript
+ok : ordinateur : 14 écrans sans défilement horizontal
+ok : ordinateur : Entrée valide la réponse tapée, puis Entrée passe à la suite (4/7 → 5/7)
+ok : ordinateur : Échap ferme la fiche du Codex
+ok : ordinateur : aucune erreur JavaScript
+ok : aucune erreur JavaScript
+
+Validation : aucun problème.
+
+real	0m29.775s
+user	0m5.211s
+sys	0m1.960s
