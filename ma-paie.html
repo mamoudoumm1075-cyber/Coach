@@ -401,6 +401,10 @@ textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--li
 .explain summary{font-size:.95rem;color:var(--muted)}
 .explain ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.88rem}
 .simbox summary{font-size:1.15rem}
+.askq{min-height:84px;padding:10px 12px;resize:vertical;font:inherit;line-height:1.4}
+.askchips{justify-content:flex-start}
+.askchips .chip{min-height:38px;padding:0 12px;font-size:.82rem;font-weight:700}
+.askpre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:.78rem;line-height:1.45;max-height:260px;overflow:auto;background:var(--surface-2);border-radius:12px;padding:10px;margin:6px 0 0}
 .tips details summary{font-size:.95rem;color:var(--muted)}
 .tips details[open]{display:flex;flex-direction:column;gap:10px}
 .dephead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -574,6 +578,15 @@ body.locked .wrap,body.locked .tabbar,body.locked .toast,body.locked .sheet{visi
         <p class="simres num" id="simRes">Entre un montant pour voir ce qu'il te resterait.</p>
       </div>
     </details>
+
+    <section class="card vstack" id="askCard">
+      <h2>💬 Une question sur ton budget ?</h2>
+      <textarea class="txt askq" id="askQ" rows="3" maxlength="500" placeholder="Ex. Je peux m’acheter des baskets à 120 € ce mois-ci ?" aria-label="Ta question pour Claude"></textarea>
+      <div class="chips askchips" id="askChips"></div>
+      <button class="btn primary" id="askGo">Demander à Claude</button>
+      <p class="hint" style="margin:0">Claude s’ouvre avec un résumé de ton mois (des chiffres seulement : ni IBAN, ni relevé, ni nom). Rien n’est envoyé tant que tu n’appuies pas sur Envoyer dans Claude. Le texte est aussi copié : colle-le si ta question n’apparaît pas.</p>
+      <details class="explain"><summary>Voir ce qui sera envoyé</summary><pre class="askpre" id="askPreview"></pre></details>
+    </section>
   </div>
 
   <!-- ===== Dépenses ===== -->
@@ -1495,7 +1508,7 @@ function render(){
   $('mPrev').disabled=idx<=0;
   $('mNext').setAttribute('aria-label',idx===S.months.length-1?'Créer '+mLabel(nextId(m.id)):'Mois suivant');
   renderBanners();renderHero(m,c);renderFavs();renderList(m,c);renderCal();renderSearch();renderSim();renderMonth(m,c);renderBilanStats(m);renderRevenus(m);
-  renderAlerts(m,c);renderEvo();renderStats();renderAbo();renderCmp();renderEp();renderGoals();renderFact();renderTable();renderSettings();renderBackup();renderSave();
+  renderAlerts(m,c);renderEvo();renderStats();renderAbo();renderCmp();renderEp();renderGoals();renderFact();renderAsk();renderTable();renderSettings();renderBackup();renderSave();
 }
 
 function renderHero(m,c){
@@ -3461,6 +3474,40 @@ function renderEvo(){
     msg.push(`<p class="hint" style="margin:0">${r>=0?`${qd}, il t’est resté${moy} ${eur(r)} en fin de mois.`:`${qd}, tu as fini${moy} à −${eur(-r)} : c’est ce trou qu’il faut combler.`}</p>`)}
   $('evoMsg').innerHTML=msg.join('');
 }
+
+/* ---------- Demander à Claude : ouvre claude.ai avec un résumé chiffré du mois (rien d'envoyé sans action dans Claude) ---------- */
+const ASK_IDEES=['Analyse mon mois','Je peux me faire un resto ce week-end ?','Comment tenir jusqu’à la fin du mois ?','Quel abonnement couper ?'];
+function resumeBudget(q){
+  const m=monthOf(ymNow)||cur(),c=calc(m),sg=v=>v<0?'−'+eur(-v):eur(v),L=[];
+  L.push(`Voici mon budget (appli Ma Paie) pour ${mLabel(m.id).toLowerCase()}${m.id===ymNow?`, au ${dateFr(isoToday,{day:'numeric',month:'long'})}`:''}. Je suis en alternance (apprentissage).${S.example?' (Attention : données d’exemple.)':''}`);
+  L.push(`- Salaire : ${eur(c.net)} ${c.recu?'(reçu)':'(estimé, pas encore reçu)'}`+(c.extra>0?` + autres revenus ${eur(c.extra)} (${(m.revenus||[]).map(r=>r.nom).join(', ')})`:''));
+  if(m.charges.length)L.push(`- Charges fixes : ${eur(c.chTot)} (${[...m.charges].sort((a,b)=>b.montant-a.montant).map(x=>`${x.nom} ${eur(x.montant)}`).join(', ')})`+(c.chVenir>0?`, dont ${eur(c.chVenir)} encore à payer`:''));
+  L.push(`- Épargne du mois : ${eur(c.ep)} prévue, ${eur(c.epFaite)} déjà versée (objectif habituel : ${eur(S.objMensuel)} par mois)`);
+  const F=factActives();if(F.length)L.push(`- Factures à prévoir : ${eur(c.prov)} mis de côté ce mois (${F.map(f=>`${f.nom} ${eur(f.montant)} en ${mLabel(factEch(f,ymNow)).toLowerCase()}`).join(', ')})`);
+  L.push(`- Budget pour vivre : ${sg(c.vivre)} ; déjà dépensé : ${eur(c.depFait)}`+(c.depVenir>0?` ; dépenses prévues : ${eur(c.depVenir)}`:'')+` ; reste à vivre : ${sg(c.reste)}`);
+  if(c.st==='encours')L.push(`- ${pl(c.jours,'jour')} restant${c.jours>1?'s':''} ; par jour conseillé : ${eur(parJour(c))} ; ${c.vivre>0?Math.round(c.depFait/c.vivre*100):0} % du budget dépensé pour ${Math.round(today.getDate()/daysIn(m.id)*100)} % du mois passé`);
+  const o=byCat(m.depenses.filter(d=>d.date<=isoToday)),ks=allCats().filter(k=>o[k.id]>0).sort((a,b)=>o[b.id]-o[a.id]);
+  if(ks.length)L.push(`- Dépenses du mois par catégorie : ${ks.map(k=>`${k.n} ${eur(o[k.id])}${S.budgets[k.id]?` (budget ${eur(S.budgets[k.id])})`:''}`).join(', ')}`);
+  const P=epargne(),G=S.goals.filter(g=>g.statut==='actif');
+  L.push(`- Épargne totale : ${sg(P.total)} (libre : ${sg(P.libre)})`+(G.length?` ; objectifs : ${G.map(g=>`${g.nom} ${eur(alloue(g))} sur ${eur(g.cible)}`).join(', ')}`:''));
+  const A=abonnements();if(A.length)L.push(`- Abonnements repérés : ${A.map(a=>`${a.nom} ${eur(a.mens)}`).join(', ')} (total ${eur(sum(A,'mens'))} par mois)`);
+  const past=S.months.filter(x=>x.id<m.id).slice(-3);
+  if(past.length)L.push(`- Mois précédents : ${past.map(x=>{const k=calc(x);return `${mLabel(x.id).toLowerCase()} : dépensé ${eur(k.dep)}, reste ${sg(k.reste)}`}).join(' ; ')}`);
+  L.push('',`Ma question : ${q||'Analyse mon mois et donne-moi 3 conseils concrets.'}`,'',
+    'Réponds en français, simplement et concrètement, avec des chiffres tirés de ces données. Mon objectif : tenir mon budget chaque mois sans toucher à mon épargne.');
+  return L.join('\n');
+}
+function renderAsk(){if(!$('askCard').hidden&&$('askPreview').closest('details').open)$('askPreview').textContent=resumeBudget($('askQ').value.trim())}
+$('askChips').innerHTML=ASK_IDEES.map(t=>`<button class="chip" data-ask="${esc(t)}">${esc(t)}</button>`).join('');
+$('askChips').addEventListener('click',e=>{const b=e.target.closest('[data-ask]');if(!b)return;$('askQ').value=b.dataset.ask;renderAsk();$('askQ').focus()});
+$('askQ').addEventListener('input',renderAsk);
+$('askPreview').closest('details').addEventListener('toggle',renderAsk);
+$('askGo').addEventListener('click',()=>{
+  const txt=resumeBudget($('askQ').value.trim()),url='https://claude.ai/new?q='+encodeURIComponent(txt);
+  try{navigator.clipboard&&navigator.clipboard.writeText(txt).catch(()=>{})}catch(e){}
+  const w=window.open(url,'_blank');if(w)w.opener=null;else location.href=url;
+  toast('Claude s’ouvre avec ton résumé. Le texte est aussi copié.');
+});
 
 /* ---------- Changement de jour pendant que l'appli est ouverte ---------- */
 function verifJour(){const old=isoToday;majDate();if(old!==isoToday){autoSnap();render()}}
