@@ -199,6 +199,18 @@ export default {
     },
   },
 
+  /* ── Son ─────────────────────────────────────────────── *
+   *  damson : extrait joué une fois, à l'apparition de la photo finale.
+   *  ambiance : piste d'ambiance facultative (en boucle, après le premier
+   *  geste du visiteur). Elle est baissée pendant l'extrait de Damson,
+   *  puis remonte. Vide = pas de musique d'ambiance.                     */
+  audio: {
+    damson: 'assets/audio/damson.mp3',
+    ambiance: '',
+    volumeAmbiance: 0.35,
+    volumeAmbianceBaisse: 0.03,
+  },
+
   /* ── Page contact ────────────────────────────────────── */
   contact: {
     title: 'Écrivez-nous.',

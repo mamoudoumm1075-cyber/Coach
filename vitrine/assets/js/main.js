@@ -350,6 +350,106 @@ function apartes() {
   els.forEach((e) => io.observe(e));
 }
 
+/* ── Son de la finale ──────────────────────────────────────
+   L'extrait de Damson part au moment où sa photo apparaît (étape 3),
+   une seule fois par passage dans la scène, jamais en double.
+   Les navigateurs (surtout sur mobile) n'autorisent le son qu'après un
+   geste : au premier clic, toucher ou touche, on « déverrouille » le
+   lecteur en silence. Si la lecture reste refusée, un bouton apparaît.
+   ───────────────────────────────────────────────────────── */
+const son = (() => {
+  const clip = $('[data-son-damson]');
+  if (!clip) return null;
+  const bouton = $('[data-son-bouton]');
+  const ambiance = $('[data-ambiance]');
+  const boutonAmb = $('[data-ambiance-bouton]');
+  const volAmb = Number(ambiance?.dataset.volume ?? 0.35);
+  const volBas = Number(ambiance?.dataset.volumeBas ?? 0.03);
+  let enCours = false, deverrouille = false, ambianceVoulue = true, fondu = 0;
+  try { ambianceVoulue = localStorage.getItem('oree-son') !== 'coupe'; } catch { /* stockage indisponible */ }
+
+  const fondre = (el, vers, ms, fin) => {
+    if (!el) return;
+    cancelAnimationFrame(fondu);
+    const de = el.volume, t0 = performance.now();
+    const pas = (now) => {
+      const t = clamp((now - t0) / ms);
+      el.volume = clamp(de + (vers - de) * t);
+      if (t < 1) fondu = requestAnimationFrame(pas); else fin?.();
+    };
+    fondu = requestAnimationFrame(pas);
+  };
+  const demarrerAmbiance = () => {
+    if (!ambiance || !ambianceVoulue) return;
+    ambiance.volume = enCours ? volBas : volAmb;
+    ambiance.play().catch(() => {});
+  };
+
+  // Premier geste : déverrouillage silencieux du lecteur (indispensable sur iOS).
+  const deverrouiller = () => {
+    if (deverrouille) return;
+    deverrouille = true;
+    ['pointerdown', 'keydown', 'touchend'].forEach((t) => removeEventListener(t, deverrouiller, true));
+    demarrerAmbiance();
+    if (enCours) return;
+    clip.muted = true;
+    const p = clip.play();
+    const remettre = () => { if (!enCours) { clip.pause(); clip.currentTime = 0; } clip.muted = false; };
+    if (p?.then) p.then(remettre, remettre); else remettre();
+  };
+  ['pointerdown', 'keydown', 'touchend'].forEach((t) => addEventListener(t, deverrouiller, { capture: true, passive: true }));
+
+  clip.loop = false;
+  clip.addEventListener('ended', () => {
+    enCours = false;
+    if (ambiance && ambianceVoulue) fondre(ambiance, volAmb, 1200);
+  });
+
+  const api = {
+    precharger() { if (clip.preload !== 'auto') clip.preload = 'auto'; },
+    declencher() {
+      if (enCours) return; // jamais deux lectures en même temps
+      enCours = true;
+      bouton.hidden = true;
+      if (ambiance && !ambiance.paused) fondre(ambiance, volBas, 450);
+      clip.muted = false;
+      clip.volume = 1;
+      clip.currentTime = 0;
+      const p = clip.play();
+      p?.catch?.(() => {
+        // Lecture refusée par le navigateur : on propose de lancer le son.
+        enCours = false;
+        bouton.hidden = false;
+        if (ambiance && ambianceVoulue && !ambiance.paused) fondre(ambiance, volAmb, 600);
+      });
+    },
+    arreter() {
+      bouton.hidden = true;
+      if (!enCours) return;
+      enCours = false;
+      const v = clip.volume, t0 = performance.now();
+      const baisse = (now) => {
+        const t = clamp((now - t0) / 400);
+        clip.volume = clamp(v * (1 - t));
+        if (t < 1) requestAnimationFrame(baisse); else { clip.pause(); clip.currentTime = 0; clip.volume = 1; }
+      };
+      requestAnimationFrame(baisse);
+      if (ambiance && ambianceVoulue) fondre(ambiance, volAmb, 900);
+    },
+    etat: () => ({ enCours, deverrouille, paused: clip.paused, temps: clip.currentTime, bouton: !bouton.hidden, ambiance: ambiance ? { paused: ambiance.paused, volume: +ambiance.volume.toFixed(2) } : null }),
+  };
+  bouton?.addEventListener('click', () => api.declencher());
+  boutonAmb?.addEventListener('click', () => {
+    ambianceVoulue = !ambianceVoulue;
+    boutonAmb.setAttribute('aria-pressed', String(ambianceVoulue));
+    try { localStorage.setItem('oree-son', ambianceVoulue ? 'actif' : 'coupe'); } catch { /* stockage indisponible */ }
+    if (ambianceVoulue) demarrerAmbiance(); else ambiance.pause();
+  });
+  boutonAmb?.setAttribute('aria-pressed', String(ambianceVoulue));
+  window.__son = api; // utile pour les tests
+  return api;
+})();
+
 function finale() {
   const section = $('[data-finale]');
   if (!section) return;
@@ -361,7 +461,12 @@ function finale() {
   auDefilement.push(() => {
     const r = section.getBoundingClientRect();
     const p = clamp(-r.top / (r.height - innerHeight));
+    const avait = section.classList.contains('etape-3');
     seuils.forEach((s, i) => section.classList.toggle(`etape-${i + 1}`, p >= s && r.top < innerHeight * 0.5));
+    const a = section.classList.contains('etape-3');
+    if (a && !avait) son?.declencher();
+    else if (!a && avait) son?.arreter();
+    if (r.top < innerHeight * 2.5) son?.precharger();
   });
 }
 
@@ -450,7 +555,11 @@ function scenes() {
       if (!sec) return null;
       const temps = [0, 450, 2700, 7700, 9300]; // obscurité, phrase, photo + zoom, question, signature
       let n = 0, minuteurs = [];
-      const poser = (k) => { n = k; for (let j = 1; j <= 5; j++) sec.classList.toggle(`etape-${j}`, j <= k); };
+      const poser = (k) => {
+        if (k >= 3 && n < 3) son?.declencher(); // la photo apparaît : l'extrait part
+        n = k;
+        for (let j = 1; j <= 5; j++) sec.classList.toggle(`etape-${j}`, j <= k);
+      };
       const arreter = () => { minuteurs.forEach(clearTimeout); minuteurs = []; };
       return {
         entrer: () => {
@@ -461,8 +570,8 @@ function scenes() {
         },
         // Avancer pendant la séquence fait passer à l'étape suivante (sans sauter la scène).
         suivante: () => { if (n >= 5) return false; arreter(); poser(n + 1); return true; },
-        quitter: arreter,
-        reinitialiser: () => { arreter(); poser(0); },
+        quitter: () => { arreter(); son?.arreter(); },
+        reinitialiser: () => { arreter(); n = 0; for (let j = 1; j <= 5; j++) sec.classList.remove(`etape-${j}`); },
       };
     })(),
   };
@@ -501,6 +610,7 @@ function scenes() {
     entete?.classList.toggle('est-compacte', courant > 0);
     liensNav.forEach((a) => a.classList.toggle('est-actif', new URL(a.href).hash === `#${el.id}`));
     document.documentElement.dataset.scene = cle(el);
+    if (courant >= liste.length - 4) son?.precharger(); // l'extrait se charge en approchant de la finale
     $('[data-flottant]')?.classList.remove('est-visible');
     if (renduHero?.setPaused) renduHero.setPaused(courant !== 0);
     const h = courant === 0 ? location.pathname + location.search : `#${el.id}`;
