@@ -78,6 +78,7 @@ function header(current) {
     <a class="logo" href="index.html" aria-label="${esc(brand.name)}, accueil">${logo()}<span class="logo__nom">${esc(brand.name)}</span></a>
     <nav class="nav" aria-label="Navigation principale"><ul>${items}</ul></nav>
     <div class="entete__actions">
+      ${current === 'accueil' && site.audio?.ambiance ? `<button type="button" class="entete__son lien" data-ambiance-bouton aria-pressed="true">Son</button><audio data-ambiance loop preload="none" src="${esc(site.audio.ambiance)}" data-volume="${site.audio.volumeAmbiance ?? 0.35}" data-volume-bas="${site.audio.volumeAmbianceBaisse ?? 0.03}"></audio>` : ''}
       <a class="entete__cta lien" href="${esc(site.primaryCta.href)}"${current === 'contact' ? ' aria-current="page"' : ''}>${esc(site.primaryCta.label)}</a>
       <button class="menu-bouton" type="button" aria-expanded="false" aria-controls="menu" data-menu-bouton>
         <span class="menu-bouton__texte" data-ouvert="Fermer" data-ferme="Menu">Menu</span>
@@ -382,6 +383,8 @@ S.finale = () => {
     </figure>
     <p class="finale__question">${esc(f.question)}</p>
     <p class="finale__signature">${logo()}<span>${esc(f.signature)}</span></p>
+    ${site.audio?.damson ? `<audio data-son-damson preload="metadata" src="${esc(site.audio.damson)}"></audio>
+    <button type="button" class="finale__son" data-son-bouton hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Lancer le son</span></button>` : ''}
   </div>
 </section>`;
 };

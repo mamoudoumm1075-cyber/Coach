@@ -107,3 +107,14 @@ Les apartés pour Damson se jouent entre deux scènes quand on avance ; une nouv
 Les qualités et la finale ont des étapes internes. Chaque scène a sa transition d'entrée (`navigation.transitions`).
 L'adresse suit la scène active (`…/vitrine/#galerie` ouvre directement la galerie).
 Sans JavaScript, la page reste une page classique qui défile.
+
+## Son de la finale
+
+`audio.damson` (`assets/audio/damson.mp3`) part au moment exact où la photo de Damson apparaît, une fois par passage
+dans la finale, sans boucle ; photo et textes restent affichés après. Quitter la finale coupe l'extrait en fondu.
+Le premier geste du visiteur (clic, toucher, touche) déverrouille le son en silence, ce qui le rend compatible avec
+les navigateurs mobiles. Si le navigateur bloque quand même la lecture (par exemple en ouvrant directement
+`…/vitrine/#finale`), un bouton « Lancer le son » apparaît.
+
+`audio.ambiance` accepte une piste d'ambiance (en boucle, avec un bouton « Son » dans l'en-tête) : elle est baissée
+pendant l'extrait (`volumeAmbianceBaisse`) puis remonte. Vide par défaut.

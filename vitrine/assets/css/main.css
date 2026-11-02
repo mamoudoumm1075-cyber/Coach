@@ -1001,3 +1001,22 @@ ol, ul { list-style: none; }
 @media (max-width: 760px) {
   .mode-scenes .finale__portrait { top: 11svh; height: 44svh; }
 }
+
+/* Bouton de secours quand le navigateur bloque le son de la finale */
+.finale__son {
+  position: absolute; left: var(--marge); bottom: clamp(1.5rem, 5vh, 3rem); z-index: 3;
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  height: 2.75rem; padding-inline: 1.1rem 1.3rem; border-radius: 999px;
+  border: 1px solid rgb(var(--laiton-rgb) / 0.7); background: rgb(var(--nuit-rgb) / 0.6);
+  color: var(--lin); font-size: var(--t-s);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  animation: apparition 0.6s var(--ease), pouls 2.4s var(--ease) 0.6s infinite;
+  transition: border-color 0.4s, color 0.4s;
+}
+.finale__son[hidden] { display: none; }
+.finale__son svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.finale__son:hover { border-color: var(--laiton); color: var(--laiton); }
+.entete__son[aria-pressed='false'] { text-decoration: line-through; opacity: 0.6; }
+@media (max-width: 760px) {
+  .finale__son { left: 50%; translate: -50% 0; bottom: auto; top: 5.2rem; }
+}
