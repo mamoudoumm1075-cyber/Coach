@@ -336,7 +336,7 @@ function mountHorizon(canvas, opts = {}) {
   gl.uniform1f(U('uSeed'), preset.seed);
 
   let quality = opts.quality ?? 0.75;
-  let raf = 0, visible = true, start = performance.now();
+  let raf = 0, visible = true, paused = false, start = performance.now();
   const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
   const frameTimes = [];
   let exposure = opts.still ? 1 : 0;
@@ -371,7 +371,7 @@ function mountHorizon(canvas, opts = {}) {
 
   const loop = (now) => {
     raf = requestAnimationFrame(loop);
-    if (!visible) return;
+    if (!visible || paused) return;
     const dt = now - (loop.last || now);
     loop.last = now;
     // qualité adaptative : on baisse la résolution si l'appareil peine
@@ -409,6 +409,7 @@ function mountHorizon(canvas, opts = {}) {
 
   return {
     setMouse(x, y) { mouse.tx = x; mouse.ty = y; },
+    setPaused(v) { paused = !!v; },
     destroy() {
       cancelAnimationFrame(raf);
       io.disconnect();

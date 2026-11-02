@@ -48,6 +48,18 @@ export default {
    *  Retirer un nom de cette liste masque la section.       */
   sections: ['hero', 'manifeste', 'univers', 'seuil', 'qualites', 'deroule', 'galerie', 'appel', 'finale'],
 
+  /* ── Navigation de l'accueil ─────────────────────────── *
+   *  mode 'scenes' : chaque section devient une scène plein écran
+   *  (double-clic, flèches, molette, balayage). Mettre 'defilement'
+   *  pour revenir à une page classique qui défile.
+   *  transitions : effet d'entrée de chaque scène
+   *  (horizon, volet, iris, fondu, rideau).                          */
+  navigation: {
+    mode: 'scenes',
+    transitions: { hero: 'fondu', manifeste: 'horizon', univers: 'volet', seuil: 'iris', qualites: 'fondu', deroule: 'rideau', galerie: 'volet', appel: 'horizon', finale: 'fondu', pied: 'volet' },
+    noms: { hero: 'Ouverture', manifeste: 'Manifeste', univers: 'Univers', seuil: 'Le seuil', qualites: 'Qualités', deroule: 'Déroulé', galerie: 'Galerie', appel: 'Conversation', finale: 'Démonstration', pied: 'Fin' },
+  },
+
   /* ── Images ──────────────────────────────────────────── *
    *  Deux formes possibles pour chaque image :
    *   1. Visuel génératif (actuel) : { scene, render:[l,h], widths:[…], alt }

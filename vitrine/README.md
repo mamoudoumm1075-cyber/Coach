@@ -90,3 +90,20 @@ Le bloc `damson` de `site.config.mjs` ajoute :
   la question, puis la signature.
 
 `damson.enabled: false` retire l'ensemble. La photo (`assets/img/damson-*.webp`) a été convertie sans ses métadonnées.
+
+## Navigation par scènes (accueil)
+
+Avec `navigation.mode: 'scenes'`, chaque section de l'accueil devient une scène plein écran :
+
+| Commande | Effet |
+| --- | --- |
+| Double-clic | scène suivante (Maj + double-clic : précédente) |
+| Flèche droite / gauche, Page suivante / précédente, Espace | suivante / précédente |
+| Molette | une scène par geste (une scène trop haute défile d'abord à l'intérieur) |
+| Balayage vers le haut ou vers la gauche (mobile) | suivante ; dans l'autre sens : précédente |
+| Repères à droite, flèches en bas | aller directement à une scène |
+
+Les apartés pour Damson se jouent entre deux scènes quand on avance ; une nouvelle commande les raccourcit.
+Les qualités et la finale ont des étapes internes. Chaque scène a sa transition d'entrée (`navigation.transitions`).
+L'adresse suit la scène active (`…/vitrine/#galerie` ouvre directement la galerie).
+Sans JavaScript, la page reste une page classique qui défile.

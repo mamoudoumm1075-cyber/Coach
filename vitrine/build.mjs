@@ -143,7 +143,7 @@ function page({ file, title, description, body, current, ogImage = 'lac', preloa
   const og = `${brand.url.replace(/\/$/, '')}/${imgUrl(ogImage, site.images[ogImage].widths?.[1])}`;
   const ld = { '@context': 'https://schema.org', '@type': 'Organization', name: brand.name, url: brand.url, description: brand.description };
   return `<!doctype html>
-<html lang="${brand.lang}" class="sans-js">
+<html lang="${brand.lang}" class="sans-js"${current === 'accueil' && site.navigation?.mode === 'scenes' ? ' data-scenes' : ''}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -165,12 +165,12 @@ function page({ file, title, description, body, current, ogImage = 'lac', preloa
 <link rel="preload" href="assets/fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 ${preload}<link rel="stylesheet" href="assets/css/tokens.css">
 <link rel="stylesheet" href="assets/css/main.css">
-<script>document.documentElement.className='js'+(matchMedia('(prefers-reduced-motion: reduce)').matches?' calme':'');setTimeout(function(){document.body&&document.body.classList.add('est-charge')},3500);</script>
+<script>var R=document.documentElement;R.className='js'+(matchMedia('(prefers-reduced-motion: reduce)').matches?' calme':'')+(R.hasAttribute('data-scenes')?' mode-scenes':'');setTimeout(function(){document.body&&document.body.classList.add('est-charge')},3500);</script>
 <script defer src="assets/js/horizon.js"></script>
 <script defer src="assets/js/main.js"></script>
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
-<body data-page="${current}" id="haut">
+<body data-page="${current}" id="haut">${current === 'accueil' && site.navigation?.mode === 'scenes' ? `\n<script type="application/json" id="config-scenes">${JSON.stringify({ transitions: site.navigation.transitions || {}, noms: site.navigation.noms || {} })}</script>` : ''}
 ${header(current)}
 <main id="contenu">
 ${body}
