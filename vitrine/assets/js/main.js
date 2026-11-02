@@ -363,34 +363,80 @@ const son = (() => {
   const bouton = $('[data-son-bouton]');
   const ambiance = $('[data-ambiance]');
   const boutonAmb = $('[data-ambiance-bouton]');
-  const volAmb = Number(ambiance?.dataset.volume ?? 0.35);
+  const volAmb = Number(ambiance?.dataset.volume ?? 0.22);
   const volBas = Number(ambiance?.dataset.volumeBas ?? 0.03);
-  let enCours = false, deverrouille = false, ambianceVoulue = true, fondu = 0;
-  try { ambianceVoulue = localStorage.getItem('oree-son') !== 'coupe'; } catch { /* stockage indisponible */ }
+  let enCours = false, deverrouille = false, ambianceVoulue = true, demarree = false, fondu = 0, fonduAmb = 0, arretAmb = 0;
+  try { ambianceVoulue = sessionStorage.getItem('oree-son') !== 'coupe'; } catch { /* stockage indisponible */ }
 
-  const fondre = (el, vers, ms, fin) => {
-    if (!el) return;
-    cancelAnimationFrame(fondu);
-    const de = el.volume, t0 = performance.now();
-    const pas = (now) => {
-      const t = clamp((now - t0) / ms);
-      el.volume = clamp(de + (vers - de) * t);
-      if (t < 1) fondu = requestAnimationFrame(pas); else fin?.();
-    };
-    fondu = requestAnimationFrame(pas);
+  /* Volume de l'ambiance. Sur iPhone, Safari ignore `audio.volume` : on passe
+     alors par la Web Audio API (nœud de gain), créée au premier geste. */
+  let ctxAudio = null, gain = null, niveauVise = 0;
+  const brancherGain = () => {
+    if (gain || !ambiance) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      ctxAudio = new AC();
+      gain = ctxAudio.createGain();
+      gain.gain.value = 0;
+      ctxAudio.createMediaElementSource(ambiance).connect(gain).connect(ctxAudio.destination);
+      ambiance.volume = 1;
+    } catch { gain = null; ctxAudio = null; }
   };
+  const niveau = (v, ms, fin) => {
+    if (!ambiance) return;
+    niveauVise = v;
+    clearTimeout(arretAmb);
+    if (gain) {
+      ctxAudio.resume?.();
+      const g = gain.gain, t = ctxAudio.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(v, t + ms / 1000);
+      if (fin) arretAmb = setTimeout(fin, ms + 30);
+      return;
+    }
+    cancelAnimationFrame(fonduAmb);
+    const de = ambiance.volume, t0 = performance.now();
+    const pas = (now) => {
+      const k = clamp((now - t0) / ms);
+      ambiance.volume = clamp(de + (v - de) * k);
+      if (k < 1) fonduAmb = requestAnimationFrame(pas); else fin?.();
+    };
+    fonduAmb = requestAnimationFrame(pas);
+  };
+  const niveauActuel = () => (gain ? gain.gain.value : ambiance?.volume ?? 0);
+  const majBouton = () => {
+    if (!boutonAmb) return;
+    boutonAmb.setAttribute('aria-pressed', String(ambianceVoulue));
+    boutonAmb.setAttribute('aria-label', ambianceVoulue ? 'Couper la musique' : 'Activer la musique');
+    boutonAmb.classList.toggle('est-joue', ambianceVoulue && demarree && !ambiance.paused);
+  };
+
+  // La musique part au premier geste avec un fondu, puis tourne en boucle
+  // sans jamais redémarrer pendant les changements de scène.
   const demarrerAmbiance = () => {
     if (!ambiance || !ambianceVoulue) return;
-    ambiance.volume = enCours ? volBas : volAmb;
-    ambiance.play().catch(() => {});
+    brancherGain();
+    if (!gain) ambiance.volume = 0;
+    ambiance.loop = true;
+    const p = ambiance.play();
+    const ok = () => { demarree = true; niveau(enCours ? volBas : volAmb, 2600); majBouton(); };
+    if (p?.then) p.then(ok, () => majBouton()); else ok();
   };
+  const couperAmbiance = () => {
+    niveau(0, 500, () => { if (!ambianceVoulue) ambiance.pause(); majBouton(); });
+  };
+  ambiance?.addEventListener('pause', majBouton);
+  ambiance?.addEventListener('playing', majBouton);
 
-  // Premier geste : déverrouillage silencieux du lecteur (indispensable sur iOS).
-  const deverrouiller = () => {
+  // Premier geste : démarrage de l'ambiance et déverrouillage silencieux de l'extrait (indispensable sur iOS).
+  const deverrouiller = (e) => {
     if (deverrouille) return;
     deverrouille = true;
     ['pointerdown', 'keydown', 'touchend'].forEach((t) => removeEventListener(t, deverrouiller, true));
-    demarrerAmbiance();
+    if (!e?.target?.closest?.('[data-ambiance-bouton]')) demarrerAmbiance();
+    else brancherGain();
     if (enCours) return;
     clip.muted = true;
     const p = clip.play();
@@ -399,10 +445,12 @@ const son = (() => {
   };
   ['pointerdown', 'keydown', 'touchend'].forEach((t) => addEventListener(t, deverrouiller, { capture: true, passive: true }));
 
+  const remonter = (ms) => { if (ambiance && ambianceVoulue && !ambiance.paused) niveau(volAmb, ms); };
+
   clip.loop = false;
   clip.addEventListener('ended', () => {
     enCours = false;
-    if (ambiance && ambianceVoulue) fondre(ambiance, volAmb, 1200);
+    remonter(1800); // la musique reprend progressivement
   });
 
   const api = {
@@ -411,7 +459,7 @@ const son = (() => {
       if (enCours) return; // jamais deux lectures en même temps
       enCours = true;
       bouton.hidden = true;
-      if (ambiance && !ambiance.paused) fondre(ambiance, volBas, 450);
+      if (ambiance && !ambiance.paused) niveau(volBas, 450); // l'ambiance s'efface devant l'extrait
       clip.muted = false;
       clip.volume = 1;
       clip.currentTime = 0;
@@ -420,32 +468,34 @@ const son = (() => {
         // Lecture refusée par le navigateur : on propose de lancer le son.
         enCours = false;
         bouton.hidden = false;
-        if (ambiance && ambianceVoulue && !ambiance.paused) fondre(ambiance, volAmb, 600);
+        remonter(600);
       });
     },
     arreter() {
       bouton.hidden = true;
       if (!enCours) return;
       enCours = false;
+      cancelAnimationFrame(fondu);
       const v = clip.volume, t0 = performance.now();
       const baisse = (now) => {
         const t = clamp((now - t0) / 400);
         clip.volume = clamp(v * (1 - t));
-        if (t < 1) requestAnimationFrame(baisse); else { clip.pause(); clip.currentTime = 0; clip.volume = 1; }
+        if (t < 1) fondu = requestAnimationFrame(baisse); else { clip.pause(); clip.currentTime = 0; clip.volume = 1; }
       };
-      requestAnimationFrame(baisse);
-      if (ambiance && ambianceVoulue) fondre(ambiance, volAmb, 900);
+      fondu = requestAnimationFrame(baisse);
+      remonter(900);
     },
-    etat: () => ({ enCours, deverrouille, paused: clip.paused, temps: clip.currentTime, bouton: !bouton.hidden, ambiance: ambiance ? { paused: ambiance.paused, volume: +ambiance.volume.toFixed(2) } : null }),
+    etat: () => ({ enCours, deverrouille, paused: clip.paused, temps: clip.currentTime, bouton: !bouton.hidden, ambiance: ambiance ? { paused: ambiance.paused, volume: +niveauActuel().toFixed(2), vise: niveauVise, temps: +ambiance.currentTime.toFixed(1), voulue: ambianceVoulue, gain: !!gain } : null }),
   };
   bouton?.addEventListener('click', () => api.declencher());
   boutonAmb?.addEventListener('click', () => {
+    if (ambianceVoulue && (!demarree || ambiance.paused)) { demarrerAmbiance(); return; } // premier clic sur « Son » : on lance
     ambianceVoulue = !ambianceVoulue;
-    boutonAmb.setAttribute('aria-pressed', String(ambianceVoulue));
-    try { localStorage.setItem('oree-son', ambianceVoulue ? 'actif' : 'coupe'); } catch { /* stockage indisponible */ }
-    if (ambianceVoulue) demarrerAmbiance(); else ambiance.pause();
+    try { sessionStorage.setItem('oree-son', ambianceVoulue ? 'actif' : 'coupe'); } catch { /* stockage indisponible */ }
+    if (ambianceVoulue) demarrerAmbiance(); else couperAmbiance();
+    majBouton();
   });
-  boutonAmb?.setAttribute('aria-pressed', String(ambianceVoulue));
+  majBouton();
   window.__son = api; // utile pour les tests
   return api;
 })();
@@ -668,7 +718,15 @@ function scenes() {
     },
   };
 
-  const attendre = (ms) => new Promise((r) => { const t = setTimeout(r, ms); passerCarton = () => { clearTimeout(t); r(); }; });
+  const attendre = (ms) => new Promise((r) => {
+    const t = setTimeout(r, ms);
+    passerCarton = () => {
+      // Raccourcir un aparté ne compte qu'une fois : les clics suivants du même geste sont ignorés.
+      passerCarton = null;
+      finVerrou = performance.now() + 700;
+      clearTimeout(t); r();
+    };
+  });
 
   async function jouerCarton(a) {
     const style = [...a.classList].find((c) => c.startsWith('aparte--'))?.slice(8);
@@ -730,6 +788,7 @@ function scenes() {
       courant = cible;
       activer(entree, dir);
       majInterface();
+      passerCarton = null;
       fermerCarton();
       await new Promise((r) => setTimeout(r, calme ? 0 : 500));
     } else {
@@ -747,7 +806,7 @@ function scenes() {
       desactiver(sortie);
     }
     occupe = false;
-    finVerrou = performance.now() + (calme ? 150 : 450);
+    finVerrou = Math.max(finVerrou, performance.now() + (calme ? 150 : 450));
     majInterface();
   }
 

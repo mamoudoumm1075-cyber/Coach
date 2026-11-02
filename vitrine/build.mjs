@@ -78,7 +78,7 @@ function header(current) {
     <a class="logo" href="index.html" aria-label="${esc(brand.name)}, accueil">${logo()}<span class="logo__nom">${esc(brand.name)}</span></a>
     <nav class="nav" aria-label="Navigation principale"><ul>${items}</ul></nav>
     <div class="entete__actions">
-      ${current === 'accueil' && site.audio?.ambiance ? `<button type="button" class="entete__son lien" data-ambiance-bouton aria-pressed="true">Son</button><audio data-ambiance loop preload="none" src="${esc(site.audio.ambiance)}" data-volume="${site.audio.volumeAmbiance ?? 0.35}" data-volume-bas="${site.audio.volumeAmbianceBaisse ?? 0.03}"></audio>` : ''}
+      ${current === 'accueil' && site.audio?.ambiance ? `<button type="button" class="entete__son" data-ambiance-bouton aria-pressed="true" aria-label="Couper la musique"><span class="entete__son-barres" aria-hidden="true"><i></i><i></i><i></i></span><span>Son</span></button><audio data-ambiance loop preload="none" src="${esc(site.audio.ambiance)}" data-volume="${site.audio.volumeAmbiance ?? 0.22}" data-volume-bas="${site.audio.volumeAmbianceBaisse ?? 0.03}"></audio>` : ''}
       <a class="entete__cta lien" href="${esc(site.primaryCta.href)}"${current === 'contact' ? ' aria-current="page"' : ''}>${esc(site.primaryCta.label)}</a>
       <button class="menu-bouton" type="button" aria-expanded="false" aria-controls="menu" data-menu-bouton>
         <span class="menu-bouton__texte" data-ouvert="Fermer" data-ferme="Menu">Menu</span>
@@ -461,7 +461,7 @@ const legal = page({
   <h2>Données personnelles</h2>
   <p>Les informations envoyées par le formulaire de contact servent uniquement à répondre à votre demande. [Durée de conservation, contact pour exercer vos droits.]</p>
   <h2>Crédits</h2>
-  <p>Typographies Bodoni Moda et Hanken Grotesk, sous licence SIL Open Font License. Visuels génératifs produits pour ce site.</p>
+  <p>Typographies Bodoni Moda et Hanken Grotesk, sous licence SIL Open Font License. Visuels génératifs produits pour ce site. Musique d’ambiance : « Fabulous Slow Mysterious Piano », Ashot Danielyan.</p>
 </section>`,
 });
 
