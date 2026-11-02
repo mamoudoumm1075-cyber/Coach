@@ -327,6 +327,31 @@ function galerie() {
   });
 }
 
+/* ── Démonstration pour Damson ─────────────────────────── */
+function apartes() {
+  const els = $$('[data-aparte]');
+  if (!els.length) return;
+  if (calme || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('est-visible')); return; }
+  const io = new IntersectionObserver((entrees) => {
+    for (const en of entrees) if (en.isIntersecting) { en.target.classList.add('est-visible'); io.unobserve(en.target); }
+  }, { threshold: 0.6 });
+  els.forEach((e) => io.observe(e));
+}
+
+function finale() {
+  const section = $('[data-finale]');
+  if (!section) return;
+  if (calme) { section.classList.add('est-statique'); return; }
+  // Seuils de progression (0 → 1) de chaque étape de la mise en scène :
+  // 1 obscurité, 2 « il faut qu'on parle », 3 apparition et zoom, 4 la question, 5 la signature.
+  const seuils = [0.02, 0.1, 0.3, 0.6, 0.78];
+  auDefilement.push(() => {
+    const r = section.getBoundingClientRect();
+    const p = clamp(-r.top / (r.height - innerHeight));
+    seuils.forEach((s, i) => section.classList.toggle(`etape-${i + 1}`, p >= s && r.top < innerHeight * 0.5));
+  });
+}
+
 /* ── Formulaire de contact ─────────────────────────────── */
 function formulaire() {
   const f = $('[data-formulaire]');
@@ -391,6 +416,8 @@ seuil();
 qualites();
 deroule();
 galerie();
+apartes();
+finale();
 formulaire();
 surDefilement();
 })();

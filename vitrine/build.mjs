@@ -340,6 +340,52 @@ const S = {
   },
 };
 
+/* ── Démonstration pour Damson : apartés et finale ─────── */
+const D = site.damson?.enabled ? site.damson : null;
+
+/** Découpe un texte en mots (et en lettres pour le style machine), sans coupure au milieu d'un mot. */
+function decoupe(texte, lettres = false) {
+  let n = 0;
+  return texte
+    .split(' ')
+    .map((mot, i) => {
+      const inner = lettres ? [...mot].map((ch) => `<span class="l" style="--n:${n++}">${esc(ch)}</span>`).join('') : esc(mot);
+      if (lettres) n++;
+      return `<span class="m" style="--i:${i}">${inner}</span>`;
+    })
+    .join(' ');
+}
+
+function aparte(apres) {
+  const a = D?.apartes.find((x) => x.after === apres);
+  if (!a) return '';
+  const style = a.style || 'trace';
+  return `
+<aside class="aparte aparte--${style}" data-aparte aria-label="${esc(a.text)}">
+  <p class="aparte__texte" aria-hidden="true">${decoupe(a.text, style === 'machine')}${style === 'machine' ? '<span class="aparte__curseur"></span>' : ''}</p>
+</aside>`;
+}
+
+S.finale = () => {
+  if (!D) return '';
+  const f = D.finale;
+  return `
+<section class="finale" id="${f.id}" data-finale aria-labelledby="finale-titre">
+  <div class="finale__scene">
+    <h2 class="finale__intro" id="finale-titre"><span class="sr">${esc(f.intro)}</span><span aria-hidden="true">${decoupe(f.intro, true)}</span></h2>
+    <figure class="finale__portrait">
+      <div class="finale__cadre">
+        <div class="finale__zoom" style="transform-origin:${esc(f.focus)}">${img(f.image, { sizes: '(min-width: 900px) 60vw, 150vw', cls: 'finale__photo' })}</div>
+        <span class="finale__flash" aria-hidden="true"></span>
+      </div>
+      <figcaption class="finale__cartel"><strong>${esc(f.cartel[0])}</strong><span>${esc(f.cartel[1])}</span></figcaption>
+    </figure>
+    <p class="finale__question">${esc(f.question)}</p>
+    <p class="finale__signature">${logo()}<span>${esc(f.signature)}</span></p>
+  </div>
+</section>`;
+};
+
 /* ── Pages ─────────────────────────────────────────────── */
 const heroImg = site.images[site.hero.image];
 const heroPreload = heroImg.scene
@@ -349,7 +395,7 @@ const heroPreload = heroImg.scene
 const index = page({
   file: 'index.html',
   current: 'accueil',
-  body: site.sections.map((s) => S[s]()).join('\n'),
+  body: site.sections.map((s) => S[s]() + aparte(s)).join('\n'),
   preload: heroPreload,
 });
 

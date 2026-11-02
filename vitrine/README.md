@@ -79,3 +79,14 @@ outils/                serveur local, rendu des visuels
 - SEO : HTML complet côté serveur, balises Open Graph, données structurées, `sitemap.xml`, `robots.txt`.
 - Performance : polices auto-hébergées et préchargées, images WebP responsives et chargées à la demande,
   rendu WebGL à résolution adaptative, mis en pause hors écran.
+
+## La démonstration pour Damson
+
+Le bloc `damson` de `site.config.mjs` ajoute :
+
+- cinq apartés entre les grandes sections, chacun avec sa propre apparition (`trace`, `marge`, `mots`, `flou`, `machine`) ;
+- une séquence finale au défilement : l'écran s'assombrit, « Bon Damson… il faut qu'on parle. », apparition de sa photo
+  en ouverture d'iris puis trois coupes de zoom sur le visage (zoom uniforme, la photo n'est jamais déformée),
+  la question, puis la signature.
+
+`damson.enabled: false` retire l'ensemble. La photo (`assets/img/damson-*.webp`) a été convertie sans ses métadonnées.

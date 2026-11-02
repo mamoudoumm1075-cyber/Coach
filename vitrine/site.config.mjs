@@ -46,7 +46,7 @@ export default {
 
   /* ── Sections de la page d'accueil, dans l'ordre ─────── *
    *  Retirer un nom de cette liste masque la section.       */
-  sections: ['hero', 'manifeste', 'univers', 'seuil', 'qualites', 'deroule', 'galerie', 'appel'],
+  sections: ['hero', 'manifeste', 'univers', 'seuil', 'qualites', 'deroule', 'galerie', 'appel', 'finale'],
 
   /* ── Images ──────────────────────────────────────────── *
    *  Deux formes possibles pour chaque image :
@@ -66,6 +66,7 @@ export default {
     astres: { scene: 'astres', render: [2400, 1350], widths: [1200, 2400], alt: 'Ciel étoilé au-dessus de crêtes bleutées' },
     seuil: { scene: 'seuil', render: [2400, 1350], widths: [1200, 2400], alt: "Ouverture lumineuse au fond d'une pièce plongée dans l'ombre" },
     rivage: { scene: 'rivage', render: [1600, 2000], widths: [700, 1400], alt: 'Lune au-dessus de la mer et son chemin de lumière' },
+    damson: { srcset: [['assets/img/damson-800.webp', 800], ['assets/img/damson-1500.webp', 1500]], width: 1500, height: 2000, alt: 'Damson, de nuit, casquette noire et débardeur blanc, se retourne vers l’objectif' },
     braise: { scene: 'braise', render: [1600, 1600], widths: [700, 1400], alt: 'Dernières braises du couchant derrière une chaîne de montagnes' },
   },
 
@@ -160,6 +161,30 @@ export default {
     text: 'Dites-nous ce que vous avez en tête. Nous vous répondons personnellement.',
     cta: { label: 'Écrire un message', href: 'contact.html' },
     image: 'astres',
+  },
+
+  /* ── La démonstration pour Damson ───────────────────── *
+   *  Apartés glissés entre les sections (`after` = section qui précède)
+   *  et séquence finale avec sa photo. `enabled: false` retire tout.
+   *  Styles d'apparition : trace, mots, flou, marge, machine.             */
+  damson: {
+    enabled: true,
+    apartes: [
+      { after: 'hero', style: 'trace', text: 'Tu vois, Damson ? Je t’avais dit que c’était possible.' },
+      { after: 'manifeste', style: 'marge', text: 'Et pourtant, on ne fait que commencer.' },
+      { after: 'univers', style: 'mots', text: 'Tu commences à comprendre, Damson ? Alors franchis le seuil.' },
+      { after: 'seuil', style: 'flou', text: 'Toujours convaincu que c’est impossible ?' },
+      { after: 'galerie', style: 'machine', text: 'J’espère que tu regardes bien. On arrive à la démonstration finale.' },
+    ],
+    finale: {
+      id: 'finale',
+      intro: 'Bon Damson… il faut qu’on parle.',
+      image: 'damson',
+      focus: '39% 33%', // centre du visage, pour le zoom
+      cartel: ['Portrait d’un sceptique', 'Tirage unique, collection privée'],
+      question: 'Alors, toujours impossible ? 😂',
+      signature: 'Démonstration terminée. Damson, on attend ton avis.',
+    },
   },
 
   /* ── Page contact ────────────────────────────────────── */
