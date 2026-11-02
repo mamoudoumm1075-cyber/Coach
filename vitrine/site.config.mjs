@@ -206,8 +206,8 @@ export default {
    *  puis remonte. Vide = pas de musique d'ambiance.                     */
   audio: {
     damson: 'assets/audio/damson.mp3',
-    ambiance: '',
-    volumeAmbiance: 0.35,
+    ambiance: 'assets/audio/ambiance.mp3', // « Fabulous Slow Mysterious Piano », Ashot Danielyan
+    volumeAmbiance: 0.22,
     volumeAmbianceBaisse: 0.03,
   },
 

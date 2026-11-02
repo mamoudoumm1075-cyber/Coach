@@ -116,5 +116,11 @@ Le premier geste du visiteur (clic, toucher, touche) déverrouille le son en sil
 les navigateurs mobiles. Si le navigateur bloque quand même la lecture (par exemple en ouvrant directement
 `…/vitrine/#finale`), un bouton « Lancer le son » apparaît.
 
-`audio.ambiance` accepte une piste d'ambiance (en boucle, avec un bouton « Son » dans l'en-tête) : elle est baissée
-pendant l'extrait (`volumeAmbianceBaisse`) puis remonte. Vide par défaut.
+## Musique d'ambiance
+
+`audio.ambiance` (`assets/audio/ambiance.mp3`, « Fabulous Slow Mysterious Piano », Ashot Danielyan) accompagne tout
+l'accueil : elle démarre au premier clic, toucher ou touche du visiteur (exigence des navigateurs), monte en fondu
+jusqu'à `volumeAmbiance` (22 %), tourne en boucle et ne redémarre jamais pendant les changements de scène.
+Le bouton « Son » de l'en-tête la coupe ou la réactive ; le choix est mémorisé pour la session.
+Pendant l'extrait de Damson, elle descend à `volumeAmbianceBaisse` (3 %) puis reprend en fondu à la fin.
+Le volume passe par la Web Audio API, seule méthode qui fonctionne sur iPhone (Safari ignore `audio.volume`).
