@@ -44,3 +44,8 @@ Application de budget (salaire, charges, dépenses, épargne), dans `ma-paie.htm
 ## Lingua Quest
 
 RPG pour apprendre l’anglais (TOEIC + oral), dans le dossier `lingua-quest/`. Même principe : tout reste dans le téléphone. Détails, installation et limites : `lingua-quest/README.md`.
+
+## Vitrine premium
+
+Site vitrine sombre et cinématographique, prêt à recevoir une marque, dans `vitrine/`.
+Tout le contenu se règle dans `vitrine/site.config.mjs`, puis `node vitrine/build.mjs`. Détails dans `vitrine/README.md`.

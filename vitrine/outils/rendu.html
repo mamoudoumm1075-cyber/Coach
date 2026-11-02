@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="fr"><meta charset="utf-8"><title>Rendu</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<canvas id="c"></canvas>
+<script src="../assets/js/horizon.js"></script>
+<script>
+  const { mountHorizon } = window.Horizon;
+  const q = new URLSearchParams(location.search);
+  const w = +q.get('w') || 1600, h = +q.get('h') || 900;
+  const c = document.getElementById('c');
+  c.style.width = w + 'px'; c.style.height = h + 'px';
+  mountHorizon(c, { scene: q.get('scene'), still: true, width: w, height: h, time: +q.get('t') || 12, onReady: () => { document.body.dataset.ready = '1'; } });
+</script>
+</html>
