@@ -1,0 +1,81 @@
+# Vitrine (identité temporaire « Orée »)
+
+Site vitrine premium, sombre et cinématographique, conçu pour accueillir n'importe quelle marque.
+HTML statique généré, CSS et JavaScript natifs : aucune dépendance à l'exécution, aucun framework.
+
+## Voir le site
+
+```bash
+node outils/serveur.mjs        # puis http://localhost:4173/
+```
+
+Le site est 100 % statique : il peut être publié tel quel (GitHub Pages, Netlify, n'importe quel hébergeur).
+
+## Adapter à votre marque
+
+Tout se règle dans **`site.config.mjs`**, puis :
+
+```bash
+node build.mjs                 # regénère les pages HTML, le sitemap et les couleurs
+```
+
+| Élément | Où |
+| --- | --- |
+| Nom, accroche, description SEO, URL | `brand` |
+| Logo | `brand.logoSrc` (fichier SVG ou PNG). Vide : monogramme provisoire |
+| Couleurs | `colors` (devient `assets/css/tokens.css`) |
+| Menu et bouton principal | `nav`, `primaryCta` |
+| Sections affichées et leur ordre | `sections` |
+| Textes de chaque section | `hero`, `manifeste`, `univers`, `seuil`, `qualites`, `deroule`, `galerie`, `appel` |
+| Images | `images` (voir ci-dessous) |
+| Formulaire | `contact.email`, `contact.endpoint`, `contact.subjects` |
+| Coordonnées, réseaux, pied de page | `coordinates`, `socials`, `footer` |
+
+Les éléments entre crochets (`[Adresse — à définir]`…) sont des placeholders à remplacer, comme la page `mentions.html`.
+
+### Images
+
+Les visuels actuels sont **génératifs** : un moteur WebGL (`assets/js/horizon.js`) peint des paysages
+nocturnes (lac, brume, ciel étoilé, rivage, braise, seuil de lumière, eau, pierre). Le hero l'utilise en direct ;
+les autres emplacements utilisent des images fixes produites par :
+
+```bash
+node outils/rendre-images.mjs  # nécessite Playwright et ffmpeg
+```
+
+Pour utiliser vos photos, remplacez l'entrée correspondante dans `images` :
+
+```js
+lac: { src: 'assets/img/ma-photo.webp', width: 2400, height: 1350, alt: 'Description de la photo' },
+// ou plusieurs tailles :
+lac: { srcset: [['assets/img/p-1200.webp', 1200], ['assets/img/p-2400.webp', 2400]], width: 2400, height: 1350, alt: '…' },
+```
+
+Pour le hero : `hero.live: false` affiche seulement l'image ; `hero.video: 'assets/video/hero.mp4'` affiche une vidéo.
+
+### Formulaire de contact
+
+- Sans `contact.endpoint` : le formulaire valide les champs puis ouvre la messagerie du visiteur avec le message prérempli.
+- Avec `contact.endpoint` (Formspree, Basin, votre API…) : envoi en `POST` JSON, avec messages de succès et d'erreur.
+
+## Structure
+
+```
+site.config.mjs        contenu et réglages (le seul fichier à modifier)
+build.mjs              générateur des pages
+index.html …           pages générées (ne pas modifier à la main)
+assets/css/main.css    styles ; tokens.css est généré
+assets/js/main.js      interactions (menu, transitions, défilement, galerie, formulaire)
+assets/js/horizon.js   moteur de paysages WebGL
+assets/fonts/          Bodoni Moda et Hanken Grotesk (licence SIL OFL)
+outils/                serveur local, rendu des visuels
+```
+
+## Qualité
+
+- Responsive mobile, tablette, ordinateur ; menu plein écran avec piège de focus et touche Échap.
+- `prefers-reduced-motion` respecté : plus d'animation, hero figé, séquences remplacées par leur état final.
+- Navigation clavier, lien d'évitement, focus visible, visionneuse en `<dialog>` (flèches, Échap, balayage).
+- SEO : HTML complet côté serveur, balises Open Graph, données structurées, `sitemap.xml`, `robots.txt`.
+- Performance : polices auto-hébergées et préchargées, images WebP responsives et chargées à la demande,
+  rendu WebGL à résolution adaptative, mis en pause hors écran.
